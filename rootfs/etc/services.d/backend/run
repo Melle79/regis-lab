@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bashio
+export PORT=8099
+export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN}"
+export PYTHONPATH=/app/backend
+exec python3 /app/backend/app.py
