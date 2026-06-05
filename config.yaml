@@ -9,7 +9,7 @@ arch:
 homeassistant_api: true
 ingress: true
 ingress_port: 8099
-panel_icon: "regis:logo"
+panel_icon: "mdi:rhombus"
 panel_title: "Regis"
 options:
   title: "Regis-Lab"
