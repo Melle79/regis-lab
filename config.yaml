@@ -1,6 +1,6 @@
 name: "Regis-Lab"
 description: "Your Smart Home Command Center"
-version: "1.0.26"
+version: "1.0.27"
 slug: "regis_lab"
 init: false
 arch:

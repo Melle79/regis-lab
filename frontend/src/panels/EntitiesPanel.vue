@@ -31,7 +31,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useDashboardStore } from '../store/dashboard.js'
-import EntityCard from '../components/EntityCard.vue'
+import EntityCard from '../components/EntityTile.vue'
 
 const { entityList, callService } = useDashboardStore()
 
