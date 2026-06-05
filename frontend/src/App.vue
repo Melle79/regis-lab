@@ -51,6 +51,7 @@
 import { ref, computed } from 'vue'
 import { useDashboardStore } from './store/dashboard.js'
 import AreasPanel        from './panels/AreasPanel.vue'
+import { registerRegisIcon } from './utils/registerIcon.js'
 import RegisLabLogo      from './components/RegisLabLogo.vue'
 import EntitiesPanel     from './panels/EntitiesPanel.vue'
 import AutomationsPanel  from './panels/AutomationsPanel.vue'
