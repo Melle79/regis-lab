@@ -46,74 +46,11 @@
               <div v-for="device in area.devices" :key="device.device_id" class="device-block">
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
-                    <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;filter:brightness(1.8) saturate(0.9)"
-                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display')"
-                      @load="if($event.target.naturalWidth < 2) { $event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display') }"
+                                                            <img v-if="device.integration" :src="brandIconUrl(device.integration)"
+                      :width="18" :height="18" style="object-fit:contain"
+                      @error="$event.target.style.display='none'"
                     />
-                    <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
-                  </span>
-                  <div class="device-info">
-                    <div class="device-name-row">
-                      <span class="device-name">{{ device.name }}</span>
-                      <span v-if="device.integration" class="integration-badge">{{ device.integration }}</span>
-                    </div>
-                    <span v-if="device.model" class="device-model">{{ device.manufacturer }} · {{ device.model }}</span>
-                  </div>
-                  <span class="badge dim">{{ device.entities.length }}</span>
-                  <button class="ha-link-btn" @click.stop="openDevice(device)" title="In HA öffnen">
-                    <MdiIcon icon="mdi:open-in-new" :size="12" />
-                  </button>
-                  <button class="assign-btn" @click.stop="openAssignModal(device, area.area_id)" title="Bereich zuweisen">
-                    <MdiIcon icon="mdi:pencil" :size="12" />
-                  </button>
-                  <span class="chevron small" :class="{ open: expanded.has('dev_' + device.device_id) }">›</span>
-                </div>
-                <div v-if="expanded.has('dev_' + device.device_id)" class="entity-list">
-                  <EntityTile
-                    v-for="e in device.entities" :key="e.entity_id"
-                    :entity="liveEntity(e)"
-                    @toggle="onToggle"
-                  />
-                </div>
-              </div>
-
-              <template v-if="area.entities.length">
-                <div class="device-header" @click="toggle('loose_' + area.area_id)">
-                  <span class="device-icon"><MdiIcon icon="mdi:dots-horizontal" :size="16" /></span>
-                  <div class="device-info"><span class="device-name">Weitere Entities</span></div>
-                  <span class="badge dim">{{ area.entities.length }}</span>
-                  <span class="chevron small" :class="{ open: expanded.has('loose_' + area.area_id) }">›</span>
-                </div>
-                <div v-if="expanded.has('loose_' + area.area_id)" class="entity-list">
-                  <EntityTile v-for="e in area.entities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
-                </div>
-              </template>
-
-              <div v-if="!area.devices.length && !area.entities.length" class="empty">Keine Entities zugeordnet</div>
-            </div>
-          </transition>
-        </div>
-
-        <!-- Nicht zugeordnet -->
-        <div v-if="(unassignedDevices.length || unassignedEntities.length) && (activeFloor === '__all__' || activeFloor === '__unassigned__')" class="area-block unassigned">
-          <div class="area-header" @click="toggle('area___unassigned__')">
-            <span class="area-icon"><MdiIcon icon="mdi:package-variant" :size="20" /></span>
-            <span class="area-name">Nicht zugeordnet</span>
-            <span class="badge">{{ unassignedDevices.reduce((s,d)=>s+d.entities.length,0) + unassignedEntities.length }}</span>
-            <span class="chevron" :class="{ open: expanded.has('area___unassigned__') }">›</span>
-          </div>
-          <transition name="slide">
-            <div v-if="expanded.has('area___unassigned__')" class="area-body">
-              <div v-for="device in unassignedDevices" :key="device.device_id" class="device-block">
-                <div class="device-header" @click="toggle('dev_' + device.device_id)">
-                  <span class="device-icon">
-                    <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;filter:brightness(1.8) saturate(0.9)"
-                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display')"
-                      @load="if($event.target.naturalWidth < 2) { $event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display') }"
-                    />
-                    <MdiIcon :icon="getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
+                    <MdiIcon v-else :icon="getDeviceIcon(device)" :size="16" />
                   </span>
                   <div class="device-info">
                     <div class="device-name-row">
