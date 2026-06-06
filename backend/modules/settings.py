@@ -14,6 +14,10 @@ DEFAULTS = {
     "theme":    "dark",
     "modules":  ["areas", "automations", "entities"],
     "ha_token": "",
+    "ki_name": "Jarvis",
+    "show_clock": True,
+    "show_weather": False,
+    "weather_entity": "",
 }
 
 
@@ -64,7 +68,7 @@ class Module(BaseModule):
                     # sonst: unveränderter Token bleibt
 
                 # Andere Felder übernehmen
-                for key in ["title", "theme", "jarvis_ollama_url", "jarvis_model", "jarvis_system_prompt"]:
+                for key in ["title", "theme", "jarvis_ollama_url", "jarvis_model", "jarvis_system_prompt", "jarvis_temperature", "jarvis_max_tokens", "ki_name", "show_clock", "show_weather", "weather_entity"]:
                     if key in new:
                         current[key] = new[key]
 

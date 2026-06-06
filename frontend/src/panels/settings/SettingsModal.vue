@@ -69,22 +69,6 @@
       </div>
     </div>
 
-    <div class="settings-card">
-      <div class="card-title">
-        <MdiIcon icon="mdi:view-dashboard" :size="20" color="var(--accent)" />
-        Dashboard
-      </div>
-      <div class="field">
-        <label>KI-Assistent Name</label>
-        <input v-model="form.ki_name" class="input" placeholder="Jarvis" />
-      </div>
-      <div class="field">
-        <label>Uhr anzeigen</label>
-        <div class="radio-group">
-          <label class="radio-label"><input type="radio" v-model="form.show_clock" :value="true" /> Ja</label>
-          <label class="radio-label"><input type="radio" v-model="form.show_clock" :value="false" /> Nein</label>
-        </div>
-      </div>
       <div class="field">
         <label>Wetter anzeigen</label>
         <div class="radio-group">
@@ -101,9 +85,14 @@
     <div class="settings-card">
       <div class="card-title">
         <MdiIcon icon="mdi:robot" :size="20" color="var(--accent)" />
-        Jarvis — KI-Assistent
+        Lokaler KI-Assistent
       </div>
-      <p class="card-desc">Verbinde Jarvis mit deiner lokalen Ollama-Installation.</p>
+      <p class="card-desc">Verbinde deinen KI-Assistenten mit einer lokalen Ollama-Installation.</p>
+
+      <div class="field">
+        <label>Name des Assistenten</label>
+        <input v-model="form.ki_name" class="input" placeholder="Jarvis" />
+      </div>
 
       <div class="field">
         <label>Ollama URL</label>
@@ -116,9 +105,19 @@
       </div>
 
       <div class="field">
-        <label>System-Prompt (optional)</label>
+        <label>Temperatur <span class="field-hint">(0 = präzise, 1 = kreativ)</span></label>
+        <input v-model.number="form.jarvis_temperature" class="input" type="number" min="0" max="2" step="0.1" placeholder="0.7" />
+      </div>
+
+      <div class="field">
+        <label>Max. Token <span class="field-hint">(Antwortlänge)</span></label>
+        <input v-model.number="form.jarvis_max_tokens" class="input" type="number" min="256" max="8192" step="256" placeholder="2048" />
+      </div>
+
+      <div class="field">
+        <label>System-Prompt <span class="field-hint">(optional)</span></label>
         <textarea v-model="form.jarvis_system_prompt" class="input" rows="4"
-          placeholder="Du bist Jarvis, ein intelligenter Smart Home Assistent…" />
+          placeholder="Du bist ein intelligenter Smart Home Assistent. Antworte auf Deutsch…" />
       </div>
     </div>
 
@@ -142,7 +141,7 @@ import { ref, onMounted } from 'vue'
 const emit = defineEmits(['close'])
 import MdiIcon from '../../components/MdiIcon.vue'
 
-const form          = ref({ title: '', theme: 'dark', ha_token: '', ha_token_set: false, jarvis_ollama_url: '', jarvis_model: '', jarvis_system_prompt: '', ki_name: 'Jarvis', show_clock: true, show_weather: false, weather_entity: '' })
+const form          = ref({ title: '', theme: 'dark', ha_token: '', ha_token_set: false, jarvis_ollama_url: '', jarvis_model: '', jarvis_system_prompt: '', jarvis_temperature: 0.7, jarvis_max_tokens: 2048, ki_name: 'Jarvis', show_clock: true, show_weather: false, weather_entity: '' })
 const showToken     = ref(false)
 const saving        = ref(false)
 const saved         = ref(false)
@@ -270,4 +269,5 @@ onMounted(load)
 .close-btn { padding: 6px; border-radius: 8px; border: none; background: transparent; color: var(--muted); cursor: pointer; }
 .close-btn:hover { background: var(--border); }
 .modal-body { overflow-y: auto; padding: 16px 20px; flex: 1; }
+.field-hint { font-size: 10px; color: var(--muted); font-weight: 400; }
 </style>
