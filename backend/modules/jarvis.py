@@ -43,8 +43,9 @@ class Module(BaseModule):
             if not model:
                 return jsonify({"error": "Kein Modell ausgewählt"}), 400
 
-            # HA-Kontext aufbauen
-            system_prompt = self._build_system_prompt()
+            # HA-Kontext nur wenn HA-Steuerung erlaubt
+            ha_control = self.config._settings.get("jarvis_ha_control", False)
+            system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
 
             full_messages = [{"role": "system", "content": system_prompt}] + messages
 
@@ -122,6 +123,16 @@ class Module(BaseModule):
         )
 
         return f"{base}\n\nAktueller HA-Status:\n{summary}"
+
+    def _build_system_prompt_no_ha(self) -> str:
+        """System-Prompt ohne HA-Kontext und ohne Token."""
+        custom = self._get_setting("jarvis_system_prompt", "")
+        ki_name = self.config._settings.get("ki_name", "Assistent")
+        return custom or (
+            f"Du bist {ki_name}, ein intelligenter Assistent. "
+            "Antworte immer auf Deutsch, präzise und hilfreich. Keine Emojis. "
+            "Du hast keinen Zugriff auf Smart Home Geräte."
+        )
 
     def _summarize_states(self, states: dict) -> str:
         """Kompakte Zusammenfassung der wichtigsten Entity-States."""
