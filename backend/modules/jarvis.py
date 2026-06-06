@@ -139,7 +139,10 @@ class Module(BaseModule):
         return "\n".join(lines)
 
     def _call_ha_service(self, domain: str, service: str, data: dict) -> bool:
-        """HA Service über REST API aufrufen."""
+        """HA Service über REST API aufrufen — nur wenn HA-Steuerung erlaubt."""
+        if not self.config._settings.get("jarvis_ha_control", False):
+            self.log.info("HA-Steuerung deaktiviert — Service-Call ignoriert")
+            return False
         try:
             r = requests.post(
                 f"{self.ha.ha_url}/api/services/{domain}/{service}",

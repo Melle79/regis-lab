@@ -22,10 +22,28 @@ class Module(BaseModule):
             allowed = [
                 "title", "theme", "show_clock", "show_weather", "weather_entity",
                 "ki_name", "ha_token", "jarvis_ollama_url", "jarvis_model",
-                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt",
+                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             self.config.save_settings(updates)
             return jsonify({"ok": True})
+
+        @self.app.route("/api/validate-token", methods=["POST"])
+        def validate_token():
+            """HA Long-Lived Token validieren."""
+            data  = request.get_json() or {}
+            token = data.get("token", "")
+            if not token:
+                return jsonify({"ok": False, "error": "Kein Token"})
+            try:
+                import requests as _req
+                r = _req.get(
+                    "http://supervisor/core/api/states",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=5,
+                )
+                return jsonify({"ok": r.status_code == 200})
+            except Exception as e:
+                return jsonify({"ok": False, "error": str(e)})
 
         self.log.info("Settings-Modul registriert")

@@ -21,6 +21,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_temperature":   0.7,
     "jarvis_max_tokens":    2048,
     "jarvis_system_prompt": "",
+    "jarvis_ha_control":   False,
 }
 
 

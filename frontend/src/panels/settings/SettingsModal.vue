@@ -77,7 +77,7 @@
                   v-model="form.ha_token"
                   :type="showToken ? 'text' : 'password'"
                   class="input"
-                  :placeholder="form.ha_token_set ? '••••••••••••••••••••' : 'Token einfügen…'"
+                  :placeholder="form.ha_token_set ? '********************' : 'Token einfügen…'"
                 />
                 <button class="icon-btn" @click="showToken = !showToken">
                   <MdiIcon :icon="showToken ? 'mdi:eye-off' : 'mdi:eye'" :size="18" />
@@ -86,7 +86,11 @@
                   <MdiIcon icon="mdi:delete" :size="18" />
                 </button>
               </div>
-              <div v-if="iconRegistered !== null" :class="['token-status', iconRegistered ? 'ok' : 'err']">
+              <div v-if="tokenError" class="token-status err">
+                <MdiIcon icon="mdi:alert-circle" :size="14" />
+                {{ tokenError }}
+              </div>
+              <div v-if="iconRegistered !== null && (iconRegistered || form.ha_token)" :class="['token-status', iconRegistered ? 'ok' : 'err']">
                 <MdiIcon :icon="iconRegistered ? 'mdi:check-circle' : 'mdi:alert-circle'" :size="14" />
                 {{ iconRegistered ? 'Custom Icon erfolgreich registriert' : 'Icon-Registrierung fehlgeschlagen — Token prüfen' }}
               </div>
@@ -104,6 +108,23 @@
             <div class="field">
               <label>Name des Assistenten</label>
               <input v-model="form.ki_name" class="input" placeholder="Jarvis" />
+            </div>
+
+            <div class="field">
+              <label>HA-Steuerung erlauben</label>
+              <div class="toggle-row">
+                <label class="toggle" :class="{ disabled: !form.ha_token_set && !form.ha_token }">
+                  <input type="checkbox" v-model="form.jarvis_ha_control"
+                    :disabled="!form.ha_token_set && !form.ha_token" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="field-hint" v-if="!form.ha_token_set && !form.ha_token">
+                  Erfordert einen HA-Token
+                </span>
+                <span class="field-hint" v-else>
+                  Jarvis darf Geräte in HA steuern
+                </span>
+              </div>
             </div>
 
             <div class="field">
@@ -179,6 +200,7 @@ const form = ref({
   jarvis_temperature: 0.7,
   jarvis_max_tokens: 2048,
   jarvis_system_prompt: '',
+  jarvis_ha_control: false,
 })
 
 const showToken      = ref(false)
@@ -188,6 +210,7 @@ const modelsError     = ref('')
 const saving         = ref(false)
 const saved          = ref(false)
 const iconRegistered = ref(null)
+const tokenError     = ref('')
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
@@ -195,6 +218,12 @@ async function loadOllamaModels() {
   loadingModels.value = true
   modelsError.value   = ''
   try {
+    // Erst speichern damit Backend die URL kennt
+    await fetch('api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jarvis_ollama_url: url }),
+    })
     const r = await fetch('api/jarvis/models')
     const d = await r.json()
     if (d.models) {
@@ -223,9 +252,32 @@ function clearToken() {
   form.value.ha_token_set = false
 }
 
+async function validateToken(token) {
+  if (!token) return false
+  try {
+    const r = await fetch('api/validate-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    const d = await r.json()
+    return d.ok === true
+  } catch(e) { return false }
+}
+
 async function save() {
   saving.value = true
   saved.value  = false
+  // Token validieren wenn neu eingetragen
+  if (form.value.ha_token && !form.value.ha_token_set) {
+    const valid = await validateToken(form.value.ha_token)
+    if (!valid) {
+      tokenError.value = 'Token ungültig — bitte prüfen'
+      saving.value = false
+      return
+    }
+    tokenError.value = ''
+  }
   try {
     const r = await fetch('api/settings', {
       method: 'POST',
@@ -243,6 +295,7 @@ async function save() {
         jarvis_temperature:   form.value.jarvis_temperature,
         jarvis_max_tokens:    form.value.jarvis_max_tokens,
         jarvis_system_prompt: form.value.jarvis_system_prompt,
+        jarvis_ha_control:    form.value.jarvis_ha_control,
       }),
     })
     const d = await r.json()
@@ -338,4 +391,18 @@ onMounted(load)
 }
 .token-status.ok  { color: var(--green); background: color-mix(in srgb, var(--green) 10%, var(--surface)); }
 .token-status.err { color: var(--red);   background: color-mix(in srgb, var(--red)   10%, var(--surface)); }
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0; background: var(--border);
+  border-radius: 24px; transition: .2s;
+}
+.toggle-slider:before {
+  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: .2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+.toggle.disabled { opacity: .4; cursor: not-allowed; }
 </style>
