@@ -51,4 +51,4 @@ Ein Long-Lived Access Token ermöglicht erweiterte Funktionen. Erstellen unter:
 
 ## Lizenz
 
-Privates Projekt — keine Gewährleistung, keine Haftung.
+Privates Projekt — keine Gewährleistung, keine Haftung, kein Support.
