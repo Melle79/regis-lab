@@ -165,7 +165,7 @@ async function loadAreas() {
     areas.value              = data.areas               || []
     unassignedDevices.value  = data.unassigned_devices  || []
     unassignedEntities.value = data.unassigned_entities || []
-    areas.value.forEach(a => expanded.value.add('area_' + a.area_id))
+    // Alles eingeklappt beim Start
     if (sortedFloors.value.length)
       activeFloor.value = sortedFloors.value[0].floor_id
   } catch (e) {
