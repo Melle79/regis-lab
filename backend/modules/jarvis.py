@@ -99,11 +99,11 @@ class Module(BaseModule):
         self.log.info("Jarvis-Modul registriert")
 
     def _get_ollama_url(self) -> str:
-        url = self.config._options.get("jarvis_ollama_url", "").rstrip("/")
+        url = self.config.jarvis_ollama_url.rstrip("/")
         return url or ""
 
     def _get_setting(self, key: str, default="") -> str:
-        return self.config._options.get(key, default)
+        return self.config._settings.get(key, default)
 
     def _build_system_prompt(self) -> str:
         """System-Prompt mit aktuellem HA-Kontext aufbauen."""

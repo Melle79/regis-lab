@@ -5,7 +5,7 @@
     <div class="jarvis-header">
       <div class="jarvis-title">
         <MdiIcon icon="mdi:robot" :size="22" color="var(--accent)" />
-        <span>Jarvis</span>
+        <span>{{ kiName }}</span>
         <span class="model-badge" v-if="currentModel">{{ currentModel }}</span>
       </div>
       <div class="jarvis-controls">
@@ -36,7 +36,7 @@
     <div class="jarvis-messages" ref="messagesEl">
       <div v-if="messages.length === 0" class="jarvis-empty">
         <MdiIcon icon="mdi:robot-outline" :size="48" color="var(--muted)" />
-        <p>Hallo! Ich bin Jarvis, dein Smart Home Assistent.<br>Frag mich alles über dein Zuhause.</p>
+        <p>Hallo! Ich bin {{ kiName }}, dein Smart Home Assistent.<br>Frag mich alles über dein Zuhause.</p>
       </div>
 
       <div
@@ -77,7 +77,7 @@
       <textarea
         v-model="inputText"
         class="jarvis-input"
-        placeholder="Frag Jarvis… (Enter zum Senden, Shift+Enter für neue Zeile)"
+        :placeholder="`Frag ${kiName}… (Enter zum Senden, Shift+Enter für neue Zeile)`"
         rows="1"
         @keydown.enter.exact.prevent="sendMessage"
         @input="autoResize"
@@ -100,6 +100,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 import { useDashboardStore } from '../../store/dashboard.js'
+import { ref as _ref, onMounted as _om } from 'vue'
 
 const { callService } = useDashboardStore()
 
@@ -113,6 +114,7 @@ const currentModel = ref('')
 const modelsError  = ref('')
 const messagesEl   = ref(null)
 const inputEl      = ref(null)
+const kiName       = ref('Jarvis')
 
 async function loadModels() {
   modelsError.value = ''
@@ -241,10 +243,16 @@ async function scrollToBottom() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadModels()
   const saved = localStorage?.getItem?.('jarvis_model')
   if (saved) currentModel.value = saved
+  try {
+    const r = await fetch('api/config')
+    const d = await r.json()
+    if (d.ki_name) kiName.value = d.ki_name
+    if (d.jarvis_model && !saved) currentModel.value = d.jarvis_model
+  } catch(e) {}
 })
 </script>
 
