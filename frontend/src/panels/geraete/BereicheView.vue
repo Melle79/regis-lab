@@ -47,8 +47,9 @@
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
                     <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;filter:brightness(2) saturate(0.8)"
-                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+                      :width="18" :height="18" style="object-fit:contain;filter:brightness(1.8) saturate(0.9)"
+                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display')"
+                      @load="if($event.target.naturalWidth < 2) { $event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display') }"
                     />
                     <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
                   </span>
@@ -108,8 +109,9 @@
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
                     <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;filter:brightness(2) saturate(0.8)"
-                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+                      :width="18" :height="18" style="object-fit:contain;filter:brightness(1.8) saturate(0.9)"
+                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display')"
+                      @load="if($event.target.naturalWidth < 2) { $event.target.style.display='none'; $event.target.nextElementSibling.style.removeProperty('display') }"
                     />
                     <MdiIcon :icon="getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
                   </span>
