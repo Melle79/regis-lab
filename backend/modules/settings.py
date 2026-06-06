@@ -37,13 +37,21 @@ class Module(BaseModule):
                 return jsonify({"ok": False, "error": "Kein Token"})
             try:
                 import requests as _req
-                # Direkt gegen HA Core API (nicht Supervisor)
+                # Über Supervisor-Proxy gegen HA Core API
                 r = _req.get(
-                    f"{self.ha.ha_url}/api/",
+                    "http://supervisor/core/api/",
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=5,
                 )
-                return jsonify({"ok": r.status_code == 200})
+                if r.status_code == 200:
+                    return jsonify({"ok": True})
+                # Fallback: direkt gegen HA
+                r2 = _req.get(
+                    "http://homeassistant:8123/api/",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=5,
+                )
+                return jsonify({"ok": r2.status_code == 200})
             except Exception as e:
                 return jsonify({"ok": False, "error": str(e)})
 
