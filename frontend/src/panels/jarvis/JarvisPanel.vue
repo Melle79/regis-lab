@@ -100,7 +100,6 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 import { useDashboardStore } from '../../store/dashboard.js'
-import { ref as _ref, onMounted as _om } from 'vue'
 
 const { callService } = useDashboardStore()
 
