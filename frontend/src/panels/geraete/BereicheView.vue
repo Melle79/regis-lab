@@ -58,6 +58,7 @@
                   <div class="device-info">
                     <span class="device-name">{{ device.name }}</span>
                     <span v-if="device.model" class="device-model">{{ device.manufacturer }} · {{ device.model }}</span>
+                    <span v-if="device.integration" class="integration-tag">{{ device.integration }}</span>
                   </div>
                   <span class="badge dim">{{ device.entities.length }}</span>
                   <button class="ha-link-btn" @click.stop="openDevice(device)" title="In HA öffnen">
