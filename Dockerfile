@@ -13,6 +13,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
 COPY frontend/package.json ./frontend/
 RUN cd frontend && npm install
 
+# Cache-Buster
+ARG CACHE_BUST=1
+
 # Frontend-Quellcode kopieren und bauen
 COPY frontend/ ./frontend/
 RUN cd frontend && NODE_OPTIONS="--max-old-space-size=512" npm run build
