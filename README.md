@@ -1,59 +1,54 @@
 # Regis-Lab
 
-**Your Smart Home Command Center**
+**Your Smart Home Command Center** — ein modulares Home Assistant Dashboard Addon.
 
-A modular Home Assistant Dashboard Add-on — built for power users who want full control over their smart home.
+> ⚠️ **Nutzung auf eigene Gefahr**  
+> Dieses Addon befindet sich in aktiver Entwicklung. Die Nutzung erfolgt auf eigene Gefahr.  
+> Insbesondere wenn der lokale KI-Assistent Zugriff auf Home Assistant erhält, können unbeabsichtigte Aktionen ausgeführt werden. Aktiviere die HA-Steuerung für den KI-Assistenten nur wenn du dir der Risiken bewusst bist.
+
+---
 
 ## Features
 
-- 🏠 **Areas** — Floors → Rooms → Devices → Entities (hierarchical view)
-- ⚙️ **Automation** — Automations, Scripts, Scenes
-- 🔧 **Helpers** — Input helpers, Timers, Counters
-- 👥 **Persons** — People, Device Trackers, Zones  
-- 📋 **All Entities** — Flat searchable list
-- ⚙ **Settings** — Configure token, theme and title
+- 🏠 **Geräte** — Stockwerke → Bereiche → Geräte → Entities (hierarchische Ansicht)
+- ⚙️ **Automationen** — Automationen, Skripte, Szenen
+- 🔧 **Helfer** — Input-Helfer, Timer, Counter und mehr
+- 👥 **Personen** — Personen-Tracker und Zonen
+- 🤖 **Lokaler KI-Assistent** — Chat mit lokalem Ollama-Modell, optional mit HA-Steuerung
+- ⚙ **Einstellungen** — Alles konfigurierbar direkt im Dashboard
 
 ## Installation
 
-1. Add this repository to Home Assistant
-2. Install **Regis-Lab** from Local Add-ons
-3. Start the add-on
-4. Open the UI via the Sidebar
+1. Repository in Home Assistant hinzufügen:  
+   **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**  
+   URL: `https://github.com/Melle79/regis-lab`
 
-## Configuration
+2. **Regis-Lab** installieren
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `title` | Regis-Lab | Dashboard title |
-| `theme` | dark | `dark`, `light`, or `auto` |
-| `ha_token` | — | Long-Lived Access Token (optional, for custom icon) |
+3. App starten und über die Seitenleiste öffnen
 
-## Custom Icon Setup (optional)
+4. Einstellungen über das ⚙-Symbol im Dashboard vornehmen
 
-To show the Regis-Lab icon in the HA sidebar:
-1. Create a Long-Lived Access Token in HA → Profile → Security
-2. Enter it in the Regis-Lab Settings panel
-3. Click Save — the icon will be registered automatically
+## Konfiguration
 
-## Architecture
+Alle Einstellungen werden direkt im Dashboard vorgenommen — kein Zugriff auf die HA-Konfigurationsdateien nötig.
 
-```
-regis-lab/
-├── config.yaml          # HA Add-on Manifest
-├── Dockerfile
-├── backend/
-│   ├── app.py           # Flask Server
-│   ├── core/            # Config, HA Client, Module Loader
-│   └── modules/         # areas, automations, entities, settings
-└── frontend/
-    ├── src/
-    │   ├── panels/      # AreasPanel, AutomationsPanel, SettingsPanel
-    │   ├── components/  # EntityTile, MdiIcon, RegisLabLogo
-    │   └── utils/       # haIcons.js
-    └── public/
-        └── regis-icon.js  # Custom sidebar icon
-```
+### Home Assistant Token (optional)
+Ein Long-Lived Access Token ermöglicht erweiterte Funktionen. Erstellen unter:  
+**HA → Profil → Sicherheit → Langlebige Zugriffstoken**
 
-## License
+### Lokaler KI-Assistent
+- Ollama URL und Modell konfigurierbar
+- Name des Assistenten frei wählbar in den Einstellungen
+- **HA-Steuerung**: standardmäßig deaktiviert — aktiviere sie nur bewusst, da der KI-Assistent dann Geräte steuern kann
 
-MIT © Sven Melchior
+## Sicherheitshinweise
+
+- Die KI-Steuerung von HA-Geräten ist experimentell
+- Fehlerhafte KI-Antworten können unbeabsichtigte Schaltaktionen auslösen
+- Der HA-Token wird im Addon gespeichert
+- Nutzung ausschließlich auf eigene Gefahr
+
+## Lizenz
+
+Privates Projekt — keine Gewährleistung, keine Haftung.
