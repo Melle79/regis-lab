@@ -114,6 +114,7 @@ const modelsError  = ref('')
 const messagesEl   = ref(null)
 const inputEl      = ref(null)
 const kiName       = ref('Jarvis')
+const haControl    = ref(false)
 
 async function loadModels() {
   modelsError.value = ''
@@ -181,10 +182,10 @@ async function sendMessage() {
       }
     }
 
-    // Action aus Antwort extrahieren
+    // Action nur ausführen wenn HA-Steuerung erlaubt
     const actionMatch = fullText.match(/\{"action":\s*(\{[^}]+\})\}/)
     let actionText = null
-    if (actionMatch) {
+    if (actionMatch && haControl.value) {
       try {
         const action = JSON.parse(actionMatch[1])
         await fetch('api/jarvis/action', {
@@ -194,6 +195,8 @@ async function sendMessage() {
         })
         actionText = `${action.domain}.${action.service}(${action.entity_id || ''})`
       } catch(e) {}
+    } else if (actionMatch && !haControl.value) {
+      actionText = null  // Aktion ignoriert — HA-Steuerung deaktiviert
     }
 
     messages.value.push({
@@ -251,6 +254,7 @@ onMounted(async () => {
     const d = await r.json()
     if (d.ki_name) kiName.value = d.ki_name
     if (d.jarvis_model && !saved) currentModel.value = d.jarvis_model
+    haControl.value = d.jarvis_ha_control === true
   } catch(e) {}
 })
 </script>
