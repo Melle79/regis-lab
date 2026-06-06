@@ -244,7 +244,15 @@ async function loadOllamaModels() {
 async function load() {
   const r = await fetch('api/settings')
   const d = await r.json()
+  // Token-Feld leer lassen — wird nur befüllt wenn neu eingegeben
+  const tokenSet = d.ha_token_set
+  delete d.ha_token
   form.value = { ...form.value, ...d }
+  form.value.ha_token_set = tokenSet
+  // Modelle laden wenn Ollama URL gesetzt
+  if (form.value.jarvis_ollama_url) {
+    await loadOllamaModels()
+  }
 }
 
 function clearToken() {
@@ -285,7 +293,7 @@ async function save() {
       body: JSON.stringify({
         title:                form.value.title,
         theme:                form.value.theme,
-        ha_token:             form.value.ha_token,
+        ...(form.value.ha_token ? { ha_token: form.value.ha_token } : {}),
         show_clock:           form.value.show_clock,
         show_weather:         form.value.show_weather,
         weather_entity:       form.value.weather_entity,

@@ -25,6 +25,9 @@ class Module(BaseModule):
                 "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
+            # Token nur speichern wenn nicht leer
+            if "ha_token" in updates and not updates["ha_token"]:
+                del updates["ha_token"]
             self.config.save_settings(updates)
             return jsonify({"ok": True})
 
