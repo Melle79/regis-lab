@@ -1,5 +1,13 @@
 <template>
   <div class="helfer-view">
+    <div class="areas-toolbar">
+      <button class="toolbar-btn" @click="expandAll">
+        <MdiIcon icon="mdi:unfold-more-horizontal" :size="14" /> Alle aufklappen
+      </button>
+      <button class="toolbar-btn" @click="collapseAll">
+        <MdiIcon icon="mdi:unfold-less-horizontal" :size="14" /> Alle zuklappen
+      </button>
+    </div>
     <div v-if="loading" class="state-msg">Lade…</div>
     <div v-else-if="error" class="state-msg error">{{ error }}</div>
     <div v-else class="groups-list">

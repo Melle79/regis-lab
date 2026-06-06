@@ -155,7 +155,7 @@ const areas              = ref([])
 const unassignedDevices  = ref([])
 const unassignedEntities = ref([])
 const activeFloor        = ref('__all__')
-const expanded           = ref(new Set())
+const expanded           = ref(new Set())  // leer = alles eingeklappt
 const assignModal        = ref(null)  // { device, currentArea }
 
 function openAssignModal(device, areaId = null) {
@@ -319,6 +319,7 @@ onMounted(loadAreas)
 .device-icon { display: flex; align-items: center; color: var(--muted); flex-shrink: 0; }
 .device-info { flex: 1; min-width: 0; }
 .device-name { font-size: 13px; font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.integration-badge { font-size: 9px; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 15%, var(--border)); color: var(--accent); flex-shrink: 0; margin-left: 4px; }
 .device-model { font-size: 10px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .entity-list { display: flex; flex-direction: column; padding: 4px 4px 8px; }

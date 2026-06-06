@@ -1,5 +1,13 @@
 <template>
   <div class="automationen-view">
+    <div class="areas-toolbar">
+      <button class="toolbar-btn" @click="expandAll">
+        <MdiIcon icon="mdi:unfold-more-horizontal" :size="14" /> Alle aufklappen
+      </button>
+      <button class="toolbar-btn" @click="collapseAll">
+        <MdiIcon icon="mdi:unfold-less-horizontal" :size="14" /> Alle zuklappen
+      </button>
+    </div>
     <div v-if="loading" class="state-msg">Lade…</div>
     <div v-else-if="error" class="state-msg error">{{ error }}</div>
     <div v-else class="groups-list">
@@ -42,7 +50,7 @@ async function load() {
     const d = await r.json()
     const AUTO_DOMAINS = new Set(['automation', 'script', 'scene'])
     groups.value = (d.groups || []).filter(g => AUTO_DOMAINS.has(g.domain))
-    groups.value.forEach(g => expanded.value.add(g.domain))
+    // groups.value.forEach(g => expanded.value.add(g.domain))  // eingeklappt beim Start
   } catch(e) { error.value = e.message }
   finally { loading.value = false }
 }

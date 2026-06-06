@@ -29,7 +29,22 @@ loader = ModuleLoader(app, ha, config)
 loader.load_all()
 
 # Melchior Custom Icon als Lovelace Resource registrieren
-def _register_icon_resource():
+def _register_icon_resource()
+
+# regis-icon.js nach /config/www/ kopieren (für Lovelace Resource)
+def _copy_icon_to_www():
+    import shutil, os
+    src = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'regis-icon.js')
+    dst_dir = '/config/www'
+    dst = os.path.join(dst_dir, 'regis-icon.js')
+    try:
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copy2(src, dst)
+        log.info(f"regis-icon.js nach {dst} kopiert")
+    except Exception as e:
+        log.warning(f"regis-icon.js konnte nicht kopiert werden: {e}")
+
+_copy_icon_to_www():
     import time, threading
     def _do_register():
         time.sleep(15)  # Warten bis HA vollständig gestartet
@@ -82,6 +97,21 @@ def _register_icon_resource():
     threading.Thread(target=_do_register, daemon=True).start()
 
 _register_icon_resource()
+
+# regis-icon.js nach /config/www/ kopieren (für Lovelace Resource)
+def _copy_icon_to_www():
+    import shutil, os
+    src = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'regis-icon.js')
+    dst_dir = '/config/www'
+    dst = os.path.join(dst_dir, 'regis-icon.js')
+    try:
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copy2(src, dst)
+        log.info(f"regis-icon.js nach {dst} kopiert")
+    except Exception as e:
+        log.warning(f"regis-icon.js konnte nicht kopiert werden: {e}")
+
+_copy_icon_to_www()
 
 # ── WebSocket ─────────────────────────────────────────────────────
 @sock.route("/ws")
