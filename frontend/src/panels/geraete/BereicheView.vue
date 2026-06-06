@@ -69,9 +69,7 @@
                   <EntityTile v-for="e in device.entities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
                 </div>
               </div>
-              <div v-if="unassignedEntities.length" class="entity-list" style="padding-top:8px">
-                <EntityTile v-for="e in unassignedEntities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
-              </div>
+
             </div>
           </transition>
         </div>
