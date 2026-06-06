@@ -37,21 +37,13 @@ class Module(BaseModule):
                 return jsonify({"ok": False, "error": "Kein Token"})
             try:
                 import requests as _req
-                # Über Supervisor-Proxy gegen HA Core API
+                # Direkt gegen HA (Long-Lived Token funktioniert nur hier)
                 r = _req.get(
-                    "http://supervisor/core/api/",
+                    "http://homeassistant.local.hass.io:8123/api/",
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=5,
                 )
-                if r.status_code == 200:
-                    return jsonify({"ok": True})
-                # Fallback: direkt gegen HA
-                r2 = _req.get(
-                    "http://homeassistant:8123/api/",
-                    headers={"Authorization": f"Bearer {token}"},
-                    timeout=5,
-                )
-                return jsonify({"ok": r2.status_code == 200})
+                return jsonify({"ok": r.status_code == 200})
             except Exception as e:
                 return jsonify({"ok": False, "error": str(e)})
 
