@@ -37,8 +37,9 @@ class Module(BaseModule):
                 return jsonify({"ok": False, "error": "Kein Token"})
             try:
                 import requests as _req
+                # Direkt gegen HA Core API (nicht Supervisor)
                 r = _req.get(
-                    "http://supervisor/core/api/states",
+                    f"{self.ha.ha_url}/api/",
                     headers={"Authorization": f"Bearer {token}"},
                     timeout=5,
                 )
