@@ -44,6 +44,57 @@ def _copy_icon_to_www():
 
 _copy_icon_to_www()
 
+# ── Icon automatisch als Lovelace Resource registrieren ───────────
+def _auto_register_icon():
+    import time
+    time.sleep(20)  # Warten bis HA vollständig gestartet
+    try:
+        token = config.ha_long_token
+        if not token:
+            log.info("Kein Long-Lived Token — Icon-Registrierung übersprungen")
+            return
+
+        import websocket as _ws_lib
+        done   = threading.Event()
+        result = [None]
+
+        def on_message(ws, raw):
+            msg = json.loads(raw)
+            t   = msg.get("type")
+            if t == "auth_required":
+                ws.send(json.dumps({"type": "auth", "access_token": token}))
+            elif t == "auth_ok":
+                ws.send(json.dumps({"id": 1, "type": "lovelace/resources"}))
+            elif t == "result" and msg.get("id") == 1:
+                resources = msg.get("result", [])
+                if any("regis-icon" in str(r.get("url","")) for r in resources):
+                    log.info("Regis-Lab Icon Resource bereits registriert")
+                    ws.close(); done.set(); return
+                ws.send(json.dumps({
+                    "id": 2, "type": "lovelace/resources/create",
+                    "res_type": "module", "url": "/local/regis-icon.js",
+                }))
+            elif t == "result" and msg.get("id") == 2:
+                if msg.get("success"):
+                    log.info("Regis-Lab Icon Resource registriert: /local/regis-icon.js")
+                else:
+                    log.warning(f"Icon Resource Registrierung fehlgeschlagen: {msg.get('error')}")
+                ws.close(); done.set()
+
+        def on_error(ws, err): log.warning(f"Icon WS Fehler: {err}"); done.set()
+        def on_close(ws, *a): done.set()
+
+        ws = _ws_lib.WebSocketApp(
+            f"ws://{config.ha_url.replace('http://','').replace('https://','')}/api/websocket",
+            on_message=on_message, on_error=on_error, on_close=on_close
+        )
+        threading.Thread(target=ws.run_forever, daemon=True).start()
+        done.wait(timeout=15)
+    except Exception as e:
+        log.warning(f"Auto-Icon-Registrierung Fehler: {e}")
+
+threading.Thread(target=_auto_register_icon, daemon=True).start()
+
 # ── WebSocket ─────────────────────────────────────────────────────
 @sock.route("/ws")
 def ws_root(ws):
