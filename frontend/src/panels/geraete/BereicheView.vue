@@ -159,8 +159,8 @@ const expanded           = ref(new Set())  // leer = alles eingeklappt
 
 function brandIconUrl(integration) {
   if (!integration) return null
-  const base = window.location.pathname.replace(/\/[^\/]*$/, '/')
-  return base + 'api/brand-icon/' + integration
+  // HA offizielle Brand-Icons CDN
+  return `https://brands.home-assistant.io/integrations/${integration}/icon.png`
 }
 const assignModal        = ref(null)  // { device, currentArea }
 
