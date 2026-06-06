@@ -108,12 +108,22 @@
 
             <div class="field">
               <label>Ollama URL</label>
-              <input v-model="form.jarvis_ollama_url" class="input" placeholder="http://192.168.0.220:11434" />
+              <div class="token-row">
+                <input v-model="form.jarvis_ollama_url" class="input" placeholder="http://192.168.0.220:11434" @blur="loadOllamaModels" />
+                <button class="icon-btn" @click="loadOllamaModels" title="Modelle laden">
+                  <MdiIcon :icon="loadingModels ? 'mdi:loading' : 'mdi:refresh'" :size="18" />
+                </button>
+              </div>
+              <div v-if="modelsError" class="token-status err">{{ modelsError }}</div>
             </div>
 
             <div class="field">
               <label>Standard-Modell</label>
-              <input v-model="form.jarvis_model" class="input" placeholder="z.B. llama3.1:8b" />
+              <select v-if="availableModels.length" v-model="form.jarvis_model" class="input">
+                <option value="">-- Modell wählen --</option>
+                <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+              </select>
+              <input v-else v-model="form.jarvis_model" class="input" placeholder="z.B. llama3.1:8b" />
             </div>
 
             <div class="field">
@@ -129,7 +139,7 @@
             <div class="field">
               <label>System-Prompt <span class="field-hint">(optional)</span></label>
               <textarea v-model="form.jarvis_system_prompt" class="input" rows="4"
-                placeholder="Du bist ein intelligenter Smart Home Assistent. Antworte auf Deutsch…" />
+                placeholder="Du bist ein intelligenter Smart Home Assistent für das Zuhause von Sven und Isabel in Ottobrunn. Du hast Zugriff auf alle Home Assistant Entitäten und kannst Geräte steuern. Antworte immer auf Deutsch, präzise und hilfreich. Rollo-Position: 100% = offen, 0% = geschlossen. Wenn du Geräte steuern sollst, füge am Ende deiner Antwort einen JSON-Block ein: {"action": {"domain": "light", "service": "turn_on", "entity_id": "light.wohnzimmer"}}" />
             </div>
           </div>
 
@@ -172,9 +182,35 @@ const form = ref({
 })
 
 const showToken      = ref(false)
+const availableModels = ref([])
+const loadingModels   = ref(false)
+const modelsError     = ref('')
 const saving         = ref(false)
 const saved          = ref(false)
 const iconRegistered = ref(null)
+
+async function loadOllamaModels() {
+  const url = form.value.jarvis_ollama_url?.trim()
+  if (!url) return
+  loadingModels.value = true
+  modelsError.value   = ''
+  try {
+    const r = await fetch('api/jarvis/models')
+    const d = await r.json()
+    if (d.models) {
+      availableModels.value = d.models
+      if (!form.value.jarvis_model && d.models.length) {
+        form.value.jarvis_model = d.models[0]
+      }
+    } else {
+      modelsError.value = d.error || 'Fehler beim Laden'
+    }
+  } catch(e) {
+    modelsError.value = 'Ollama nicht erreichbar'
+  } finally {
+    loadingModels.value = false
+  }
+}
 
 async function load() {
   const r = await fetch('api/settings')

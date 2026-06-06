@@ -111,11 +111,13 @@ class Module(BaseModule):
         states = self.ha.get_cached_states()
         summary = self._summarize_states(states)
 
+        ki_name = self.config._settings.get("ki_name", "Jarvis")
         base = custom or (
-            "Du bist Jarvis, ein intelligenter Smart Home Assistent. "
+            f"Du bist {ki_name}, ein intelligenter Smart Home Assistent. "
             "Du hast Zugriff auf alle Home Assistant Entitäten und kannst Geräte steuern. "
-            "Antworte auf Deutsch, präzise und hilfreich. "
-            "Wenn du Geräte steuern sollst, antworte mit einem JSON-Block: "
+            "Antworte immer auf Deutsch, präzise und hilfreich. Keine Emojis. "
+            "Rollo-Position: 100% = offen, 0% = geschlossen. "
+            "Wenn du Geräte steuern sollst, füge am Ende deiner Antwort einen JSON-Block ein: "
             '{"action": {"domain": "light", "service": "turn_on", "entity_id": "light.wohnzimmer"}}'
         )
 
