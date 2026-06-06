@@ -90,9 +90,9 @@
                 <MdiIcon icon="mdi:alert-circle" :size="14" />
                 {{ tokenError }}
               </div>
-              <div v-if="iconRegistered !== null && (iconRegistered || form.ha_token)" :class="['token-status', iconRegistered ? 'ok' : 'err']">
-                <MdiIcon :icon="iconRegistered ? 'mdi:check-circle' : 'mdi:alert-circle'" :size="14" />
-                {{ iconRegistered ? 'Custom Icon erfolgreich registriert' : 'Icon-Registrierung fehlgeschlagen — Token prüfen' }}
+              <div v-else-if="tokenSaved" class="token-status ok">
+                <MdiIcon icon="mdi:check-circle" :size="14" />
+                Token erfolgreich gespeichert
               </div>
             </div>
           </div>
@@ -209,8 +209,8 @@ const loadingModels   = ref(false)
 const modelsError     = ref('')
 const saving         = ref(false)
 const saved          = ref(false)
-const iconRegistered = ref(null)
 const tokenError     = ref('')
+const tokenSaved     = ref(false)
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
@@ -249,6 +249,7 @@ async function load() {
   delete d.ha_token
   form.value = { ...form.value, ...d }
   form.value.ha_token_set = tokenSet
+  iconRegistered.value = null  // Reset beim Laden
   // Modelle laden wenn Ollama URL gesetzt
   if (form.value.jarvis_ollama_url) {
     await loadOllamaModels()
@@ -310,7 +311,10 @@ async function save() {
     if (d.ok) {
       saved.value = true
       setTimeout(() => saved.value = false, 3000)
-      await testIconRegistration()
+      if (form.value.ha_token) {
+        tokenSaved.value = true
+        setTimeout(() => tokenSaved.value = false, 4000)
+      }
       await load()
     }
   } finally {
@@ -318,15 +322,6 @@ async function save() {
   }
 }
 
-async function testIconRegistration() {
-  try {
-    const r = await fetch('api/register-icon', { method: 'POST' })
-    const d = await r.json()
-    iconRegistered.value = d.ok === true
-  } catch(e) {
-    iconRegistered.value = false
-  }
-}
 
 onMounted(load)
 </script>
