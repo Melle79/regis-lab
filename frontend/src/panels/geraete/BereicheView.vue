@@ -46,19 +46,14 @@
               <div v-for="device in area.devices" :key="device.device_id" class="device-block">
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
-                    <img
-                      v-if="device.integration && brandIconUrl(device.integration)"
-                      :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18"
-                      style="object-fit:contain;opacity:0.85"
-                      @error="$event.target.style.display='none'"
-                    />
-                    <MdiIcon v-else :icon="device.icon || getDeviceIcon(device)" :size="16" />
+                    <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" />
                   </span>
                   <div class="device-info">
-                    <span class="device-name">{{ device.name }}</span>
+                    <div class="device-name-row">
+                      <span class="device-name">{{ device.name }}</span>
+                      <span v-if="device.integration" class="integration-badge">{{ device.integration }}</span>
+                    </div>
                     <span v-if="device.model" class="device-model">{{ device.manufacturer }} · {{ device.model }}</span>
-                    <span v-if="device.integration" class="integration-tag">{{ device.integration }}</span>
                   </div>
                   <span class="badge dim">{{ device.entities.length }}</span>
                   <button class="ha-link-btn" @click.stop="openDevice(device)" title="In HA öffnen">
@@ -325,7 +320,8 @@ onMounted(loadAreas)
 .device-header:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .device-icon { display: flex; align-items: center; color: var(--muted); flex-shrink: 0; }
 .device-info { flex: 1; min-width: 0; }
-.device-name { font-size: 13px; font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-name-row { display: flex; align-items: center; gap: 6px; }
+.device-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .integration-badge { font-size: 9px; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 15%, var(--border)); color: var(--accent); flex-shrink: 0; margin-left: 4px; }
 .device-model { font-size: 10px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
