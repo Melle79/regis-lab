@@ -140,11 +140,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useDashboardStore } from '../store/dashboard.js'
-import EntityTile from '../components/EntityTile.vue'
-import { getEntityIcon } from '../utils/haIcons.js'
-import AssignAreaModal from '../components/AssignAreaModal.vue'
-import MdiIcon    from '../components/MdiIcon.vue'
+import { useDashboardStore } from '../../store/dashboard.js'
+import EntityTile from '../../components/EntityTile.vue'
+import { getEntityIcon } from '../../utils/haIcons.js'
+import AssignAreaModal from '../../components/AssignAreaModal.vue'
+import MdiIcon    from '../../components/MdiIcon.vue'
 
 const { callService, state } = useDashboardStore()
 

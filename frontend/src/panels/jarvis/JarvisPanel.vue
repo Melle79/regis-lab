@@ -98,8 +98,8 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import MdiIcon from '../components/MdiIcon.vue'
-import { useDashboardStore } from '../store/dashboard.js'
+import MdiIcon from '../../components/MdiIcon.vue'
+import { useDashboardStore } from '../../store/dashboard.js'
 
 const { callService } = useDashboardStore()
 
