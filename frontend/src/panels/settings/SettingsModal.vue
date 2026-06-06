@@ -129,7 +129,6 @@
         {{ saving ? 'Speichern…' : 'Speichern' }}
       </button>
     </div>
-    </div>
         </div>
       </div>
     </div>
