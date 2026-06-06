@@ -1,6 +1,6 @@
 name: "Regis-Lab"
 description: "Your Smart Home Command Center. Alle Einstellungen sind im Dashboard unter dem ⚙-Symbol vorzunehmen."
-version: "1.0.41"
+version: "1.0.42"
 slug: "regis_lab"
 init: false
 arch:
