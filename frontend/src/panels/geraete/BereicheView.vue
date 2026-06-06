@@ -47,7 +47,7 @@
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
                     <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;opacity:0.85"
+                      :width="18" :height="18" style="object-fit:contain;filter:brightness(2) saturate(0.8)"
                       @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
                     />
                     <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
@@ -108,7 +108,7 @@
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
                     <img v-if="device.integration" :src="brandIconUrl(device.integration)"
-                      :width="18" :height="18" style="object-fit:contain;opacity:0.85"
+                      :width="18" :height="18" style="object-fit:contain;filter:brightness(2) saturate(0.8)"
                       @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
                     />
                     <MdiIcon :icon="getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
@@ -172,7 +172,7 @@ const expanded           = ref(new Set())  // leer = alles eingeklappt
 function brandIconUrl(integration) {
   if (!integration) return null
   // HA offizielle Brand-Icons CDN - dark_icon Format
-  return `https://brands.home-assistant.io/_/${integration}/dark_icon.png`
+  return `https://brands.home-assistant.io/_/${integration}/icon.png`
 }
 const assignModal        = ref(null)  // { device, currentArea }
 
