@@ -56,6 +56,30 @@
       </div>
     </div>
 
+    <div class="settings-card">
+      <div class="card-title">
+        <MdiIcon icon="mdi:robot" :size="20" color="var(--accent)" />
+        Jarvis — KI-Assistent
+      </div>
+      <p class="card-desc">Verbinde Jarvis mit deiner lokalen Ollama-Installation.</p>
+
+      <div class="field">
+        <label>Ollama URL</label>
+        <input v-model="form.jarvis_ollama_url" class="input" placeholder="http://192.168.0.220:11434" />
+      </div>
+
+      <div class="field">
+        <label>Standard-Modell</label>
+        <input v-model="form.jarvis_model" class="input" placeholder="z.B. llama3.1:8b" />
+      </div>
+
+      <div class="field">
+        <label>System-Prompt (optional)</label>
+        <textarea v-model="form.jarvis_system_prompt" class="input" rows="4"
+          placeholder="Du bist Jarvis, ein intelligenter Smart Home Assistent…" />
+      </div>
+    </div>
+
     <div class="settings-actions">
       <span v-if="saved" class="saved-msg">
         <MdiIcon icon="mdi:check" :size="16" /> Gespeichert
@@ -71,7 +95,7 @@
 import { ref, onMounted } from 'vue'
 import MdiIcon from '../components/MdiIcon.vue'
 
-const form          = ref({ title: '', theme: 'dark', ha_token: '', ha_token_set: false })
+const form          = ref({ title: '', theme: 'dark', ha_token: '', ha_token_set: false, jarvis_ollama_url: '', jarvis_model: '', jarvis_system_prompt: '' })
 const showToken     = ref(false)
 const saving        = ref(false)
 const saved         = ref(false)
@@ -96,9 +120,12 @@ async function save() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title:    form.value.title,
-        theme:    form.value.theme,
-        ha_token: form.value.ha_token,
+        title:                form.value.title,
+        theme:                form.value.theme,
+        ha_token:             form.value.ha_token,
+        jarvis_ollama_url:    form.value.jarvis_ollama_url,
+        jarvis_model:         form.value.jarvis_model,
+        jarvis_system_prompt: form.value.jarvis_system_prompt,
       }),
     })
     const d = await r.json()

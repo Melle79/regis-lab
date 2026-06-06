@@ -56,6 +56,7 @@ import RegisLabLogo      from './components/RegisLabLogo.vue'
 import EntitiesPanel     from './panels/EntitiesPanel.vue'
 import AutomationsPanel  from './panels/AutomationsPanel.vue'
 import SettingsPanel     from './panels/SettingsPanel.vue'
+import JarvisPanel      from './panels/JarvisPanel.vue'
 
 const store = useDashboardStore()
 
@@ -65,6 +66,7 @@ const PANEL_REGISTRY = {
   areas:       { id: 'areas',       label: '🏠 Bereiche',           component: AreasPanel },
   automations: { id: 'automations', label: '⚙️ Steuerung',           component: AutomationsPanel },
   entities:    { id: 'entities',    label: '📋 Alle Entities',       component: EntitiesPanel },
+  jarvis:      { id: 'jarvis',      label: '🤖 Jarvis',              component: JarvisPanel },
   settings:    { id: 'settings',    label: '⚙ Einstellungen',        component: SettingsPanel },
 }
 

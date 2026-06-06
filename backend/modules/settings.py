@@ -64,7 +64,7 @@ class Module(BaseModule):
                     # sonst: unveränderter Token bleibt
 
                 # Andere Felder übernehmen
-                for key in ["title", "theme"]:
+                for key in ["title", "theme", "jarvis_ollama_url", "jarvis_model", "jarvis_system_prompt"]:
                     if key in new:
                         current[key] = new[key]
 
