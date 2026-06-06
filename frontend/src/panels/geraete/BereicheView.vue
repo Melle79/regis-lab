@@ -47,8 +47,8 @@
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
                     <img
-                      v-if="device.integration"
-                      :src="'api/brand-icon/' + device.integration"
+                      v-if="device.integration && brandIconUrl(device.integration)"
+                      :src="brandIconUrl(device.integration)"
                       :width="18" :height="18"
                       style="object-fit:contain;opacity:0.85"
                       @error="$event.target.style.display='none'"
@@ -156,6 +156,12 @@ const unassignedDevices  = ref([])
 const unassignedEntities = ref([])
 const activeFloor        = ref('__all__')
 const expanded           = ref(new Set())  // leer = alles eingeklappt
+
+function brandIconUrl(integration) {
+  if (!integration) return null
+  const base = window.location.pathname.replace(/\/[^\/]*$/, '/')
+  return base + 'api/brand-icon/' + integration
+}
 const assignModal        = ref(null)  // { device, currentArea }
 
 function openAssignModal(device, areaId = null) {
