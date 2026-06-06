@@ -1,38 +1,29 @@
 /**
  * Registriert das Regis-Lab Custom Icon als Lovelace Resource
- * Nutzt die bestehende Browser-Session (kein Token nötig)
+ * Nutzt window.hassConnection (Browser bereits eingeloggt)
  */
 export async function registerRegisIcon(ingressUrl) {
   try {
-    const iconUrl = `${ingressUrl}regis-icon.js`
+    const iconUrl = '/local/regis-icon.js'
+    const hassConn = window.parent?.hassConnection || window.hassConnection
+    if (!hassConn) return false
 
-    // HA WebSocket über Parent-Frame nutzen (Browser ist bereits eingeloggt)
-    const haWs = window.parent?.hassConnection || window.hassConnection
-    if (!haWs) return false
+    const hass = await hassConn
+    const ws   = hass.conn
 
-    const conn = await haWs
+    if (!ws?.sendMessagePromise) return false
 
-    // Bestehende Resources prüfen
-    const resources = await conn.sendMessagePromise({
-      type: 'lovelace/resources',
-    })
+    const resources = await ws.sendMessagePromise({ type: 'lovelace/resources' })
+    if (resources.some(r => r.url?.includes('regis-icon'))) return true
 
-    if (resources.some(r => r.url?.includes('regis-icon'))) {
-      console.log('[Regis-Lab] Icon bereits registriert')
-      return true
-    }
-
-    // Resource registrieren
-    await conn.sendMessagePromise({
+    await ws.sendMessagePromise({
       type: 'lovelace/resources/create',
       res_type: 'module',
       url: iconUrl,
     })
-
-    console.log('[Regis-Lab] Icon registriert:', iconUrl)
     return true
   } catch(e) {
-    console.warn('[Regis-Lab] Icon-Registrierung fehlgeschlagen:', e)
+    // Kein Log-Spam — Icon-Registrierung ist optional
     return false
   }
 }
