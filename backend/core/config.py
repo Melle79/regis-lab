@@ -127,5 +127,6 @@ class AddonConfig:
             "jarvis_temperature":   self._settings.get("jarvis_temperature", 0.7),
             "jarvis_max_tokens":    self._settings.get("jarvis_max_tokens", 2048),
             "jarvis_system_prompt": self._settings.get("jarvis_system_prompt", ""),
+            "jarvis_ha_control":    self._settings.get("jarvis_ha_control", False),
             "ha_token_set":         bool(self.ha_long_token),
         }
