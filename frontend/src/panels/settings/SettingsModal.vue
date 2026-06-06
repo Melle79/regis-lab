@@ -139,7 +139,7 @@
             <div class="field">
               <label>System-Prompt <span class="field-hint">(optional)</span></label>
               <textarea v-model="form.jarvis_system_prompt" class="input" rows="4"
-                placeholder="Du bist ein intelligenter Smart Home Assistent für das Zuhause von Sven und Isabel in Ottobrunn. Du hast Zugriff auf alle Home Assistant Entitäten und kannst Geräte steuern. Antworte immer auf Deutsch, präzise und hilfreich. Rollo-Position: 100% = offen, 0% = geschlossen. Wenn du Geräte steuern sollst, füge am Ende deiner Antwort einen JSON-Block ein: {"action": {"domain": "light", "service": "turn_on", "entity_id": "light.wohnzimmer"}}" />
+                placeholder="Du bist ein intelligenter Smart Home Assistent. Antworte auf Deutsch, praezise und hilfreich. Keine Emojis." />
             </div>
           </div>
 
