@@ -46,7 +46,11 @@
               <div v-for="device in area.devices" :key="device.device_id" class="device-block">
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
                   <span class="device-icon">
-                    <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" />
+                    <img v-if="device.integration" :src="brandIconUrl(device.integration)"
+                      :width="18" :height="18" style="object-fit:contain;opacity:0.85"
+                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+                    />
+                    <MdiIcon :icon="device.icon || getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
                   </span>
                   <div class="device-info">
                     <div class="device-name-row">
@@ -102,8 +106,20 @@
             <div v-if="expanded.has('area___unassigned__')" class="area-body">
               <div v-for="device in unassignedDevices" :key="device.device_id" class="device-block">
                 <div class="device-header" @click="toggle('dev_' + device.device_id)">
-                  <span class="device-icon"><MdiIcon :icon="getDeviceIcon(device)" :size="16" /></span>
-                  <div class="device-info"><span class="device-name">{{ device.name }}</span></div>
+                  <span class="device-icon">
+                    <img v-if="device.integration" :src="brandIconUrl(device.integration)"
+                      :width="18" :height="18" style="object-fit:contain;opacity:0.85"
+                      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+                    />
+                    <MdiIcon :icon="getDeviceIcon(device)" :size="16" :style="device.integration ? 'display:none' : ''" />
+                  </span>
+                  <div class="device-info">
+                    <div class="device-name-row">
+                      <span class="device-name">{{ device.name }}</span>
+                      <span v-if="device.integration" class="integration-badge">{{ device.integration }}</span>
+                    </div>
+                    <span v-if="device.model" class="device-model">{{ device.manufacturer }} · {{ device.model }}</span>
+                  </div>
                   <span class="badge dim">{{ device.entities.length }}</span>
                   <button class="assign-btn" @click.stop="openAssignModal(device, null)" title="Bereich zuweisen">
                     <MdiIcon icon="mdi:pencil" :size="12" />
