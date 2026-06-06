@@ -171,8 +171,8 @@ const expanded           = ref(new Set())  // leer = alles eingeklappt
 
 function brandIconUrl(integration) {
   if (!integration) return null
-  // HA offizielle Brand-Icons CDN
-  return `https://brands.home-assistant.io/integrations/${integration}/icon.png`
+  // HA offizielle Brand-Icons CDN - dark_icon Format
+  return `https://brands.home-assistant.io/_/${integration}/dark_icon.png`
 }
 const assignModal        = ref(null)  // { device, currentArea }
 
