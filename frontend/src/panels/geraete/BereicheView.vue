@@ -75,6 +75,37 @@
         </div>
 
       </div>
+
+      <!-- Nicht zugeordnet -->
+      <div v-if="activeFloor === '__unassigned__'" class="areas-list">
+        <div v-for="device in unassignedDevices" :key="device.device_id" class="device-block">
+          <div class="device-header" @click="toggle('dev_' + device.device_id)">
+            <span class="device-icon">
+              <img v-if="device.integration" :src="brandIconUrl(device.integration)"
+                :width="18" :height="18" style="object-fit:contain"
+                @error="$event.target.style.display='none'"
+              />
+              <MdiIcon v-else :icon="getDeviceIcon(device)" :size="16" />
+            </span>
+            <div class="device-info">
+              <div class="device-name-row">
+                <span class="device-name">{{ device.name }}</span>
+                <span v-if="device.integration" class="integration-badge">{{ device.integration }}</span>
+              </div>
+              <span v-if="device.model" class="device-model">{{ device.manufacturer }} · {{ device.model }}</span>
+            </div>
+            <span class="badge dim">{{ device.entities.length }}</span>
+            <button class="assign-btn" @click.stop="openAssignModal(device, null)" title="Bereich zuweisen">
+              <MdiIcon icon="mdi:pencil" :size="12" />
+            </button>
+            <span class="chevron small" :class="{ open: expanded.has('dev_' + device.device_id) }">›</span>
+          </div>
+          <div v-if="expanded.has('dev_' + device.device_id)" class="entity-list">
+            <EntityTile v-for="e in device.entities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
+          </div>
+        </div>
+      </div>
+
     </template>
   </div>
   <!-- Bereich-Zuweisungs-Modal -->
