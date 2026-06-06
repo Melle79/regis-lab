@@ -140,7 +140,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 const emit = defineEmits(['close'])
-import MdiIcon from '../components/MdiIcon.vue'
+import MdiIcon from '../../components/MdiIcon.vue'
 
 const form          = ref({ title: '', theme: 'dark', ha_token: '', ha_token_set: false, jarvis_ollama_url: '', jarvis_model: '', jarvis_system_prompt: '', ki_name: 'Jarvis', show_clock: true, show_weather: false, weather_entity: '' })
 const showToken     = ref(false)
