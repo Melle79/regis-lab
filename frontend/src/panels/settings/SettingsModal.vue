@@ -122,7 +122,7 @@
                   Erfordert einen HA-Token
                 </span>
                 <span class="field-hint" v-else>
-                  Jarvis darf Geräte in HA steuern
+                  {{ form.ki_name || "KI" }} darf Geräte in HA steuern
                 </span>
               </div>
             </div>
@@ -304,7 +304,7 @@ async function save() {
         jarvis_temperature:   form.value.jarvis_temperature,
         jarvis_max_tokens:    form.value.jarvis_max_tokens,
         jarvis_system_prompt: form.value.jarvis_system_prompt,
-        jarvis_ha_control:    form.value.jarvis_ha_control,
+        jarvis_ha_control:    !!form.value.jarvis_ha_control,
       }),
     })
     const d = await r.json()
