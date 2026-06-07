@@ -154,9 +154,7 @@ class Module(BaseModule):
                             f"{ollama_url}/api/generate",
                             json={
                                 "model": model,
-                                "prompt": f"Erstelle einen kurzen Titel (max. 5 Wörter, kein Anführungszeichen) für dieses Gespräch. Nur den Titel ausgeben, nichts sonst.
-
-Nachricht: {message[:200]}",
+                                "prompt": f"Erstelle einen kurzen Titel (max. 5 Wörter, kein Anführungszeichen) für dieses Gespräch. Nur den Titel ausgeben, nichts sonst.\n\nNachricht: {message[:200]}",
                                 "stream": False,
                             },
                             timeout=15,
