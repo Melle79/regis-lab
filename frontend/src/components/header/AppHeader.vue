@@ -7,10 +7,7 @@
     </div>
 
     <!-- Mitte: Haupt-Navigation mit Drag & Drop -->
-    <nav class="header-nav"
-      @dragover.prevent
-      @drop="onDrop"
-    >
+    <nav class="header-nav" @dragover.prevent @drop="onDrop">
       <button
         v-for="tab in localTabs"
         :key="tab.id"
@@ -42,22 +39,45 @@
 </template>
 
 <script setup>
+import { ref, watch, inject } from 'vue'
 import RegisLabLogo from '../RegisLabLogo.vue'
 import MdiIcon from '../MdiIcon.vue'
 import HeaderClock from './HeaderClock.vue'
 import HeaderWeather from './HeaderWeather.vue'
 
-import { ref, watch } from 'vue'
-
 const props = defineProps({
-  tabs:      { type: Array,  default: () => [] },
-  activeTab: { type: String, default: '' },
-  version:   { type: String, default: '' },
+  tabs:      { type: Array,   default: () => [] },
+  activeTab: { type: String,  default: '' },
   isLive:    { type: Boolean, default: false },
-  settings:  { type: Object, default: () => ({}) },
+  settings:  { type: Object,  default: () => ({}) },
 })
 
-defineEmits(['tab', 'settings'])
+const emit = defineEmits(['tab', 'settings', 'reorder'])
+
+const version   = inject('appVersion', '?')
+const localTabs = ref([...props.tabs])
+const dragId    = ref(null)
+let   dragOver  = null
+
+watch(() => props.tabs, (t) => {
+  if (t && t.length) localTabs.value = [...t]
+}, { immediate: true })
+
+function onDragStart(id) { dragId.value = id }
+function onDragOver(id)  { dragOver = id }
+function onDrop()        {}
+function onDragEnd() {
+  if (dragId.value && dragOver && dragId.value !== dragOver) {
+    const arr  = [...localTabs.value]
+    const from = arr.findIndex(t => t.id === dragId.value)
+    const to   = arr.findIndex(t => t.id === dragOver)
+    arr.splice(to, 0, arr.splice(from, 1)[0])
+    localTabs.value = arr
+    emit('reorder', arr.map(t => t.id))
+  }
+  dragId.value = null
+  dragOver     = null
+}
 </script>
 
 <style scoped>
@@ -75,29 +95,20 @@ defineEmits(['tab', 'settings'])
 .nav-tab {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 14px; border-radius: 8px; border: none;
-  background: transparent; color: var(--muted); cursor: pointer;
+  background: transparent; color: var(--muted); cursor: grab;
   font-size: 13px; font-weight: 500; transition: all .15s;
 }
-.nav-tab:hover { color: var(--text); background: var(--border); }
-.nav-tab.active { background: var(--accent); color: #fff; }
+.nav-tab:hover  { color: var(--text); background: var(--border); }
+.nav-tab.active { background: var(--accent); color: #fff; cursor: pointer; }
 .nav-tab.dragging { opacity: .4; }
-.nav-tab[draggable] { cursor: grab; }
 
-.header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-
-.header-live {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: var(--muted);
-}
-.live-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
-}
-.header-live.live .live-dot { background: var(--green); }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header-live  { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
 .header-live.live { color: var(--green); }
-
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .settings-btn {
-  padding: 6px; border-radius: 8px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); cursor: pointer; transition: all .15s;
+  padding: 6px; border-radius: 8px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer;
 }
-.settings-btn:hover { color: var(--text); border-color: var(--accent); }
+.settings-btn:hover { color: var(--text); background: var(--border); }
 </style>
