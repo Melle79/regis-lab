@@ -732,4 +732,20 @@ onMounted(async () => {
   padding: 1px 5px; border-radius: 4px;
   background: var(--border); font-size: 9px;
 }
+.code-block {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin: 6px 0; text-align: left;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 10px; background: var(--border); font-size: 11px;
+}
+.code-lang { color: var(--muted); font-family: monospace; }
+.code-download {
+  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer; font-size: 10px;
+}
+.code-download:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
+.code-block code { background: none; padding: 0; font-size: 11px; }
 </style>
