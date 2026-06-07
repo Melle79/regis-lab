@@ -78,7 +78,7 @@
       </div>
 
       <!-- Nachrichten -->
-      <div class="messages-area" ref="messagesEl">
+      <div class="messages-area" ref="messagesEl" :data-chatid="activeChatId">
         <div v-if="!activeChat" class="empty-state">
           <MdiIcon icon="mdi:robot-outline" :size="52" color="var(--muted)" />
           <p>Wähle einen Chat oder erstelle einen neuen.</p>
@@ -426,8 +426,9 @@ function autoResize(e) {
 
 function bindAttachmentHandlers() {
   if (!messagesEl.value) return
+  const chatId = messagesEl.value.dataset.chatid || activeChatId.value
   messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
-    el.onclick = () => downloadAttachment(el.dataset.filename)
+    el.onclick = () => downloadAttachmentById(chatId, el.dataset.filename)
   })
 }
 
