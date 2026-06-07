@@ -28,14 +28,27 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": "HA nicht erreichbar: " + str(e)}), 500
 
-            # Offline / Unavailable
+            # Offline / Unavailable — nur physische Geräte
+            SKIP_DOMAINS = {
+                "scene", "input_boolean", "input_number", "input_text", "input_select",
+                "input_datetime", "input_button", "timer", "counter", "group",
+                "sun", "moon", "zone", "person", "device_tracker", "persistent_notification",
+                "script", "automation", "update", "number", "button", "select",
+            }
             offline = []
             for s in states:
+                domain = s.get("entity_id", "").split(".")[0]
+                if domain in SKIP_DOMAINS:
+                    continue
                 if s.get("state") in ("unavailable", "unknown"):
+                    name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+                    # Virtuelle/interne Entitäten überspringen
+                    if any(x in s["entity_id"] for x in ["_debug", "_test", "recorder", "homeassistant"]):
+                        continue
                     offline.append({
                         "entity_id": s["entity_id"],
-                        "name": s.get("attributes", {}).get("friendly_name", s["entity_id"]),
-                        "state": s["state"],
+                        "name":      name,
+                        "state":     s["state"],
                     })
 
             # Niedriger Akku (< 20%)
