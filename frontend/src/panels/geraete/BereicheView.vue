@@ -139,7 +139,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useDashboardStore } from '../../store/dashboard.js'
 import EntityTile from '../../components/EntityTile.vue'
 import { getEntityIcon } from '../../utils/haIcons.js'
@@ -149,7 +149,7 @@ import MdiIcon    from '../../components/MdiIcon.vue'
 const { callService, state } = useDashboardStore()
 
 // Expose-Status für Sprachassistenten
-const exposeMap = ref({})
+const exposeMap = reactive({})
 async function loadExposeStatus() {
   try {
     const r = await fetch('api/voice/expose')
@@ -158,14 +158,14 @@ async function loadExposeStatus() {
     for (const e of (d.entities || [])) {
       map[e.entity_id] = e.exposed
     }
-    exposeMap.value = map
+    Object.assign(exposeMap, map)
   } catch(e) {}
 }
 
 async function toggleExpose(entity_id) {
   const current = exposeMap.value[entity_id]
   const newVal  = current === true ? false : true
-  exposeMap.value[entity_id] = newVal
+  exposeMap[entity_id] = newVal
   try {
     await fetch(`api/voice/expose/${encodeURIComponent(entity_id)}`, {
       method:  'POST',
@@ -173,7 +173,7 @@ async function toggleExpose(entity_id) {
       body:    JSON.stringify({ exposed: newVal }),
     })
   } catch(e) {
-    exposeMap.value[entity_id] = current
+    exposeMap[entity_id] = current
   }
 }
 
