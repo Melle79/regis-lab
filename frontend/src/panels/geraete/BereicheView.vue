@@ -34,6 +34,10 @@
             <span class="area-name">{{ area.name }}</span>
             <span v-if="area.floor_name && activeFloor === '__all__'" class="badge accent">{{ area.floor_name }}</span>
             <span class="badge">{{ countEntities(area) }}</span>
+            <span v-if="countExposed(area) > 0" class="badge expose-badge" title="Für Sprachassistent verfügbar">
+              <MdiIcon icon="mdi:microphone" :size="11" />
+              {{ countExposed(area) }}
+            </span>
             <button class="ha-link-btn" @click.stop="openArea(area)" title="In HA öffnen">
               <MdiIcon icon="mdi:open-in-new" :size="13" />
             </button>
@@ -287,6 +291,10 @@ function collapseAll() {
   expanded.value = new Set()
 }
 function countEntities(area) { return area.devices.reduce((s, d) => s + d.entities.length, 0) + area.entities.length }
+function countExposed(area) {
+  const all = [...area.devices.flatMap(d => d.entities), ...area.entities]
+  return all.filter(e => exposeMap[e.entity_id] === true).length
+}
 
 const TOGGLEABLE = ['light','switch','input_boolean','fan','cover']
 function onToggle(entity) {
@@ -383,7 +391,11 @@ onMounted(async () => { await loadAreas(); await loadExposeStatus() })
 
 .slide-enter-active, .slide-leave-active { transition: all .2s ease; }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-4px); }
-.entity-row { display: flex; align-items: center; }
+.expose-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
 .expose-btn {
   flex-shrink: 0; padding: 4px 5px; border: none; background: transparent;
   color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0;
