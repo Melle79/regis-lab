@@ -263,30 +263,43 @@ async function sendMessage() {
   let text = inputText.value.trim()
   inputText.value = ''
 
-  // Datei-Inhalt anhängen
+  // Datei-Inhalt für KI vorbereiten (aber im Chat nur Dateiname anzeigen)
+  let fileAttachment = null
   if (uploadedFile.value?.content) {
     const ext = uploadedFile.value.name.split('.').pop()
-    text += `
-
-\`\`\`${ext}
-// Datei: ${uploadedFile.value.name}
-${uploadedFile.value.content}
-\`\`\``
+    fileAttachment = {
+      name: uploadedFile.value.name,
+      content: uploadedFile.value.content,
+      ext: ext,
+    }
     uploadedFile.value = null
   }
 
   streaming.value = true
   streamText.value = ''
 
-  // Optimistisch zur UI hinzufügen
-  activeChat.value.messages.push({ role: 'user', content: text })
+  // Im Chat nur Text + Dateiname anzeigen
+  const displayText = text + (fileAttachment ? `
+
+📎 ${fileAttachment.name}` : '')
+  activeChat.value.messages.push({ role: 'user', content: displayText })
+
+  // An KI schicken: Text + Dateiinhalt
+  const sendText = fileAttachment
+    ? `${text}
+
+\`\`\`${fileAttachment.ext}
+// Datei: ${fileAttachment.name}
+${fileAttachment.content}
+\`\`\``
+    : text
   await scrollToBottom()
 
   try {
     const r = await fetch(`api/jarvis/chats/${activeChatId.value}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: text, model: currentModel.value }),
+      body:    JSON.stringify({ message: sendText, model: currentModel.value }),
     })
 
     const reader  = r.body.getReader()
