@@ -106,7 +106,7 @@ class Module(BaseModule):
                 return jsonify({"error": "Chat nicht gefunden"}), 404
 
             # Nachricht hinzufügen
-            chat_data["messages"].append({"role": "user", "content": message})
+            chat_data["messages"].append({"role": "user", "content": display})
 
             # System-Prompt
             ha_control = self.config._settings.get("jarvis_ha_control", False)
