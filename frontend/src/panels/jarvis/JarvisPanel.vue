@@ -94,6 +94,15 @@
           </div>
 
           <div v-for="(msg, i) in activeChat.messages" :key="i" :class="['message', msg.role]">
+            <!-- System-Nachricht -->
+            <template v-if="msg.role === 'system'">
+              <div class="system-msg">
+                <MdiIcon icon="mdi:information-outline" :size="13" />
+                {{ msg.content }}
+                <button class="new-chat-inline" @click="createChat">Neuer Chat</button>
+              </div>
+            </template>
+            <template v-else>
             <div class="msg-avatar" :title="msg.role === 'assistant' ? (msg.ha_control ? 'HA-Steuerung aktiv' : 'HA-Steuerung inaktiv') : ''">
               <MdiIcon
                 :icon="msg.role === 'user' ? 'mdi:account' : 'mdi:robot'"
@@ -108,6 +117,7 @@
                 {{ msg.action }}
               </div>
             </div>
+            </template>
           </div>
 
           <!-- Streaming -->
@@ -334,12 +344,14 @@ async function loadModels() {
 }
 
 watch(haControl, (newVal, oldVal) => {
-  if (oldVal !== undefined && newVal !== oldVal && activeChatId.value) {
+  if (oldVal !== undefined && newVal !== oldVal && activeChatId.value && activeChat.value) {
     const msg = newVal
-      ? 'HA-Steuerung aktiviert. Für beste Ergebnisse empfehlen wir einen neuen Chat.'
-      : 'HA-Steuerung deaktiviert. Für beste Ergebnisse empfehlen wir einen neuen Chat.'
+      ? 'HA-Steuerung wurde aktiviert. Für beste Ergebnisse wird ein neuer Chat empfohlen.'
+      : 'HA-Steuerung wurde deaktiviert. Für beste Ergebnisse wird ein neuer Chat empfohlen.'
+    // Als System-Nachricht im Chat anzeigen
+    activeChat.value.messages.push({ role: 'system', content: msg })
     haControlChanged.value = msg
-    setTimeout(() => haControlChanged.value = '', 8000)
+    setTimeout(() => haControlChanged.value = '', 5000)
   }
 })
 
@@ -527,4 +539,17 @@ onMounted(async () => {
   margin-left: auto; padding: 2px; border: none; background: transparent;
   color: var(--amber); cursor: pointer;
 }
+.system-msg {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 6px 12px; border-radius: 8px; font-size: 11px;
+  background: color-mix(in srgb, var(--amber) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--amber) 25%, var(--border));
+  color: var(--amber);
+}
+.new-chat-inline {
+  margin-left: auto; padding: 2px 8px; border-radius: 5px;
+  border: 1px solid var(--amber); background: transparent;
+  color: var(--amber); cursor: pointer; font-size: 10px;
+}
+.new-chat-inline:hover { background: color-mix(in srgb, var(--amber) 15%, transparent); }
 </style>
