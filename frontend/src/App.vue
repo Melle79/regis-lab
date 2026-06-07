@@ -79,9 +79,7 @@ const mainTabs = computed(() => {
     .map(id => ALL_TABS.find(t => t.id === id))
     .filter(Boolean)
     .map(t => t.id === 'jarvis' ? { ...t, label: config.value.ki_name || 'Jarvis' } : t)
-}
-
-])
+})
 
 const headerSettings = computed(() => ({
   show_clock:     config.value.show_clock   !== false,
