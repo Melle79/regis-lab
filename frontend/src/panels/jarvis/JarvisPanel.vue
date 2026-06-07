@@ -158,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const chats          = ref([])
@@ -343,7 +343,21 @@ watch(haControl, (newVal, oldVal) => {
   }
 })
 
+// haControl alle 5 Sekunden aktualisieren
+let configTimer = null
+onUnmounted(() => clearInterval(configTimer))
+
 onMounted(async () => {
+  configTimer = setInterval(async () => {
+    try {
+      const r = await fetch('api/config')
+      const d = await r.json()
+      const newHaControl = d.jarvis_ha_control === true
+      if (newHaControl !== haControl.value) {
+        haControl.value = newHaControl
+      }
+    } catch(e) {}
+  }, 5000)
   try {
     const r = await fetch('api/config')
     const d = await r.json()
