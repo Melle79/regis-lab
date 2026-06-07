@@ -385,11 +385,15 @@ onMounted(loadAreas)
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-4px); }
 .entity-row { display: flex; align-items: center; }
 .expose-btn {
-  flex-shrink: 0; padding: 4px; border: none; background: transparent;
-  color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0.4;
+  flex-shrink: 0; padding: 4px 5px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0;
   transition: all .15s;
 }
-.entity-row:hover .expose-btn { opacity: 1; }
-.expose-btn.active  { color: var(--accent); opacity: 1; }
-.expose-btn.inactive { color: var(--muted); opacity: 0.6; }
+.entity-row:hover .expose-btn { opacity: 0.6; }
+.expose-btn.active {
+  color: var(--accent); opacity: 1 !important;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 5px;
+}
+.expose-btn.inactive { color: var(--muted); }
 </style>
