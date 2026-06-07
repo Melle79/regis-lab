@@ -761,23 +761,27 @@ onMounted(async () => {
 .code-download:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
 .code-block code { background: none; padding: 0; font-size: 11px; }
+/* Code-Block CSS ist im globalen Style-Block unten */
+</style>
+
+<style>
+/* Globale Styles für v-html Code-Blöcke */
 .code-block {
-  background: #1e1e2e; border: 1px solid var(--border); border-radius: 8px;
+  background: #1e1e2e !important; border: 1px solid #313244; border-radius: 8px;
   overflow: hidden; margin: 8px 0; text-align: left; width: 100%;
 }
 .code-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 12px; background: #2a2a3e; font-size: 11px;
+  padding: 6px 12px; background: #313244; font-size: 11px;
 }
-.code-lang { color: var(--accent); font-family: monospace; font-weight: 600; }
+.code-lang { color: #89b4fa; font-family: monospace; font-weight: 600; }
 .code-actions { display: flex; gap: 6px; }
 .code-copy-btn, .code-download-btn {
-  padding: 3px 10px; border-radius: 5px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 10px;
-  transition: all .15s;
+  padding: 3px 10px; border-radius: 5px; border: 1px solid #45475a;
+  background: #1e1e2e; color: #cdd6f4; cursor: pointer; font-size: 10px; transition: all .15s;
 }
-.code-copy-btn:hover { color: var(--text); border-color: var(--text); }
-.code-download-btn:hover { color: var(--accent); border-color: var(--accent); }
+.code-copy-btn:hover { border-color: #cdd6f4; }
+.code-download-btn:hover { color: #89b4fa; border-color: #89b4fa; }
 .code-block pre { margin: 0; padding: 12px; overflow-x: auto; }
-.code-block code { background: none; padding: 0; font-size: 12px; line-height: 1.6; color: #cdd6f4; white-space: pre; font-family: 'Courier New', monospace; }
+.code-block pre code { background: none !important; padding: 0 !important; font-size: 12px; line-height: 1.6; color: #cdd6f4; white-space: pre; font-family: 'Courier New', monospace; }
 </style>
