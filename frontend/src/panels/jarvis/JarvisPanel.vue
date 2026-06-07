@@ -22,8 +22,24 @@
         >
           <MdiIcon icon="mdi:chat-outline" :size="14" color="var(--muted)" />
           <div class="chat-item-info">
-            <div class="chat-item-title">{{ chat.title }}</div>
-            <div class="chat-item-meta">{{ chat.message_count }} Nachrichten</div>
+            <div class="chat-item-title" @dblclick.stop="startRenameChat(chat)">
+              <template v-if="renamingChatId === chat.id">
+                <input
+                  v-model="renameValue"
+                  class="rename-input"
+                  @blur="saveRename(chat)"
+                  @keydown.enter="saveRename(chat)"
+                  @keydown.escape="renamingChatId = null"
+                  @click.stop
+                  :ref="el => { if (el) el.focus() }"
+                />
+              </template>
+              <template v-else>{{ chat.title }}</template>
+            </div>
+            <div class="chat-item-meta">
+              {{ chat.message_count }} Nachrichten
+              <span v-if="chat.updated_at" class="chat-timestamp">· {{ formatChatDate(chat.updated_at) }}</span>
+            </div>
           </div>
           <button class="delete-chat-btn" @click.stop="deleteChat(chat.id)" title="Löschen">
             <MdiIcon icon="mdi:delete-outline" :size="13" />
@@ -216,7 +232,24 @@ const canSend = computed(() =>
 async function loadChatList() {
   const r = await fetch('api/jarvis/chats')
   const d = await r.json()
-  chats.value = d.chats || []
+  // Neueste zuerst
+  chats.value = (d.chats || []).sort((a, b) => {
+    const ta = a.updated_at || a.created_at || ''
+    const tb = b.updated_at || b.created_at || ''
+    return tb.localeCompare(ta)
+  })
+}
+
+function formatChatDate(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000) return 'Gerade eben'
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' Min.'
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' Std.'
+  if (diff < 604800000) return Math.floor(diff / 86400000) + ' Tage'
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
 }
 
 async function createChat() {
@@ -781,7 +814,7 @@ onMounted(async () => {
 .code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
 .code-block code { background: none; padding: 0; font-size: 11px; }
 /* Code-Block CSS ist im globalen Style-Block unten */
-.rename-input {
+.chat-timestamp { color: var(--muted); opacity: 0.7; font-size: 10px; }
   font-size: 12px; border: none; outline: none; background: var(--border);
   color: var(--text); width: 100%; border-radius: 3px; padding: 1px 4px;
 }
