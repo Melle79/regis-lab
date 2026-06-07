@@ -153,24 +153,27 @@ async function analyzeArea(area) {
   suggestedIds.value = new Set()
   selected.value = new Set()
 
-  // Alle Entitäten des Zimmers aufbauen
-  const entities = area.entities.map(e => ({
-    entity_id:      e.entity_id,
-    name:           e.friendly_name || e.entity_id,
-    domain:         e.entity_id.split('.')[0],
+  const CONTROLLABLE = ['light', 'switch', 'cover', 'climate', 'lock', 'fan', 'media_player', 'vacuum', 'input_boolean', 'script', 'scene']
+
+  // Alle Entitäten aufbauen — steuerbare und nicht-steuerbare getrennt
+  const allAreaEntities = area.entities.map(e => ({
+    entity_id:       e.entity_id,
+    name:            e.friendly_name || e.entity_id,
+    domain:          e.entity_id.split('.')[0],
     already_exposed: props.exposeMap[e.entity_id] === true,
-    reason:         '',
+    reason:          '',
   }))
+  const controllable = allAreaEntities.filter(e => CONTROLLABLE.includes(e.domain))
 
   try {
-    // KI-Vorschläge laden
+    // Nur steuerbare Entitäten an KI schicken
     const r = await fetch('api/voice/suggest', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
         model:     props.model,
         area_name: area.name,
-        entities:  entities.map(e => ({
+        entities:  controllable.map(e => ({
           entity_id: e.entity_id,
           name:      e.name,
           domain:    e.domain,
@@ -188,9 +191,9 @@ async function analyzeArea(area) {
       reasonMap[s.entity_id] = s.reason || ''
     }
 
-    // Alle Entitäten: KI-Vorschläge zuerst, dann Rest
-    const suggested = entities.filter(e => suggestedIds.value.has(e.entity_id)).map(e => ({ ...e, reason: reasonMap[e.entity_id] || '' }))
-    const rest      = entities.filter(e => !suggestedIds.value.has(e.entity_id))
+    // Nur steuerbare anzeigen: KI-Vorschläge zuerst, dann Rest
+    const suggested = controllable.filter(e => suggestedIds.value.has(e.entity_id)).map(e => ({ ...e, reason: reasonMap[e.entity_id] || '' }))
+    const rest      = controllable.filter(e => !suggestedIds.value.has(e.entity_id))
     allEntities.value = [...suggested, ...rest]
 
     // KI-Vorschläge vorauswählen
