@@ -409,7 +409,7 @@ function formatMessage(text) {
     const ext = (lang || 'txt').trim()
     const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const b64 = btoa(unescape(encodeURIComponent(code)))
-    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><div class="code-actions"><button class="code-copy-btn" onclick="navigator.clipboard.writeText(atob('${b64}'))">📋 Kopieren</button><button class="code-download-btn" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Download</button></div></div><pre><code>${escaped}</code></pre></div>`
+    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><div class="code-actions"><button class="code-copy-btn" onclick="(function(){var t=document.createElement('textarea');t.value=atob('${b64}');document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)})()">📋 Kopieren</button><button class="code-download-btn" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Download</button></div></div><pre><code>${escaped}</code></pre></div>`
     return key
   })
 
