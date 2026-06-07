@@ -1,5 +1,13 @@
 <template>
   <div class="geraete-panel">
+    <VoiceSuggestModal
+      v-if="showSuggestModal"
+      :ki-name="kiName"
+      :model="currentModel"
+      @close="showSuggestModal = false"
+      @applied="onSuggestApplied"
+    />
+    <div class="sub-tabs-row">
     <div class="sub-tabs">
       <button
         v-for="tab in subTabs"
@@ -10,6 +18,11 @@
         <MdiIcon :icon="tab.icon" :size="13" />
         {{ tab.label }}
       </button>
+    </div>
+    <button class="suggest-btn" @click="showSuggestModal = true" title="KI-Vorschläge für Sprachassistent">
+      <MdiIcon icon="mdi:robot" :size="14" />
+      KI-Vorschläge
+    </button>
     </div>
 
     <div class="sub-content">
@@ -22,14 +35,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 import BereicheView     from './BereicheView.vue'
 import AutomationenView from './AutomationenView.vue'
 import HelferView       from './HelferView.vue'
 import AlleEntitiesView from './AlleEntitiesView.vue'
+import VoiceSuggestModal from './VoiceSuggestModal.vue'
 
-const activeSubTab = ref('bereiche')
+const activeSubTab    = ref('bereiche')
+const showSuggestModal = ref(false)
+const kiName           = ref('KI')
+const currentModel     = ref('')
+
+onMounted(async () => {
+  try {
+    const r = await fetch('api/config')
+    const d = await r.json()
+    kiName.value       = d.ki_name || 'KI'
+    currentModel.value = d.jarvis_model || ''
+  } catch(e) {}
+})
+
+function onSuggestApplied(count) {
+  // Bereiche neu laden nach Anwenden
+}
 
 const subTabs = [
   { id: 'bereiche',     label: 'Bereiche',     icon: 'mdi:home-floor-1' },
@@ -51,4 +81,15 @@ const subTabs = [
 .sub-tab:hover { color: var(--text); border-color: var(--accent); }
 .sub-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sub-content { flex: 1; }
+.sub-tabs-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 4px;
+}
+.suggest-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 11px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.suggest-btn:hover { color: var(--accent); border-color: var(--accent); }
 </style>

@@ -51,7 +51,132 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+        @self.app.route("/api/voice/suggest", methods=["POST"])
+        def suggest_expose():
+            """Jarvis schlägt Entitäten für den Sprachassistenten vor."""
+            import requests as _req
+            data       = request.get_json() or {}
+            model      = data.get("model") or self.config._settings.get("jarvis_model", "")
+            ollama_url = self.config.jarvis_ollama_url.rstrip("/")
+
+            if not ollama_url or not model:
+                return jsonify({"error": "Ollama nicht konfiguriert"}), 400
+
+            # Alle Entitäten mit Bereich-Info laden
+            try:
+                areas_data = self._get_areas_with_entities()
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+            # Expose-Status laden
+            try:
+                exposed_entities = set()
+                registry = self._ws_call({"type": "config/entity_registry/list"})
+                for e in (registry or []):
+                    opts = e.get("options", {})
+                    if opts.get("conversation", {}).get("should_expose"):
+                        exposed_entities.add(e["entity_id"])
+            except Exception:
+                exposed_entities = set()
+
+            # Prompt für Jarvis
+            areas_summary = []
+            for area in areas_data:
+                entities = [f"  - {e['entity_id']} ({e.get('domain','')}: {e.get('name', e['entity_id'])})"
+                           for e in area.get("entities", [])]
+                if entities:
+                    areas_summary.append(f"Zimmer: {area['name']}
+" + "
+".join(entities))
+
+            prompt = (
+                "Du bist ein Smart Home Experte. Analysiere diese Home Assistant Entitäten "
+                "und wähle die sinnvollsten für den Sprachassistenten aus.
+
+"
+                "Regeln:
+"
+                "- Wähle Entitäten die man per Sprache steuern möchte (Lichter, Schalter, Rollos, Heizung)
+"
+                "- Keine Diagnose-Sensoren (Spannung, RSSI, etc.)
+"
+                "- Keine internen HA-Entitäten
+"
+                "- Max 3-5 Entitäten pro Zimmer
+
+"
+                "Antworte NUR mit einem JSON-Array, keine Erklärung:
+"
+                '[{"area": "Wohnzimmer", "entity_id": "light.wohnzimmer", "name": "Wohnzimmer Licht", "reason": "Hauptlicht"}]
+
+'
+                "Entitäten:
+" + "
+
+".join(areas_summary[:20])
+            )
+
+            try:
+                r = _req.post(
+                    f"{ollama_url}/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False},
+                    timeout=60,
+                )
+                if r.status_code != 200:
+                    return jsonify({"error": "Ollama Fehler"}), 500
+
+                response_text = r.json().get("response", "")
+                # JSON aus Antwort extrahieren
+                import re, json as _json
+                match = re.search(r'\[[\s\S]*\]', response_text)
+                if not match:
+                    return jsonify({"error": "KI hat kein gültiges JSON zurückgegeben", "raw": response_text[:200]}), 500
+
+                suggestions = _json.loads(match.group())
+                # Expose-Status hinzufügen
+                for s in suggestions:
+                    s["already_exposed"] = s["entity_id"] in exposed_entities
+
+                return jsonify({"suggestions": suggestions})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
         self.log.info("Voice-Expose-Modul registriert")
+
+    def _get_areas_with_entities(self) -> list:
+        """Lädt Bereiche mit Entitäten aus dem Backend."""
+        import requests as _req
+        token = self.config.ha_long_token
+        states_r = _req.get(
+            "http://homeassistant.local.hass.io:8123/api/states",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        states = {s["entity_id"]: s for s in states_r.json()}
+
+        areas_r = _req.get(
+            "http://homeassistant.local.hass.io:8123/api/template",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"template": "{{ area_entities('') | tojson }}"},
+            timeout=10,
+        )
+
+        # Einfacher: direkt die Regis-Lab areas API nutzen
+        areas_api = _req.get("http://127.0.0.1:8099/api/areas", timeout=10)
+        data = areas_api.json()
+        result = []
+        for area in data.get("areas", []):
+            entities = []
+            for device in area.get("devices", []):
+                for e in device.get("entities", []):
+                    entities.append({
+                        "entity_id": e["entity_id"],
+                        "name":      e.get("friendly_name", e["entity_id"]),
+                        "domain":    e["entity_id"].split(".")[0],
+                    })
+            if entities:
+                result.append({"name": area["name"], "entities": entities})
+        return result
 
     def _ws_call(self, msg: dict) -> any:
         """Synchroner WebSocket-Call an HA."""
