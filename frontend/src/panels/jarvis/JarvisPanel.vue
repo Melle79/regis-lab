@@ -1,161 +1,245 @@
 <template>
-  <div class="jarvis-panel">
+  <div class="jarvis-layout">
 
-    <!-- Header -->
-    <div class="jarvis-header">
-      <div class="jarvis-title">
-        <MdiIcon icon="mdi:robot" :size="22" color="var(--accent)" />
-        <span>{{ kiName }}</span>
-        <span class="model-badge" v-if="currentModel">{{ currentModel }}</span>
-      </div>
-      <div class="jarvis-controls">
-        <button class="ctrl-btn" @click="clearChat" title="Chat leeren">
-          <MdiIcon icon="mdi:delete-outline" :size="16" />
+    <!-- Seitenleiste: Chat-Liste -->
+    <div class="chat-sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" @click="createChat" title="Neuer Chat">
+          <MdiIcon icon="mdi:plus" :size="16" />
+          <span v-if="!sidebarCollapsed">Neuer Chat</span>
         </button>
-        <button class="ctrl-btn" @click="showConfig = !showConfig" title="Einstellungen">
-          <MdiIcon icon="mdi:tune" :size="16" />
+        <button class="collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed">
+          <MdiIcon :icon="sidebarCollapsed ? 'mdi:chevron-right' : 'mdi:chevron-left'" :size="16" />
         </button>
       </div>
-    </div>
 
-    <!-- Inline Config -->
-    <div v-if="showConfig" class="jarvis-config">
-      <div class="config-row">
-        <label>Modell</label>
-        <select v-model="currentModel" class="config-select" @change="saveModel">
-          <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
-        </select>
-        <button class="config-btn" @click="loadModels">
-          <MdiIcon icon="mdi:refresh" :size="14" />
-        </button>
-      </div>
-      <div v-if="modelsError" class="config-error">{{ modelsError }}</div>
-    </div>
-
-    <!-- Messages -->
-    <div class="jarvis-messages" ref="messagesEl">
-      <div v-if="messages.length === 0" class="jarvis-empty">
-        <MdiIcon icon="mdi:robot-outline" :size="48" color="var(--muted)" />
-        <p>Hallo! Ich bin {{ kiName }}, dein Smart Home Assistent.<br>Frag mich alles über dein Zuhause.</p>
-      </div>
-
-      <div
-        v-for="(msg, i) in messages"
-        :key="i"
-        :class="['message', msg.role]"
-      >
-        <div class="message-icon">
-          <MdiIcon
-            :icon="msg.role === 'user' ? 'mdi:account' : 'mdi:robot'"
-            :size="16"
-            :color="msg.role === 'user' ? 'var(--muted)' : 'var(--accent)'"
-          />
-        </div>
-        <div class="message-content">
-          <div class="message-text" v-html="formatMessage(msg.content)"></div>
-          <div v-if="msg.action" class="message-action">
-            <MdiIcon icon="mdi:flash" :size="12" color="var(--amber)" />
-            {{ msg.action }}
+      <div class="chat-list" v-if="!sidebarCollapsed">
+        <div
+          v-for="chat in chats"
+          :key="chat.id"
+          :class="['chat-item', { active: activeChatId === chat.id }]"
+          @click="loadChat(chat.id)"
+        >
+          <MdiIcon icon="mdi:chat-outline" :size="14" color="var(--muted)" />
+          <div class="chat-item-info">
+            <div class="chat-item-title">{{ chat.title }}</div>
+            <div class="chat-item-meta">{{ chat.message_count }} Nachrichten</div>
           </div>
+          <button class="delete-chat-btn" @click.stop="deleteChat(chat.id)" title="Löschen">
+            <MdiIcon icon="mdi:delete-outline" :size="13" />
+          </button>
         </div>
-      </div>
-
-      <!-- Streaming -->
-      <div v-if="streaming" class="message assistant">
-        <div class="message-icon">
-          <MdiIcon icon="mdi:robot" :size="16" color="var(--accent)" />
-        </div>
-        <div class="message-content">
-          <div class="message-text" v-html="formatMessage(streamingText)"></div>
-          <span class="cursor">▋</span>
-        </div>
+        <div v-if="chats.length === 0" class="no-chats">Noch keine Chats</div>
       </div>
     </div>
 
-    <!-- Input -->
-    <div class="jarvis-input-row">
-      <textarea
-        v-model="inputText"
-        class="jarvis-input"
-        :placeholder="`Frag ${kiName}… (Enter zum Senden, Shift+Enter für neue Zeile)`"
-        rows="1"
-        @keydown.enter.exact.prevent="sendMessage"
-        @input="autoResize"
-        ref="inputEl"
-        :disabled="streaming"
-      />
-      <button
-        class="send-btn"
-        @click="sendMessage"
-        :disabled="!inputText.trim() || streaming"
-      >
-        <MdiIcon :icon="streaming ? 'mdi:stop' : 'mdi:send'" :size="18" />
-      </button>
-    </div>
+    <!-- Haupt-Chat-Bereich -->
+    <div class="chat-main">
 
+      <!-- Header -->
+      <div class="chat-header">
+        <div class="chat-title-row">
+          <MdiIcon icon="mdi:robot" :size="18" color="var(--accent)" />
+          <span class="chat-title" v-if="activeChat">
+            <input
+              v-if="editingTitle"
+              v-model="editTitle"
+              class="title-input"
+              @blur="saveTitle"
+              @keydown.enter="saveTitle"
+              @keydown.escape="editingTitle = false"
+              ref="titleInput"
+              autofocus
+            />
+            <span v-else @dblclick="startEditTitle">{{ activeChat.title }}</span>
+          </span>
+          <span v-else class="chat-title muted">{{ kiName }}</span>
+        </div>
+        <div class="chat-header-right">
+          <select v-model="currentModel" class="model-select" @change="saveModel">
+            <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
+            <option v-if="!models.length" value="">Kein Modell</option>
+          </select>
+          <span class="ha-control-badge" :class="haControl ? 'active' : 'inactive'">
+            <MdiIcon :icon="haControl ? 'mdi:home' : 'mdi:home-off'" :size="13" />
+            {{ haControl ? 'HA aktiv' : 'HA aus' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Nachrichten -->
+      <div class="messages-area" ref="messagesEl">
+        <div v-if="!activeChat" class="empty-state">
+          <MdiIcon icon="mdi:robot-outline" :size="52" color="var(--muted)" />
+          <p>Wähle einen Chat oder erstelle einen neuen.</p>
+          <button class="start-btn" @click="createChat">
+            <MdiIcon icon="mdi:plus" :size="16" /> Neuer Chat
+          </button>
+        </div>
+
+        <template v-else>
+          <div v-if="activeChat.messages.length === 0" class="empty-state">
+            <MdiIcon icon="mdi:chat-outline" :size="52" color="var(--muted)" />
+            <p>Hallo! Ich bin {{ kiName }}.<br>Wie kann ich dir helfen?</p>
+          </div>
+
+          <div v-for="(msg, i) in activeChat.messages" :key="i" :class="['message', msg.role]">
+            <div class="msg-avatar">
+              <MdiIcon
+                :icon="msg.role === 'user' ? 'mdi:account' : 'mdi:robot'"
+                :size="15"
+                :color="msg.role === 'user' ? 'var(--muted)' : 'var(--accent)'"
+              />
+            </div>
+            <div class="msg-content">
+              <div class="msg-text" v-html="formatMessage(msg.content)" />
+              <div v-if="msg.action" class="msg-action">
+                <MdiIcon icon="mdi:flash" :size="11" color="var(--amber)" />
+                {{ msg.action }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Streaming -->
+          <div v-if="streaming" class="message assistant">
+            <div class="msg-avatar">
+              <MdiIcon icon="mdi:robot" :size="15" color="var(--accent)" />
+            </div>
+            <div class="msg-content">
+              <div class="msg-text" v-html="formatMessage(streamText)" />
+              <span class="cursor">▋</span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Upload-Vorschau -->
+      <div v-if="uploadedFile" class="upload-preview">
+        <MdiIcon icon="mdi:file" :size="14" color="var(--accent)" />
+        <span>{{ uploadedFile.name }}</span>
+        <button @click="uploadedFile = null">
+          <MdiIcon icon="mdi:close" :size="13" />
+        </button>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area" v-if="activeChat">
+        <label class="upload-btn" title="Datei hochladen">
+          <input type="file" style="display:none" @change="onFileUpload" accept="image/*,.pdf,.txt,.md" />
+          <MdiIcon icon="mdi:paperclip" :size="18" />
+        </label>
+        <textarea
+          v-model="inputText"
+          class="msg-input"
+          :placeholder="`Nachricht an ${kiName}… (Enter senden, Shift+Enter neue Zeile)`"
+          rows="1"
+          @keydown.enter.exact.prevent="sendMessage"
+          @input="autoResize"
+          ref="inputEl"
+          :disabled="streaming || !activeChat"
+        />
+        <button class="send-btn" @click="sendMessage" :disabled="!canSend">
+          <MdiIcon :icon="streaming ? 'mdi:stop-circle' : 'mdi:send'" :size="18" />
+        </button>
+      </div>
+
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
-import { useDashboardStore } from '../../store/dashboard.js'
 
-const { callService } = useDashboardStore()
+const chats          = ref([])
+const activeChatId   = ref(null)
+const activeChat     = ref(null)
+const models         = ref([])
+const currentModel   = ref('')
+const kiName         = ref('Assistent')
+const haControl      = ref(false)
+const inputText      = ref('')
+const streaming      = ref(false)
+const streamText     = ref('')
+const uploadedFile   = ref(null)
+const sidebarCollapsed = ref(false)
+const editingTitle   = ref(false)
+const editTitle      = ref('')
+const messagesEl     = ref(null)
+const inputEl        = ref(null)
+const titleInput     = ref(null)
 
-const messages     = ref([])
-const inputText    = ref('')
-const streaming    = ref(false)
-const streamingText = ref('')
-const showConfig   = ref(false)
-const models       = ref([])
-const currentModel = ref('')
-const modelsError  = ref('')
-const messagesEl   = ref(null)
-const inputEl      = ref(null)
-const kiName       = ref('Jarvis')
-const haControl    = ref(false)
+const canSend = computed(() =>
+  inputText.value.trim() && !streaming.value && activeChatId.value && currentModel.value
+)
 
-async function loadModels() {
-  modelsError.value = ''
-  try {
-    const r = await fetch('api/jarvis/models')
-    const d = await r.json()
-    if (d.models) {
-      models.value = d.models
-      if (!currentModel.value && d.models.length > 0) {
-        currentModel.value = d.models[0]
-      }
-    } else {
-      modelsError.value = d.error || 'Fehler'
-    }
-  } catch(e) {
-    modelsError.value = `Nicht erreichbar: ${e.message}`
+// ── Chat-Verwaltung ──────────────────────────────────────────────
+
+async function loadChatList() {
+  const r = await fetch('api/jarvis/chats')
+  const d = await r.json()
+  chats.value = d.chats || []
+}
+
+async function createChat() {
+  const r = await fetch('api/jarvis/chats', { method: 'POST' })
+  const d = await r.json()
+  await loadChatList()
+  await loadChat(d.id)
+}
+
+async function loadChat(id) {
+  activeChatId.value = id
+  const r = await fetch(`api/jarvis/chats/${id}`)
+  activeChat.value = await r.json()
+  await scrollToBottom()
+}
+
+async function deleteChat(id) {
+  await fetch(`api/jarvis/chats/${id}`, { method: 'DELETE' })
+  if (activeChatId.value === id) {
+    activeChatId.value = null
+    activeChat.value   = null
   }
+  await loadChatList()
 }
 
-function saveModel() {
-  localStorage?.setItem?.('jarvis_model', currentModel.value)
+function startEditTitle() {
+  editTitle.value   = activeChat.value.title
+  editingTitle.value = true
+  nextTick(() => titleInput.value?.focus())
 }
+
+async function saveTitle() {
+  if (!activeChatId.value) return
+  await fetch(`api/jarvis/chats/${activeChatId.value}`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ title: editTitle.value }),
+  })
+  activeChat.value.title = editTitle.value
+  editingTitle.value = false
+  await loadChatList()
+}
+
+// ── Senden ──────────────────────────────────────────────────────
 
 async function sendMessage() {
+  if (!canSend.value) return
   const text = inputText.value.trim()
-  if (!text || streaming.value) return
-
-  messages.value.push({ role: 'user', content: text })
   inputText.value = ''
-  streaming.value  = true
-  streamingText.value = ''
+  streaming.value = true
+  streamText.value = ''
+
+  // Optimistisch zur UI hinzufügen
+  activeChat.value.messages.push({ role: 'user', content: text })
   await scrollToBottom()
 
   try {
-    const r = await fetch('api/jarvis/chat', {
+    const r = await fetch(`api/jarvis/chats/${activeChatId.value}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        messages: messages.value.map(m => ({ role: m.role, content: m.content })),
-        model:    currentModel.value,
-      }),
+      body:    JSON.stringify({ message: text, model: currentModel.value }),
     })
 
     const reader  = r.body.getReader()
@@ -165,204 +249,229 @@ async function sendMessage() {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-
       const lines = decoder.decode(value).split('\n').filter(Boolean)
       for (const line of lines) {
         try {
-          const data = JSON.parse(line)
-          if (data.error) {
-            streamingText.value = `Fehler: ${data.error}`
-            break
-          }
-          const chunk = data.message?.content || ''
-          fullText += chunk
-          streamingText.value = fullText
+          const data  = JSON.parse(line)
+          if (data.error) { streamText.value = `Fehler: ${data.error}`; break }
+          fullText += data.message?.content || ''
+          streamText.value = fullText
           await scrollToBottom()
         } catch(e) {}
       }
     }
 
-    // Action nur ausführen wenn HA-Steuerung erlaubt
-    const actionMatch = fullText.match(/\{"action":\s*(\{[^}]+\})\}/)
-    let actionText = null
-    if (actionMatch && haControl.value) {
-      try {
-        const action = JSON.parse(actionMatch[1])
-        await fetch('api/jarvis/action', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(action),
-        })
-        actionText = `${action.domain}.${action.service}(${action.entity_id || ''})`
-      } catch(e) {}
-    } else if (actionMatch && !haControl.value) {
-      actionText = null  // Aktion ignoriert — HA-Steuerung deaktiviert
-    }
-
-    messages.value.push({
-      role:    'assistant',
-      content: fullText,
-      action:  actionText,
-    })
+    // Antwort zur Chat-History hinzufügen
+    activeChat.value.messages.push({ role: 'assistant', content: fullText })
+    // Chat-Liste aktualisieren (Titel könnte sich geändert haben)
+    await loadChatList()
 
   } catch(e) {
-    messages.value.push({
-      role:    'assistant',
-      content: `Fehler: ${e.message}`,
-    })
+    activeChat.value.messages.push({ role: 'assistant', content: `Fehler: ${e.message}` })
   } finally {
-    streaming.value     = false
-    streamingText.value = ''
+    streaming.value  = false
+    streamText.value = ''
     await scrollToBottom()
   }
 }
 
-function clearChat() {
-  messages.value = []
+// ── Hilfsfunktionen ─────────────────────────────────────────────
+
+function onFileUpload(e) {
+  uploadedFile.value = e.target.files[0] || null
+}
+
+function saveModel() {
+  localStorage?.setItem?.('jarvis_model', currentModel.value)
 }
 
 function formatMessage(text) {
   if (!text) return ''
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
 }
 
 function autoResize(e) {
   const el = e.target
   el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
 
 async function scrollToBottom() {
   await nextTick()
-  if (messagesEl.value) {
+  if (messagesEl.value)
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
-  }
+}
+
+async function loadModels() {
+  try {
+    const r = await fetch('api/jarvis/models')
+    const d = await r.json()
+    if (d.models) {
+      models.value = d.models
+      const saved = localStorage?.getItem?.('jarvis_model')
+      currentModel.value = saved && d.models.includes(saved)
+        ? saved
+        : (d.models[0] || '')
+    }
+  } catch(e) {}
 }
 
 onMounted(async () => {
-  loadModels()
-  const saved = localStorage?.getItem?.('jarvis_model')
-  if (saved) currentModel.value = saved
   try {
     const r = await fetch('api/config')
     const d = await r.json()
-    if (d.ki_name) kiName.value = d.ki_name
-    if (d.jarvis_model && !saved) currentModel.value = d.jarvis_model
+    kiName.value    = d.ki_name || 'Assistent'
     haControl.value = d.jarvis_ha_control === true
   } catch(e) {}
+  await loadModels()
+  await loadChatList()
+  // Letzten Chat laden
+  if (chats.value.length > 0)
+    await loadChat(chats.value[0].id)
 })
 </script>
 
 <style scoped>
-.jarvis-panel {
-  display: flex; flex-direction: column; height: calc(100vh - 140px);
-  min-height: 400px;
+.jarvis-layout {
+  display: flex; height: calc(100vh - 120px); gap: 0; overflow: hidden;
+  background: var(--bg); border-radius: 12px; border: 1px solid var(--border);
 }
 
-.jarvis-header {
+/* Sidebar */
+.chat-sidebar {
+  width: 240px; flex-shrink: 0; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; transition: width .2s; overflow: hidden;
+  background: var(--surface);
+}
+.chat-sidebar.collapsed { width: 48px; }
+
+.sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 0;
+  padding: 10px 8px; border-bottom: 1px solid var(--border); gap: 6px; flex-shrink: 0;
 }
-.jarvis-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 16px; font-weight: 600;
+.new-chat-btn {
+  display: flex; align-items: center; gap: 6px; flex: 1;
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); cursor: pointer; font-size: 12px;
+  white-space: nowrap; overflow: hidden;
 }
-.model-badge {
-  font-size: 11px; padding: 2px 8px; border-radius: 10px;
-  background: color-mix(in srgb, var(--accent) 15%, var(--border));
-  color: var(--accent); font-weight: 400;
+.new-chat-btn:hover { border-color: var(--accent); color: var(--accent); }
+.collapse-btn {
+  padding: 6px; border-radius: 6px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; flex-shrink: 0;
 }
-.jarvis-controls { display: flex; gap: 6px; }
-.ctrl-btn {
-  padding: 6px; border-radius: 6px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); cursor: pointer;
-}
-.ctrl-btn:hover { color: var(--text); border-color: var(--accent); }
+.collapse-btn:hover { color: var(--text); }
 
-.jarvis-config {
-  padding: 12px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px;
+.chat-list { overflow-y: auto; flex: 1; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.chat-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-radius: 8px; cursor: pointer; transition: background .15s; position: relative;
 }
-.config-row { display: flex; align-items: center; gap: 8px; }
-.config-row label { font-size: 12px; color: var(--muted); min-width: 60px; }
-.config-select {
-  flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text); font-size: 13px;
+.chat-item:hover { background: var(--border); }
+.chat-item.active { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.chat-item-info { flex: 1; overflow: hidden; }
+.chat-item-title { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-item-meta  { font-size: 10px; color: var(--muted); }
+.delete-chat-btn {
+  opacity: 0; padding: 3px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; border-radius: 4px; flex-shrink: 0;
 }
-.config-btn {
-  padding: 6px; border-radius: 6px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); cursor: pointer;
-}
-.config-btn:hover { color: var(--accent); }
-.config-error { font-size: 12px; color: var(--red); }
+.chat-item:hover .delete-chat-btn { opacity: 1; }
+.delete-chat-btn:hover { color: var(--red); }
+.no-chats { font-size: 12px; color: var(--muted); text-align: center; padding: 20px; }
 
-.jarvis-messages {
-  flex: 1; overflow-y: auto; padding: 12px 0;
-  display: flex; flex-direction: column; gap: 12px;
+/* Main */
+.chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  background: var(--surface);
+}
+.chat-title-row { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.title-input {
+  font-size: 14px; font-weight: 600; border: none; outline: none;
+  background: transparent; color: var(--text); width: 200px;
+}
+.chat-title.muted { color: var(--muted); font-weight: 400; }
+.chat-header-right { display: flex; align-items: center; gap: 8px; }
+.model-select {
+  font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); max-width: 160px;
+}
+.ha-control-badge {
+  display: flex; align-items: center; gap: 4px; font-size: 10px; padding: 3px 8px;
+  border-radius: 10px; font-weight: 500;
+}
+.ha-control-badge.active  { background: color-mix(in srgb, var(--green) 15%, var(--surface)); color: var(--green); }
+.ha-control-badge.inactive { background: var(--border); color: var(--muted); }
+
+.messages-area {
+  flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
 }
 
-.jarvis-empty {
+.empty-state {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 12px; color: var(--muted); text-align: center;
-  font-size: 14px; line-height: 1.6;
+  justify-content: center; gap: 12px; color: var(--muted); text-align: center; font-size: 14px;
 }
+.start-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); cursor: pointer; font-size: 13px;
+}
+.start-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-.message {
-  display: flex; gap: 10px; align-items: flex-start;
-}
+.message { display: flex; gap: 10px; align-items: flex-start; }
 .message.user { flex-direction: row-reverse; }
-.message-icon {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--border);
+.msg-avatar {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; background: var(--border);
 }
-.message-content { max-width: 80%; display: flex; flex-direction: column; gap: 4px; }
-.message.user .message-content { align-items: flex-end; }
-
-.message-text {
-  padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6;
+.msg-content { max-width: 78%; }
+.message.user .msg-content { align-items: flex-end; display: flex; flex-direction: column; }
+.msg-text {
+  padding: 9px 13px; border-radius: 12px; font-size: 13px; line-height: 1.6;
   background: var(--surface); border: 1px solid var(--border);
 }
-.message.user .message-text {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
-  border-color: var(--accent);
+.message.user .msg-text {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
-.message-text code {
-  background: var(--border); padding: 1px 4px; border-radius: 3px; font-size: 12px;
-}
+.msg-text code { background: var(--border); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.msg-action { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--amber); margin-top: 4px; }
+.cursor { animation: blink 1s infinite; color: var(--accent); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-.message-action {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 11px; color: var(--amber); padding: 0 4px;
+.upload-preview {
+  display: flex; align-items: center; gap: 8px; padding: 6px 16px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 12px; color: var(--text);
 }
+.upload-preview button { border: none; background: transparent; color: var(--muted); cursor: pointer; }
 
-.cursor { animation: blink 1s infinite; font-size: 14px; color: var(--accent); }
-@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-.jarvis-input-row {
-  display: flex; gap: 8px; align-items: flex-end;
-  padding-top: 12px; border-top: 1px solid var(--border);
+.input-area {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface);
 }
-.jarvis-input {
-  flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); font-size: 13px;
-  resize: none; outline: none; line-height: 1.5; font-family: inherit;
-  transition: border-color .15s;
+.upload-btn {
+  padding: 8px; color: var(--muted); cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--border); display: flex; align-items: center;
 }
-.jarvis-input:focus { border-color: var(--accent); }
-.jarvis-input:disabled { opacity: .5; }
-
+.upload-btn:hover { color: var(--accent); border-color: var(--accent); }
+.msg-input {
+  flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13px; resize: none;
+  outline: none; line-height: 1.5; font-family: inherit;
+}
+.msg-input:focus { border-color: var(--accent); }
 .send-btn {
-  width: 40px; height: 40px; border-radius: 10px; border: none;
+  width: 38px; height: 38px; border-radius: 10px; border: none;
   background: var(--accent); color: #fff; cursor: pointer; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  transition: opacity .15s;
 }
 .send-btn:disabled { opacity: .4; cursor: default; }
 .send-btn:hover:not(:disabled) { opacity: .85; }
