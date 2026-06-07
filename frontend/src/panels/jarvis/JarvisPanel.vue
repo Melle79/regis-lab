@@ -114,6 +114,10 @@
                 <MdiIcon icon="mdi:flash" :size="11" color="var(--amber)" />
                 {{ msg.action }}
               </div>
+              <div class="msg-meta">
+                <span v-if="msg.timestamp">{{ formatTime(msg.timestamp) }}</span>
+                <span v-if="msg.model" class="msg-model">{{ msg.model }}</span>
+              </div>
               <div class="msg-actions">
                 <button class="msg-action-btn" @click="copyMessage(msg.content)" title="Kopieren">
                   <MdiIcon icon="mdi:content-copy" :size="12" />
@@ -418,6 +422,12 @@ function formatMessage(text) {
   return text
 }
 
+function formatTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+}
+
 function autoResize(e) {
   const el = e.target
   el.style.height = 'auto'
@@ -712,4 +722,14 @@ onMounted(async () => {
   transition: background .15s;
 }
 .file-attachment:hover { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.msg-meta {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 10px; color: var(--muted); margin-top: 3px;
+  padding: 0 2px;
+}
+.message.user .msg-meta { justify-content: flex-end; }
+.msg-model {
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--border); font-size: 9px;
+}
 </style>

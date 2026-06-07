@@ -106,7 +106,7 @@ class Module(BaseModule):
                 return jsonify({"error": "Chat nicht gefunden"}), 404
 
             # Nachricht hinzufügen
-            chat_data["messages"].append({"role": "user", "content": display})
+            chat_data["messages"].append({"role": "user", "content": display, "timestamp": datetime.now().isoformat(), "model": model})
 
             # System-Prompt
             ha_control = self.config._settings.get("jarvis_ha_control", False)
@@ -144,7 +144,7 @@ class Module(BaseModule):
                     return
 
                 # Antwort speichern mit ha_control Status
-                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control})
+                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch setzen (erste Nachricht)
