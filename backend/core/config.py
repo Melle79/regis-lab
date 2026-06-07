@@ -23,7 +23,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_ollama_url":    "",
     "jarvis_system_prompt": "",
     "jarvis_ha_control":   False,
-    "tab_order":           ["geraete", "personen", "zonen", "jarvis"],
+    "tab_order":           ["geraete", "personen", "zonen", "jarvis", "analyse"],
 }
 
 
@@ -114,7 +114,7 @@ class AddonConfig:
 
     @property
     def enabled_modules(self) -> list:
-        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose"]
+        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose", "analyse"]
 
     def frontend_config(self) -> dict:
         return {

@@ -17,6 +17,7 @@
       <PersonenPanel  v-else-if="activeTab === 'personen'" />
       <ZonenPanel     v-else-if="activeTab === 'zonen'" />
       <JarvisPanel    v-else-if="activeTab === 'jarvis'" />
+      <AnalysePanel   v-else-if="activeTab === 'analyse'" />
     </main>
 
     <!-- Settings Modal -->
@@ -35,6 +36,7 @@ import GeraetePanel from './panels/geraete/GeraetePanel.vue'
 import PersonenPanel from './panels/personen/PersonenPanel.vue'
 import ZonenPanel   from './panels/zonen/ZonenPanel.vue'
 import JarvisPanel  from './panels/jarvis/JarvisPanel.vue'
+import AnalysePanel from './panels/analyse/AnalysePanel.vue'
 import SettingsModal from './panels/settings/SettingsModal.vue'
 
 const store        = useDashboardStore()
@@ -48,6 +50,7 @@ const ALL_TABS = [
   { id: 'personen', label: 'Personen', icon: 'mdi:account-group' },
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
   { id: 'jarvis',   label: 'Jarvis',  icon: 'mdi:robot' },
+  { id: 'analyse',  label: 'Analyse', icon: 'mdi:chart-line' },
 ]
 
 // Tab-Reihenfolge aus Backend laden
