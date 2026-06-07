@@ -408,8 +408,8 @@ function formatMessage(text) {
     const key = `CODEBLOCK${idx++}CODEBLOCK`
     const ext = (lang || 'txt').trim()
     const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    const b64 = btoa(unescape(encodeURIComponent(code)))
-    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><div class="code-actions"><button class="code-copy-btn" onclick="(function(){var t=document.createElement('textarea');t.value=atob('${b64}');document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)})()">📋 Kopieren</button><button class="code-download-btn" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Download</button></div></div><pre><code>${escaped}</code></pre></div>`
+    const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(code)))
+    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><div class="code-actions"><button class="code-copy-btn" onclick="(function(btn){var bytes=atob('${b64}');var arr=new Uint8Array(bytes.length);for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);var t=document.createElement('textarea');t.value=new TextDecoder().decode(arr);document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);var orig=btn.textContent;btn.textContent='✓ Kopiert!';setTimeout(function(){btn.textContent=orig},2000)})(this)">📋 Kopieren</button><button class="code-download-btn" onclick="(function(){var bytes=atob('${b64}');var arr=new Uint8Array(bytes.length);for(var i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);var blob=new Blob([arr],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='download.${ext}';a.click()})()">⬇ Download</button></div></div><pre><code>${escaped}</code></pre></div>`
     return key
   })
 
