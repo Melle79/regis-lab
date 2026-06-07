@@ -65,15 +65,15 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+            # exposed_entities: aus dem expose endpoint laden
+            exposed_entities = set()
             try:
-                exposed_entities = set()
-                registry = self._ws_call({"type": "config/entity_registry/list"})
-                for e in (registry or []):
-                    opts = e.get("options", {})
-                    if opts.get("conversation", {}).get("should_expose"):
+                expose_r = requests.get("http://127.0.0.1:8099/api/voice/expose", timeout=5)
+                for e in expose_r.json().get("entities", []):
+                    if e.get("exposed"):
                         exposed_entities.add(e["entity_id"])
             except Exception:
-                exposed_entities = set()
+                pass
 
             areas_summary = []
             for area in areas_data:
