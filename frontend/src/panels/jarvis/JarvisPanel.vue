@@ -396,11 +396,26 @@ function saveModel() {
 
 function formatMessage(text) {
   if (!text) return ''
-  return text
+  // Attachments VOR dem Escaping extrahieren
+  const attachments = {}
+  let idx = 0
+  text = text.replace(/📎 ([^\n]+)/g, (_, filename) => {
+    const key = `ATTACH${idx++}ATTACH`
+    const fn = filename.trim()
+    attachments[key] = `<span class="file-attachment" data-filename="${fn}" title="Datei herunterladen">📎 ${fn}</span>`
+    return key
+  })
+  // HTML escapen und formatieren
+  text = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
+  // Attachments zurückeinsetzen
+  for (const [key, html] of Object.entries(attachments)) {
+    text = text.replace(key, html)
+  }
+  return text
 }
 
 function autoResize(e) {
