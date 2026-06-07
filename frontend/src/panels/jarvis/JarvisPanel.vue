@@ -227,6 +227,8 @@ async function loadChat(id) {
   const r = await fetch(`api/jarvis/chats/${id}`)
   activeChat.value = await r.json()
   await scrollToBottom()
+  await nextTick()
+  bindAttachmentHandlers()
 }
 
 async function deleteChat(id) {
@@ -407,15 +409,18 @@ function autoResize(e) {
   el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
 
+function bindAttachmentHandlers() {
+  if (!messagesEl.value) return
+  messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
+    el.onclick = () => downloadAttachment(el.dataset.filename)
+  })
+}
+
 async function scrollToBottom() {
   await nextTick()
   if (messagesEl.value) {
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
-    // Native click-Handler für Attachments
-    messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
-      el.onclick = null
-      el.onclick = () => downloadAttachment(el.dataset.filename)
-    })
+    bindAttachmentHandlers()
   }
 }
 
