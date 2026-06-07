@@ -4,6 +4,7 @@
       v-if="showSuggestModal"
       :ki-name="kiName"
       :model="currentModel"
+      :expose-map="exposeMap"
       @close="showSuggestModal = false"
       @applied="onSuggestApplied"
     />
@@ -47,6 +48,7 @@ const activeSubTab    = ref('bereiche')
 const showSuggestModal = ref(false)
 const kiName           = ref('KI')
 const currentModel     = ref('')
+const exposeMap        = ref({})
 
 onMounted(async () => {
   try {
@@ -54,6 +56,13 @@ onMounted(async () => {
     const d = await r.json()
     kiName.value       = d.ki_name || 'KI'
     currentModel.value = d.jarvis_model || ''
+  } catch(e) {}
+  try {
+    const r = await fetch('api/voice/expose')
+    const d = await r.json()
+    const map = {}
+    for (const e of (d.entities || [])) map[e.entity_id] = e.exposed
+    exposeMap.value = map
   } catch(e) {}
 })
 

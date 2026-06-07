@@ -73,11 +73,12 @@ class Module(BaseModule):
                 "Welche dieser Home Assistant Entitaeten im Zimmer '" + area_name + "' "
                 "sollten per Sprachassistent steuerbar sein?\n\n"
                 "Entitaeten:\n" + entity_list + "\n"
-                "Regeln:\n"
-                "- Nur steuerbare Geraete: Licht, Schalter, Rollo, Heizung, Schloss\n"
-                "- Keine Sensoren oder Diagnose-Entitaeten\n"
-                "- Max 5 Entitaeten\n\n"
-                "Antworte AUSSCHLIESSLICH mit JSON-Array, kein Text:\n"
+                "WICHTIGE Regeln:\n"
+                "- NUR direkt steuerbare Geraete: light.*, switch.*, cover.*, climate.*, lock.*, fan.*\n"
+                "- KEINE binary_sensor.*, sensor.*, button.*, update.*\n"
+                "- KEINE Diagnose, Batterie, RSSI, Temperatur-Sensoren\n"
+                "- Gib NUR entity_ids zurueck die in der obigen Liste vorkommen\n\n"
+                "Antworte NUR mit JSON-Array:\n"
                 '[{"entity_id": "light.beispiel", "name": "Licht", "reason": "Hauptlicht"}]'
             )
 
