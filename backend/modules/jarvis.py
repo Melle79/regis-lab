@@ -160,7 +160,7 @@ class Module(BaseModule):
                             timeout=15,
                         )
                         if title_r.status_code == 200:
-                            title = title_r.json().get("response", "").strip().strip('"'').strip()
+                            title = title_r.json().get("response", "").strip().strip("\"'").strip()
                             chat_data["title"] = title[:60] if title else message[:50]
                         else:
                             chat_data["title"] = message[:50] + ("…" if len(message) > 50 else "")
