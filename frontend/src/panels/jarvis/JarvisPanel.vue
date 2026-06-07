@@ -427,8 +427,10 @@ function autoResize(e) {
 function bindAttachmentHandlers() {
   if (!messagesEl.value) return
   const chatId = messagesEl.value.dataset.chatid || activeChatId.value
+  // Globale Funktion registrieren damit onclick im HTML-Kontext funktioniert
+  window.__regisDownload = (filename) => downloadAttachmentById(chatId, filename)
   messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
-    el.onclick = () => downloadAttachmentById(chatId, el.dataset.filename)
+    el.setAttribute('onclick', `window.__regisDownload('${el.dataset.filename.replace(/'/g, "\'")}')`)
   })
 }
 
