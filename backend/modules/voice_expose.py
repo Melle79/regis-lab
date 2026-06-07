@@ -55,66 +55,53 @@ class Module(BaseModule):
         def suggest_expose():
             data       = request.get_json() or {}
             model      = data.get("model") or self.config._settings.get("jarvis_model", "")
+            area_name  = data.get("area_name", "Unbekannt")
+            entities   = data.get("entities", [])
             ollama_url = self.config.jarvis_ollama_url.rstrip("/")
 
             if not ollama_url or not model:
                 return jsonify({"error": "Ollama nicht konfiguriert"}), 400
 
-            try:
-                areas_data = self._get_areas_with_entities()
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
+            if not entities:
+                return jsonify({"suggestions": []})
 
-            # exposed_entities: aus dem expose endpoint laden
-            exposed_entities = set()
-            try:
-                expose_r = requests.get("http://127.0.0.1:8099/api/voice/expose", timeout=5)
-                for e in expose_r.json().get("entities", []):
-                    if e.get("exposed"):
-                        exposed_entities.add(e["entity_id"])
-            except Exception:
-                pass
-
-            areas_summary = []
-            for area in areas_data:
-                entities = [
-                    "  - " + e["entity_id"] + " (" + e.get("domain", "") + ": " + e.get("name", e["entity_id"]) + ")"
-                    for e in area.get("entities", [])
-                ]
-                if entities:
-                    areas_summary.append("Zimmer: " + area["name"] + "\n" + "\n".join(entities))
+            entity_list = ""
+            for e in entities:
+                entity_list += "- " + e.get("entity_id", "") + " (" + e.get("domain", "") + "): " + e.get("name", "") + "\n"
 
             prompt = (
-                "Du bist ein Smart Home Experte. Analysiere diese Home Assistant Entitaeten "
-                "und waehle die sinnvollsten fuer den Sprachassistenten aus.\n\n"
+                "Welche dieser Home Assistant Entitaeten im Zimmer '" + area_name + "' "
+                "sollten per Sprachassistent steuerbar sein?\n\n"
+                "Entitaeten:\n" + entity_list + "\n"
                 "Regeln:\n"
-                "- Waehle Entitaeten die man per Sprache steuern moechte (Lichter, Schalter, Rollos, Heizung)\n"
-                "- Keine Diagnose-Sensoren (Spannung, RSSI etc.)\n"
-                "- Keine internen HA-Entitaeten\n"
-                "- Max 3-5 Entitaeten pro Zimmer\n\n"
-                "Antworte NUR mit einem JSON-Array ohne Erklaerung:\n"
-                '[{"area": "Wohnzimmer", "entity_id": "light.wohnzimmer", "name": "Licht", "reason": "Hauptlicht"}]\n\n'
-                "Entitaeten:\n" + "\n\n".join(areas_summary[:20])
+                "- Nur steuerbare Geraete: Licht, Schalter, Rollo, Heizung, Schloss\n"
+                "- Keine Sensoren oder Diagnose-Entitaeten\n"
+                "- Max 5 Entitaeten\n\n"
+                "Antworte AUSSCHLIESSLICH mit JSON-Array, kein Text:\n"
+                '[{"entity_id": "light.beispiel", "name": "Licht", "reason": "Hauptlicht"}]'
             )
 
             try:
                 r = requests.post(
                     ollama_url + "/api/generate",
                     json={"model": model, "prompt": prompt, "stream": False},
-                    timeout=60,
+                    timeout=30,
                 )
                 if r.status_code != 200:
-                    return jsonify({"error": "Ollama Fehler"}), 500
+                    return jsonify({"error": "Ollama Fehler " + str(r.status_code)}), 500
 
-                response_text = r.json().get("response", "")
-                match = re.search(r'\[[\s\S]*\]', response_text)
+                response_text = r.json().get("response", "").strip()
+                self.log.info("KI Antwort fuer " + area_name + ": " + response_text[:150])
+
+                match = re.search(r"\[[\s\S]*?\]", response_text)
                 if not match:
-                    return jsonify({"error": "Kein gueltiges JSON", "raw": response_text[:200]}), 500
+                    return jsonify({"suggestions": [], "raw": response_text[:200]})
 
                 import json as _json
                 suggestions = _json.loads(match.group())
                 for s in suggestions:
-                    s["already_exposed"] = s.get("entity_id", "") in exposed_entities
+                    s["area"] = area_name
+                    s["already_exposed"] = False
 
                 return jsonify({"suggestions": suggestions})
             except Exception as e:
@@ -123,20 +110,26 @@ class Module(BaseModule):
         self.log.info("Voice-Expose-Modul registriert")
 
     def _get_areas_with_entities(self) -> list:
-        areas_api = requests.get("http://127.0.0.1:8099/api/areas", timeout=10)
-        data = areas_api.json()
-        result = []
-        for area in data.get("areas", []):
-            entities = []
-            for device in area.get("devices", []):
-                for e in device.get("entities", []):
-                    entities.append({
-                        "entity_id": e["entity_id"],
-                        "name":      e.get("friendly_name", e["entity_id"]),
-                        "domain":    e["entity_id"].split(".")[0],
-                    })
-            if entities:
-                result.append({"name": area["name"], "entities": entities})
+        # Direkt HA API nutzen statt eigener API (vermeidet Deadlock)
+        token = self.config.ha_long_token
+        ha = "http://homeassistant.local.hass.io:8123"
+        headers = {"Authorization": "Bearer " + token}
+
+        areas_r   = requests.get(ha + "/api/config/area_registry/list", headers=headers, timeout=10)
+        devices_r = requests.get(ha + "/api/config/device_registry/list", headers=headers, timeout=10)
+        entity_r  = requests.get(ha + "/api/config/entity_registry/list", headers=headers, timeout=10)
+        states_r  = requests.get(ha + "/api/states", headers=headers, timeout=10)
+
+        # Fallback: einfach alle States nach domain gruppieren
+        states = states_r.json() if states_r.status_code == 200 else []
+        result = [{"name": "Alle Geraete", "entities": [
+            {"entity_id": s["entity_id"],
+             "name": s.get("attributes", {}).get("friendly_name", s["entity_id"]),
+             "domain": s["entity_id"].split(".")[0]}
+            for s in states
+            if s["entity_id"].split(".")[0] in
+               ["light", "switch", "cover", "climate", "lock", "fan", "media_player", "vacuum"]
+        ][:40]}]
         return result
 
     def _ws_call(self, msg: dict) -> any:
