@@ -70,6 +70,8 @@ class Module(BaseModule):
             data = request.get_json() or {}
             if "title" in data:
                 chat["title"] = data["title"]
+            if "messages" in data:
+                chat["messages"] = data["messages"]
             chat["updated_at"] = datetime.now().isoformat()
             _save_chat(chat)
             return jsonify({"ok": True})

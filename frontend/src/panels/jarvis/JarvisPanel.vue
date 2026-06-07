@@ -114,6 +114,14 @@
                 <MdiIcon icon="mdi:flash" :size="11" color="var(--amber)" />
                 {{ msg.action }}
               </div>
+              <div class="msg-actions">
+                <button class="msg-action-btn" @click="copyMessage(msg.content)" title="Kopieren">
+                  <MdiIcon icon="mdi:content-copy" :size="12" />
+                </button>
+                <button class="msg-action-btn danger" @click="deleteMessage(i)" title="Löschen">
+                  <MdiIcon icon="mdi:delete-outline" :size="12" />
+                </button>
+              </div>
             </div>
             </template>
           </div>
@@ -297,6 +305,32 @@ async function sendMessage() {
 }
 
 // ── Hilfsfunktionen ─────────────────────────────────────────────
+
+async function copyMessage(content) {
+  try {
+    await navigator.clipboard.writeText(content)
+  } catch(e) {
+    // Fallback
+    const el = document.createElement('textarea')
+    el.value = content
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+  }
+}
+
+async function deleteMessage(index) {
+  if (!activeChatId.value) return
+  activeChat.value.messages.splice(index, 1)
+  // Im Backend speichern
+  await fetch(`api/jarvis/chats/${activeChatId.value}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: activeChat.value.messages }),
+  })
+  await loadChatList()
+}
 
 function onFileUpload(e) {
   uploadedFile.value = e.target.files[0] || null
@@ -558,4 +592,17 @@ onMounted(async () => {
   color: var(--amber); cursor: pointer; font-size: 10px;
 }
 .new-chat-inline:hover { background: color-mix(in srgb, var(--amber) 15%, transparent); }
+.msg-actions {
+  display: none; gap: 4px; margin-top: 4px;
+  justify-content: flex-end;
+}
+.message:hover .msg-actions { display: flex; }
+.message.user .msg-actions { justify-content: flex-start; }
+.msg-action-btn {
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 11px;
+  display: flex; align-items: center; gap: 3px; transition: all .15s;
+}
+.msg-action-btn:hover { color: var(--text); border-color: var(--accent); }
+.msg-action-btn.danger:hover { color: var(--red); border-color: var(--red); }
 </style>
