@@ -409,7 +409,7 @@ function formatMessage(text) {
     const ext = (lang || 'txt').trim()
     const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const b64 = btoa(unescape(encodeURIComponent(code)))
-    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><button class="code-download" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Herunterladen</button></div><pre><code>${escaped}</code></pre></div>`
+    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><div class="code-actions"><button class="code-copy-btn" onclick="navigator.clipboard.writeText(atob('${b64}'))">📋 Kopieren</button><button class="code-download-btn" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Download</button></div></div><pre><code>${escaped}</code></pre></div>`
     return key
   })
 
@@ -762,19 +762,22 @@ onMounted(async () => {
 .code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
 .code-block code { background: none; padding: 0; font-size: 11px; }
 .code-block {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-  overflow: hidden; margin: 6px 0; text-align: left; width: 100%;
+  background: #1e1e2e; border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin: 8px 0; text-align: left; width: 100%;
 }
 .code-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 10px; background: var(--border); font-size: 11px;
+  padding: 6px 12px; background: #2a2a3e; font-size: 11px;
 }
-.code-lang { color: var(--muted); font-family: monospace; }
-.code-download {
-  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--accent);
-  background: transparent; color: var(--accent); cursor: pointer; font-size: 10px;
+.code-lang { color: var(--accent); font-family: monospace; font-weight: 600; }
+.code-actions { display: flex; gap: 6px; }
+.code-copy-btn, .code-download-btn {
+  padding: 3px 10px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 10px;
+  transition: all .15s;
 }
-.code-download:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
-.code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
-.code-block code { background: none; padding: 0; font-size: 11px; white-space: pre; }
+.code-copy-btn:hover { color: var(--text); border-color: var(--text); }
+.code-download-btn:hover { color: var(--accent); border-color: var(--accent); }
+.code-block pre { margin: 0; padding: 12px; overflow-x: auto; }
+.code-block code { background: none; padding: 0; font-size: 12px; line-height: 1.6; color: #cdd6f4; white-space: pre; font-family: 'Courier New', monospace; }
 </style>
