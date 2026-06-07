@@ -66,7 +66,17 @@
                   <span class="chevron small" :class="{ open: expanded.has('dev_' + device.device_id) }">›</span>
                 </div>
                 <div v-if="expanded.has('dev_' + device.device_id)" class="entity-list">
-                  <EntityTile v-for="e in device.entities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
+                  <div v-for="e in device.entities" :key="e.entity_id" class="entity-row">
+                  <EntityTile :entity="liveEntity(e)" @toggle="onToggle" style="flex:1" />
+                  <button
+                    class="expose-btn"
+                    :class="{ active: exposeMap[e.entity_id] === true, inactive: exposeMap[e.entity_id] === false }"
+                    @click="toggleExpose(e.entity_id)"
+                    :title="exposeMap[e.entity_id] === true ? 'Für Sprachassistent verfügbar' : 'Nicht verfügbar'"
+                  >
+                    <MdiIcon :icon="exposeMap[e.entity_id] === true ? 'mdi:microphone' : 'mdi:microphone-off'" :size="13" />
+                  </button>
+                </div>
                 </div>
               </div>
 
@@ -101,7 +111,17 @@
             <span class="chevron small" :class="{ open: expanded.has('dev_' + device.device_id) }">›</span>
           </div>
           <div v-if="expanded.has('dev_' + device.device_id)" class="entity-list">
-            <EntityTile v-for="e in device.entities" :key="e.entity_id" :entity="liveEntity(e)" @toggle="onToggle"/>
+            <div v-for="e in device.entities" :key="e.entity_id" class="entity-row">
+              <EntityTile :entity="liveEntity(e)" @toggle="onToggle" style="flex:1" />
+              <button
+                class="expose-btn"
+                :class="{ active: exposeMap[e.entity_id] === true, inactive: exposeMap[e.entity_id] === false }"
+                @click="toggleExpose(e.entity_id)"
+                :title="exposeMap[e.entity_id] === true ? 'Für Sprachassistent verfügbar' : 'Nicht verfügbar'"
+              >
+                <MdiIcon :icon="exposeMap[e.entity_id] === true ? 'mdi:microphone' : 'mdi:microphone-off'" :size="13" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -127,6 +147,35 @@ import AssignAreaModal from '../../components/AssignAreaModal.vue'
 import MdiIcon    from '../../components/MdiIcon.vue'
 
 const { callService, state } = useDashboardStore()
+
+// Expose-Status für Sprachassistenten
+const exposeMap = ref({})
+async function loadExposeStatus() {
+  try {
+    const r = await fetch('api/voice/expose')
+    const d = await r.json()
+    const map = {}
+    for (const e of (d.entities || [])) {
+      map[e.entity_id] = e.exposed
+    }
+    exposeMap.value = map
+  } catch(e) {}
+}
+
+async function toggleExpose(entity_id) {
+  const current = exposeMap.value[entity_id]
+  const newVal  = current === true ? false : true
+  exposeMap.value[entity_id] = newVal
+  try {
+    await fetch(`api/voice/expose/${encodeURIComponent(entity_id)}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ exposed: newVal }),
+    })
+  } catch(e) {
+    exposeMap.value[entity_id] = current
+  }
+}
 
 const loading            = ref(true)
 const error              = ref(null)
@@ -334,4 +383,13 @@ onMounted(loadAreas)
 
 .slide-enter-active, .slide-leave-active { transition: all .2s ease; }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-4px); }
+.entity-row { display: flex; align-items: center; }
+.expose-btn {
+  flex-shrink: 0; padding: 4px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0.4;
+  transition: all .15s;
+}
+.entity-row:hover .expose-btn { opacity: 1; }
+.expose-btn.active  { color: var(--accent); opacity: 1; }
+.expose-btn.inactive { color: var(--muted); opacity: 0.6; }
 </style>
