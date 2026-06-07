@@ -186,6 +186,8 @@ async function createChat() {
   const d = await r.json()
   await loadChatList()
   await loadChat(d.id)
+  await nextTick()
+  inputEl.value?.focus()
 }
 
 async function loadChat(id) {
