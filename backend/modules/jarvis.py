@@ -138,8 +138,8 @@ class Module(BaseModule):
                     yield json.dumps({"error": str(e)}) + "\n"
                     return
 
-                # Antwort speichern
-                chat_data["messages"].append({"role": "assistant", "content": full_text})
+                # Antwort speichern mit ha_control Status
+                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch setzen (erste Nachricht)

@@ -94,11 +94,11 @@
           </div>
 
           <div v-for="(msg, i) in activeChat.messages" :key="i" :class="['message', msg.role]">
-            <div class="msg-avatar">
+            <div class="msg-avatar" :title="msg.role === 'assistant' ? (msg.ha_control ? 'HA-Steuerung aktiv' : 'HA-Steuerung inaktiv') : ''">
               <MdiIcon
                 :icon="msg.role === 'user' ? 'mdi:account' : 'mdi:robot'"
                 :size="15"
-                :color="msg.role === 'user' ? 'var(--muted)' : 'var(--accent)'"
+                :color="msg.role === 'user' ? 'var(--muted)' : (msg.ha_control ? 'var(--accent)' : 'var(--muted)')"
               />
             </div>
             <div class="msg-content">
@@ -113,7 +113,7 @@
           <!-- Streaming -->
           <div v-if="streaming" class="message assistant">
             <div class="msg-avatar">
-              <MdiIcon icon="mdi:robot" :size="15" color="var(--accent)" />
+              <MdiIcon icon="mdi:robot" :size="15" :color="haControl ? 'var(--accent)' : 'var(--muted)'" />
             </div>
             <div class="msg-content">
               <div class="msg-text" v-html="formatMessage(streamText)" />
