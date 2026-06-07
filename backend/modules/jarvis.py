@@ -184,6 +184,19 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": f"Ollama nicht erreichbar: {e}"}), 503
 
+        @self.app.route("/api/jarvis/chats/<chat_id>/system-message", methods=["POST"])
+        def add_system_message(chat_id):
+            chat = _load_chat(chat_id)
+            if not chat:
+                return jsonify({"error": "Chat nicht gefunden"}), 404
+            data = request.get_json() or {}
+            content = data.get("content", "")
+            if content:
+                chat["messages"].append({"role": "system", "content": content})
+                chat["updated_at"] = datetime.now().isoformat()
+                _save_chat(chat)
+            return jsonify({"ok": True})
+
         self.log.info("Jarvis-Modul v2 registriert")
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────

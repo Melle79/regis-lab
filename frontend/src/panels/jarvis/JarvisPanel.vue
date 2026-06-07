@@ -346,10 +346,18 @@ watch(haControl, (newVal, oldVal) => {
     const msg = newVal
       ? 'HA-Steuerung wurde aktiviert. Für beste Ergebnisse wird ein neuer Chat empfohlen.'
       : 'HA-Steuerung wurde deaktiviert. Für beste Ergebnisse wird ein neuer Chat empfohlen.'
-    // Als System-Nachricht im Chat anzeigen
+    // Als System-Nachricht im Chat anzeigen und speichern
     activeChat.value.messages.push({ role: 'system', content: msg })
     haControlChanged.value = msg
     setTimeout(() => haControlChanged.value = '', 5000)
+    // Im Backend speichern
+    try {
+      await fetch(`api/jarvis/chats/${activeChatId.value}/system-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: msg }),
+      })
+    } catch(e) {}
   }
 })
 
