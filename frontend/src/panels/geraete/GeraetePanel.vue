@@ -28,7 +28,7 @@
     </div>
 
     <div class="sub-content">
-      <BereicheView     v-if="activeSubTab === 'bereiche'" @suggest="onAreaSuggest" />
+      <BereicheView     v-if="activeSubTab === 'bereiche'" :key="exposeReloadKey" @suggest="onAreaSuggest" />
       <AutomationenView v-else-if="activeSubTab === 'automationen'" />
       <HelferView       v-else-if="activeSubTab === 'helfer'" />
       <AlleEntitiesView v-else-if="activeSubTab === 'entities'" />
@@ -51,6 +51,7 @@ const kiName           = ref('KI')
 const currentModel     = ref('')
 const exposeMap        = ref({})
 const suggestArea      = ref(null)
+const exposeReloadKey  = ref(0)
 
 function onAreaSuggest(area) {
   suggestArea.value = {
@@ -77,8 +78,15 @@ onMounted(async () => {
   } catch(e) {}
 })
 
-function onSuggestApplied(count) {
-  // Bereiche neu laden nach Anwenden
+async function onSuggestApplied(count) {
+  try {
+    const r = await fetch('api/voice/expose')
+    const d = await r.json()
+    const map = {}
+    for (const e of (d.entities || [])) map[e.entity_id] = e.exposed
+    exposeMap.value = map
+  } catch(e) {}
+  exposeReloadKey.value++
 }
 
 const subTabs = [
