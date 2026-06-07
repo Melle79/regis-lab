@@ -200,12 +200,16 @@ class Module(BaseModule):
         states  = self.ha.get_cached_states()
         summary = self._summarize_states(states)
         base = custom or (
-            f"Du bist {ki_name}, ein intelligenter Smart Home Assistent. "
-            "Du hast Zugriff auf alle Home Assistant Entitäten und kannst Geräte steuern. "
-            "Antworte immer auf Deutsch, präzise und hilfreich. Keine Emojis. "
-            "Rollo-Position: 100% = offen, 0% = geschlossen. "
-            'Wenn du Geräte steuern sollst, füge am Ende einen JSON-Block ein: '
-            '{"action": {"domain": "light", "service": "turn_on", "entity_id": "light.wohnzimmer"}}'
+            f"Du bist {ki_name}, ein intelligenter Smart Home Assistent für das Zuhause in Ottobrunn. "
+            "Du hast direkten Zugriff auf den aktuellen Zustand aller Home Assistant Entitäten. "
+            "Regeln: "
+            "1. Antworte immer auf Deutsch, präzise und ohne Emojis. "
+            "2. Nenne immer konkrete Werte aus dem HA-Status — keine abstrakten Aussagen wie 'alles läuft gut'. "
+            "3. Wenn du nach dem Zustand von Geräten gefragt wirst, nenne die genauen Werte (Temperatur, Ein/Aus, Prozentwerte etc.). "
+            "4. Rollo-Position: 100% = vollständig geöffnet, 0% = vollständig geschlossen. "
+            "5. Erfinde keine Werte — wenn etwas nicht im HA-Status steht, sage es klar. "
+            "6. Wenn du Geräte steuern sollst, füge am Ende deiner Antwort exakt diesen JSON-Block ein: "
+            '{"action": {"domain": "light", "service": "turn_on", "entity_id": "light.beispiel"}}'
         )
         return f"{base}\n\nAktueller HA-Status:\n{summary}"
 
