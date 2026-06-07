@@ -93,15 +93,13 @@
             <p>Hallo! Ich bin {{ kiName }}.<br>Wie kann ich dir helfen?</p>
           </div>
 
-          <div v-for="(msg, i) in activeChat.messages" :key="i" :class="['message', msg.role]">
+          <div v-for="(msg, i) in activeChat.messages" :key="i" :class="['message', msg.role === 'system' ? 'system' : msg.role]">
             <!-- System-Nachricht -->
-            <template v-if="msg.role === 'system'">
-              <div class="system-msg">
-                <MdiIcon icon="mdi:information-outline" :size="13" />
-                {{ msg.content }}
-                <button class="new-chat-inline" @click="createChat">Neuer Chat</button>
-              </div>
-            </template>
+            <div v-if="msg.role === 'system'" class="system-msg">
+              <MdiIcon icon="mdi:information-outline" :size="13" />
+              {{ msg.content }}
+              <button class="new-chat-inline" @click="createChat">Neuer Chat</button>
+            </div>
             <template v-else>
             <div class="msg-avatar" :title="msg.role === 'assistant' ? (msg.ha_control ? 'HA-Steuerung aktiv' : 'HA-Steuerung inaktiv') : ''">
               <MdiIcon
