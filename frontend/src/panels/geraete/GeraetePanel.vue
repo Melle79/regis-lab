@@ -5,7 +5,8 @@
       :ki-name="kiName"
       :model="currentModel"
       :expose-map="exposeMap"
-      @close="showSuggestModal = false"
+      :initial-area="suggestArea"
+      @close="showSuggestModal = false; suggestArea = null"
       @applied="onSuggestApplied"
     />
     <div class="sub-tabs-row">
@@ -27,7 +28,7 @@
     </div>
 
     <div class="sub-content">
-      <BereicheView     v-if="activeSubTab === 'bereiche'" />
+      <BereicheView     v-if="activeSubTab === 'bereiche'" @suggest="onAreaSuggest" />
       <AutomationenView v-else-if="activeSubTab === 'automationen'" />
       <HelferView       v-else-if="activeSubTab === 'helfer'" />
       <AlleEntitiesView v-else-if="activeSubTab === 'entities'" />
@@ -49,6 +50,16 @@ const showSuggestModal = ref(false)
 const kiName           = ref('KI')
 const currentModel     = ref('')
 const exposeMap        = ref({})
+const suggestArea      = ref(null)
+
+function onAreaSuggest(area) {
+  suggestArea.value = {
+    name:     area.name,
+    icon:     area.icon,
+    entities: area.devices?.flatMap(dev => dev.entities || []) || [],
+  }
+  showSuggestModal.value = true
+}
 
 onMounted(async () => {
   try {

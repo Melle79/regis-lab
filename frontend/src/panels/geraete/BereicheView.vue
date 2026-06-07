@@ -38,6 +38,9 @@
               <MdiIcon icon="mdi:microphone" :size="11" />
               {{ countExposed(area) }}
             </span>
+            <button class="ki-suggest-btn" @click.stop="$emit('suggest', area)" title="KI-Vorschläge für dieses Zimmer">
+              <MdiIcon icon="mdi:robot" :size="13" />
+            </button>
             <button class="ha-link-btn" @click.stop="openArea(area)" title="In HA öffnen">
               <MdiIcon icon="mdi:open-in-new" :size="13" />
             </button>
@@ -150,7 +153,7 @@ import { getEntityIcon } from '../../utils/haIcons.js'
 import AssignAreaModal from '../../components/AssignAreaModal.vue'
 import MdiIcon    from '../../components/MdiIcon.vue'
 
-const { callService, state } = useDashboardStore()
+const emit = defineEmits(['suggest'])const { callService, state } = useDashboardStore()
 
 // Expose-Status für Sprachassistenten
 const exposeMap = reactive({})
@@ -396,6 +399,13 @@ onMounted(async () => { await loadAreas(); await loadExposeStatus() })
   color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
+.ki-suggest-btn {
+  padding: 4px 6px; border-radius: 6px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; opacity: 0; transition: all .15s;
+  display: flex; align-items: center;
+}
+.area-header:hover .ki-suggest-btn { opacity: 1; }
+.ki-suggest-btn:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .expose-btn {
   flex-shrink: 0; padding: 4px 5px; border: none; background: transparent;
   color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0;

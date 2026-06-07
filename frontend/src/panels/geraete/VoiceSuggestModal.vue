@@ -113,9 +113,10 @@ import { ref, onMounted } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const props = defineProps({
-  kiName:     { type: String, default: 'KI' },
-  model:      { type: String, default: '' },
-  exposeMap:  { type: Object, default: () => ({}) },
+  kiName:      { type: String, default: 'KI' },
+  model:       { type: String, default: '' },
+  exposeMap:   { type: Object, default: () => ({}) },
+  initialArea: { type: Object, default: null },
 })
 const emit = defineEmits(['close', 'applied'])
 
@@ -144,6 +145,10 @@ onMounted(async () => {
     error.value = e.message
   } finally {
     loadingAreas.value = false
+  }
+  // Direkt starten wenn initialArea gesetzt
+  if (props.initialArea) {
+    analyzeArea(props.initialArea)
   }
 })
 
