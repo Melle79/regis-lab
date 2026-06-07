@@ -163,7 +163,7 @@ async function loadExposeStatus() {
 }
 
 async function toggleExpose(entity_id) {
-  const current = exposeMap.value[entity_id]
+  const current = exposeMap[entity_id]
   const newVal  = current === true ? false : true
   exposeMap[entity_id] = newVal
   try {
@@ -318,7 +318,7 @@ function getDeviceIcon(device) {
   return 'mdi:chip'
 }
 
-onMounted(loadAreas)
+onMounted(async () => { await loadAreas(); await loadExposeStatus() })
 </script>
 
 <style scoped>
