@@ -37,16 +37,17 @@ class Module(BaseModule):
 
         @self.app.route("/api/voice/expose/<entity_id>", methods=["POST"])
         def set_exposed(entity_id):
-            """Setzt den Expose-Status einer Entität."""
+            """Setzt den Expose-Status einer Entität via HA Voice Assistant API."""
             data    = request.get_json() or {}
             exposed = data.get("exposed", True)
             try:
                 result = self._ws_call({
-                    "type":      "config/entity_registry/update",
-                    "entity_id": entity_id,
-                    "options":   {"conversation": {"should_expose": exposed}},
+                    "type":       "homeassistant/expose_entity",
+                    "assistant":  "conversation",
+                    "entity_ids": [entity_id],
+                    "should_expose": exposed,
                 })
-                return jsonify({"ok": True, "result": result})
+                return jsonify({"ok": True})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
