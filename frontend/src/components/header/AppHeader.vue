@@ -6,13 +6,20 @@
       <span class="header-version">v{{ version }}</span>
     </div>
 
-    <!-- Mitte: Haupt-Navigation -->
-    <nav class="header-nav">
+    <!-- Mitte: Haupt-Navigation mit Drag & Drop -->
+    <nav class="header-nav"
+      @dragover.prevent
+      @drop="onDrop"
+    >
       <button
-        v-for="tab in tabs"
+        v-for="tab in localTabs"
         :key="tab.id"
-        :class="['nav-tab', { active: activeTab === tab.id }]"
+        :class="['nav-tab', { active: activeTab === tab.id, dragging: dragId === tab.id }]"
+        draggable="true"
         @click="$emit('tab', tab.id)"
+        @dragstart="onDragStart(tab.id)"
+        @dragover.prevent="onDragOver(tab.id)"
+        @dragend="onDragEnd"
       >
         <MdiIcon :icon="tab.icon" :size="15" />
         {{ tab.label }}
@@ -40,7 +47,9 @@ import MdiIcon from '../MdiIcon.vue'
 import HeaderClock from './HeaderClock.vue'
 import HeaderWeather from './HeaderWeather.vue'
 
-defineProps({
+import { ref, watch } from 'vue'
+
+const props = defineProps({
   tabs:      { type: Array,  default: () => [] },
   activeTab: { type: String, default: '' },
   version:   { type: String, default: '' },
@@ -71,6 +80,8 @@ defineEmits(['tab', 'settings'])
 }
 .nav-tab:hover { color: var(--text); background: var(--border); }
 .nav-tab.active { background: var(--accent); color: #fff; }
+.nav-tab.dragging { opacity: .4; }
+.nav-tab[draggable] { cursor: grab; }
 
 .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 

@@ -3,6 +3,7 @@
 
     <AppHeader
       :tabs="mainTabs"
+      @reorder="saveTabOrder"
       :active-tab="activeTab"
       :version="addonVersion"
       :is-live="store.state.connected"
@@ -42,11 +43,44 @@ const showSettings = ref(false)
 const config       = ref({})
 const addonVersion = ref('?')
 
-const mainTabs = computed(() => [
+const ALL_TABS = [
   { id: 'geraete',  label: 'Geräte',  icon: 'mdi:home' },
   { id: 'personen', label: 'Personen', icon: 'mdi:account-group' },
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
   { id: 'jarvis',   label: config.value.ki_name || 'Jarvis', icon: 'mdi:robot' },
+]
+
+// Tab-Reihenfolge aus Backend laden
+const tabOrder = ref(['geraete', 'personen', 'zonen', 'jarvis'])
+
+async function loadTabOrder() {
+  try {
+    const r = await fetch('api/settings')
+    const d = await r.json()
+    if (d.tab_order && Array.isArray(d.tab_order)) {
+      tabOrder.value = d.tab_order
+    }
+  } catch(e) {}
+}
+
+async function saveTabOrder(order) {
+  tabOrder.value = order
+  try {
+    await fetch('api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tab_order: order }),
+    })
+  } catch(e) {}
+}
+
+const mainTabs = computed(() => {
+  return tabOrder.value
+    .map(id => ALL_TABS.find(t => t.id === id))
+    .filter(Boolean)
+    .map(t => t.id === 'jarvis' ? { ...t, label: config.value.ki_name || 'Jarvis' } : t)
+}
+
 ])
 
 const headerSettings = computed(() => ({
@@ -54,6 +88,8 @@ const headerSettings = computed(() => ({
   show_weather:   config.value.show_weather === true,
   weather_entity: config.value.weather_entity || '',
 }))
+
+loadTabOrder()
 
 async function reloadConfig() {
   try {

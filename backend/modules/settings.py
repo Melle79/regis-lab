@@ -22,7 +22,7 @@ class Module(BaseModule):
             allowed = [
                 "title", "theme", "show_clock", "show_weather", "weather_entity",
                 "ki_name", "ha_token", "jarvis_ollama_url", "jarvis_model",
-                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control",
+                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             # Token nur speichern wenn nicht leer
