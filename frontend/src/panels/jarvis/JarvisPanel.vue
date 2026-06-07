@@ -284,6 +284,17 @@ async function sendMessage() {
 📎 ${fileAttachment.name}` : '')
   activeChat.value.messages.push({ role: 'user', content: displayText })
 
+  // Datei im Backend speichern
+  if (fileAttachment) {
+    try {
+      await fetch(`api/jarvis/chats/${activeChatId.value}/attachments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: fileAttachment.name, content: fileAttachment.content }),
+      })
+    } catch(e) {}
+  }
+
   // An KI schicken: Text + Dateiinhalt
   const sendText = fileAttachment
     ? `${text}
@@ -648,4 +659,13 @@ onMounted(async () => {
 }
 .msg-action-btn:hover { color: var(--text); border-color: var(--accent); }
 .msg-action-btn.danger:hover { color: var(--red); border-color: var(--red); }
+.file-attachment {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 6px; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--accent); font-size: 12px; text-decoration: none;
+  transition: background .15s;
+}
+.file-attachment:hover { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
 </style>

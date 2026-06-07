@@ -202,6 +202,31 @@ class Module(BaseModule):
                 _save_chat(chat)
             return jsonify({"ok": True})
 
+        @self.app.route("/api/jarvis/chats/<chat_id>/attachments", methods=["POST"])
+        def save_attachment(chat_id):
+            """Datei-Anhang speichern."""
+            data     = request.get_json() or {}
+            filename = data.get("filename", "")
+            content  = data.get("content", "")
+            if not filename or not content:
+                return jsonify({"error": "filename und content erforderlich"}), 400
+            att_dir = os.path.join(CHATS_DIR, "attachments", chat_id)
+            os.makedirs(att_dir, exist_ok=True)
+            att_path = os.path.join(att_dir, filename)
+            with open(att_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            return jsonify({"ok": True, "path": att_path})
+
+        @self.app.route("/api/jarvis/chats/<chat_id>/attachments/<filename>")
+        def get_attachment(chat_id, filename):
+            """Datei-Anhang abrufen."""
+            att_path = os.path.join(CHATS_DIR, "attachments", chat_id, filename)
+            if not os.path.exists(att_path):
+                return jsonify({"error": "Datei nicht gefunden"}), 404
+            with open(att_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return jsonify({"filename": filename, "content": content})
+
         self.log.info("Jarvis-Modul v2 registriert")
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────
