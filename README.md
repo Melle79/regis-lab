@@ -81,7 +81,7 @@ Wetter-Entität in den Einstellungen eintragen (z.B. `weather.forecast_home`)
 
 - Die KI-Steuerung von HA-Geräten ist experimentell
 - Fehlerhafte KI-Antworten können unbeabsichtigte Schaltaktionen auslösen
-- Der HA-Token wird lokal im Addon gespeichert (`/data/regis_settings.json`)
+- Der HA-Token wird lokal im Addon gespeichert
 - Nutzung ausschließlich auf eigene Gefahr
 
 ---
