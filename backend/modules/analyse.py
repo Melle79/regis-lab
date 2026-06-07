@@ -31,7 +31,7 @@ class Module(BaseModule):
             # Offline / Unavailable — nur steuerbare/wichtige physische Geräte
             RELEVANT_DOMAINS = {
                 "light", "switch", "cover", "climate", "lock", "fan",
-                "media_player", "vacuum", "camera", "alarm_control_panel",
+                "vacuum", "camera", "alarm_control_panel",
             }
             offline = []
             for s in states:
