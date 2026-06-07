@@ -341,7 +341,7 @@ async function loadModels() {
   } catch(e) {}
 }
 
-watch(haControl, (newVal, oldVal) => {
+watch(haControl, async (newVal, oldVal) => {
   if (oldVal !== undefined && newVal !== oldVal && activeChatId.value && activeChat.value) {
     const msg = newVal
       ? 'HA-Steuerung wurde aktiviert. Für beste Ergebnisse wird ein neuer Chat empfohlen.'
