@@ -47,7 +47,7 @@ const ALL_TABS = [
   { id: 'geraete',  label: 'Geräte',  icon: 'mdi:home' },
   { id: 'personen', label: 'Personen', icon: 'mdi:account-group' },
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
-  { id: 'jarvis',   label: config.value.ki_name || 'Jarvis', icon: 'mdi:robot' },
+  { id: 'jarvis',   label: 'Jarvis',  icon: 'mdi:robot' },
 ]
 
 // Tab-Reihenfolge aus Backend laden
