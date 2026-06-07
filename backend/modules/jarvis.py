@@ -147,9 +147,27 @@ class Module(BaseModule):
                 chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
-                # Titel automatisch setzen (erste Nachricht)
+                # Titel automatisch durch KI generieren (erste Nachricht)
                 if chat_data.get("title") == "Neuer Chat" and message:
-                    chat_data["title"] = message[:50] + ("…" if len(message) > 50 else "")
+                    try:
+                        title_r = requests.post(
+                            f"{ollama_url}/api/generate",
+                            json={
+                                "model": model,
+                                "prompt": f"Erstelle einen kurzen Titel (max. 5 Wörter, kein Anführungszeichen) für dieses Gespräch. Nur den Titel ausgeben, nichts sonst.
+
+Nachricht: {message[:200]}",
+                                "stream": False,
+                            },
+                            timeout=15,
+                        )
+                        if title_r.status_code == 200:
+                            title = title_r.json().get("response", "").strip().strip('"'').strip()
+                            chat_data["title"] = title[:60] if title else message[:50]
+                        else:
+                            chat_data["title"] = message[:50] + ("…" if len(message) > 50 else "")
+                    except Exception:
+                        chat_data["title"] = message[:50] + ("…" if len(message) > 50 else "")
 
                 # HA-Action ausführen wenn erlaubt
                 if ha_control:

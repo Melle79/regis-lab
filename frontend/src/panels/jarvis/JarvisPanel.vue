@@ -200,6 +200,8 @@ const streamText     = ref('')
 const uploadedFile   = ref(null)
 const sidebarCollapsed = ref(false)
 const editingTitle   = ref(false)
+const renamingChatId = ref(null)
+const renameValue    = ref('')
 const editTitle      = ref('')
 const messagesEl     = ref(null)
 const inputEl        = ref(null)
@@ -242,6 +244,23 @@ async function deleteChat(id) {
     activeChat.value   = null
   }
   await loadChatList()
+}
+
+function startRenameChat(chat) {
+  renamingChatId.value = chat.id
+  renameValue.value    = chat.title
+}
+
+async function saveRename(chat) {
+  if (!renameValue.value.trim()) { renamingChatId.value = null; return }
+  await fetch(`api/jarvis/chats/${chat.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: renameValue.value.trim() }),
+  })
+  renamingChatId.value = null
+  await loadChatList()
+  if (activeChatId.value === chat.id) activeChat.value.title = renameValue.value.trim()
 }
 
 function startEditTitle() {
@@ -762,6 +781,10 @@ onMounted(async () => {
 .code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
 .code-block code { background: none; padding: 0; font-size: 11px; }
 /* Code-Block CSS ist im globalen Style-Block unten */
+.rename-input {
+  font-size: 12px; border: none; outline: none; background: var(--border);
+  color: var(--text); width: 100%; border-radius: 3px; padding: 1px 4px;
+}
 </style>
 
 <style>
