@@ -282,8 +282,8 @@ async function sendMessage() {
       }
     }
 
-    // Antwort zur Chat-History hinzufügen
-    activeChat.value.messages.push({ role: 'assistant', content: fullText })
+    // Chat neu laden damit ha_control korrekt gesetzt ist
+    await loadChat(activeChatId.value)
     // Chat-Liste aktualisieren (Titel könnte sich geändert haben)
     await loadChatList()
 
