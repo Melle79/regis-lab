@@ -39,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, watch, inject } from 'vue'
+import { ref, watch, computed } from 'vue'
 import RegisLabLogo from '../RegisLabLogo.vue'
 import MdiIcon from '../MdiIcon.vue'
 import HeaderClock from './HeaderClock.vue'
@@ -48,13 +48,14 @@ import HeaderWeather from './HeaderWeather.vue'
 const props = defineProps({
   tabs:      { type: Array,   default: () => [] },
   activeTab: { type: String,  default: '' },
+  version:   { type: String,  default: '?' },
   isLive:    { type: Boolean, default: false },
   settings:  { type: Object,  default: () => ({}) },
 })
 
 const emit = defineEmits(['tab', 'settings', 'reorder'])
 
-const version   = inject('appVersion', '?')
+const version   = computed(() => props.version)
 const localTabs = ref([...props.tabs])
 const dragId    = ref(null)
 let   dragOver  = null

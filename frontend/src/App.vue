@@ -55,7 +55,7 @@ const tabOrder = ref(['geraete', 'personen', 'zonen', 'jarvis'])
 
 async function loadTabOrder() {
   try {
-    const r = await fetch('api/settings')
+    const r = await fetch('api/config')
     const d = await r.json()
     if (d.tab_order && Array.isArray(d.tab_order)) {
       tabOrder.value = d.tab_order

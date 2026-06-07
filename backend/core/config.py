@@ -131,5 +131,6 @@ class AddonConfig:
             "jarvis_max_tokens":    self._settings.get("jarvis_max_tokens", 2048),
             "jarvis_system_prompt": self._settings.get("jarvis_system_prompt", ""),
             "jarvis_ha_control":    self._settings.get("jarvis_ha_control", False),
+            "tab_order":            self._settings.get("tab_order", ["geraete", "personen", "zonen", "jarvis"]),
             "ha_token_set":         bool(self.ha_long_token),
         }
