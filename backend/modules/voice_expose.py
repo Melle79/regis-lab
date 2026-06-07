@@ -43,7 +43,7 @@ class Module(BaseModule):
             try:
                 result = self._ws_call({
                     "type":       "homeassistant/expose_entity",
-                    "assistant":  "conversation",
+                    "assistants": ["conversation"],
                     "entity_ids": [entity_id],
                     "should_expose": exposed,
                 })
