@@ -78,7 +78,7 @@
       </div>
 
       <!-- Nachrichten -->
-      <div class="messages-area" ref="messagesEl" @click.capture="onMessagesClick">
+      <div class="messages-area" ref="messagesEl">
         <div v-if="!activeChat" class="empty-state">
           <MdiIcon icon="mdi:robot-outline" :size="52" color="var(--muted)" />
           <p>Wähle einen Chat oder erstelle einen neuen.</p>
@@ -409,8 +409,14 @@ function autoResize(e) {
 
 async function scrollToBottom() {
   await nextTick()
-  if (messagesEl.value)
+  if (messagesEl.value) {
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+    // Native click-Handler für Attachments
+    messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
+      el.onclick = null
+      el.onclick = () => downloadAttachment(el.dataset.filename)
+    })
+  }
 }
 
 async function loadModels() {
