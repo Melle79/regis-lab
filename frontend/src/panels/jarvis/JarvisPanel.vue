@@ -815,6 +815,7 @@ onMounted(async () => {
 .code-block code { background: none; padding: 0; font-size: 11px; }
 /* Code-Block CSS ist im globalen Style-Block unten */
 .chat-timestamp { color: var(--muted); opacity: 0.7; font-size: 10px; }
+.rename-input {
   font-size: 12px; border: none; outline: none; background: var(--border);
   color: var(--text); width: 100%; border-radius: 3px; padding: 1px 4px;
 }
