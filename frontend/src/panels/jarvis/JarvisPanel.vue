@@ -427,10 +427,25 @@ function autoResize(e) {
 function bindAttachmentHandlers() {
   if (!messagesEl.value) return
   const chatId = messagesEl.value.dataset.chatid || activeChatId.value
-  // Globale Funktion registrieren damit onclick im HTML-Kontext funktioniert
-  window.__regisDownload = (filename) => downloadAttachmentById(chatId, filename)
   messagesEl.value.querySelectorAll('.file-attachment').forEach(el => {
-    el.setAttribute('onclick', `window.__regisDownload('${el.dataset.filename.replace(/'/g, "\'")}')`)
+    const filename = el.dataset.filename
+    el.style.cursor = 'pointer'
+    el.addEventListener('click', async (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (!chatId) return
+      try {
+        const r = await fetch(`api/jarvis/chats/${chatId}/attachments/${encodeURIComponent(filename)}`)
+        const d = await r.json()
+        if (d.content) {
+          const blob = new Blob([d.content], { type: 'text/plain' })
+          const url  = URL.createObjectURL(blob)
+          const a    = document.createElement('a')
+          a.href = url; a.download = filename; a.click()
+          URL.revokeObjectURL(url)
+        }
+      } catch(e) { console.error('Download error:', e) }
+    })
   })
 }
 
