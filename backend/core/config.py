@@ -20,6 +20,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_model":         "",
     "jarvis_temperature":   0.7,
     "jarvis_max_tokens":    2048,
+    "jarvis_ollama_url":    "",
     "jarvis_system_prompt": "",
     "jarvis_ha_control":   False,
 }
@@ -108,7 +109,7 @@ class AddonConfig:
 
     @property
     def jarvis_ollama_url(self) -> str:
-        return self._options.get("jarvis_ollama_url", "") or self._settings.get("jarvis_ollama_url", "")
+        return self._settings.get("jarvis_ollama_url", "") or self._options.get("jarvis_ollama_url", "")
 
     @property
     def enabled_modules(self) -> list:
@@ -122,6 +123,7 @@ class AddonConfig:
             "show_weather":         self._settings.get("show_weather", False),
             "weather_entity":       self._settings.get("weather_entity", ""),
             "ki_name":              self._settings.get("ki_name", "Jarvis"),
+            "jarvis_ollama_url":    self.jarvis_ollama_url,
             "jarvis_ollama_url":    self.jarvis_ollama_url,
             "jarvis_model":         self._settings.get("jarvis_model", ""),
             "jarvis_temperature":   self._settings.get("jarvis_temperature", 0.7),
