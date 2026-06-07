@@ -67,6 +67,16 @@
         </div>
       </div>
 
+      <!-- HA-Steuerung Warnung -->
+      <div v-if="haControlChanged" class="ha-changed-banner">
+        <MdiIcon icon="mdi:information" :size="14" />
+        {{ haControlChanged }}
+        <button @click="createChat" class="banner-btn">Neuer Chat</button>
+        <button @click="haControlChanged = ''" class="banner-close">
+          <MdiIcon icon="mdi:close" :size="13" />
+        </button>
+      </div>
+
       <!-- Nachrichten -->
       <div class="messages-area" ref="messagesEl">
         <div v-if="!activeChat" class="empty-state">
@@ -158,6 +168,7 @@ const models         = ref([])
 const currentModel   = ref('')
 const kiName         = ref('Assistent')
 const haControl      = ref(false)
+const haControlChanged = ref('')
 const inputText      = ref('')
 const streaming      = ref(false)
 const streamText     = ref('')
@@ -322,6 +333,16 @@ async function loadModels() {
   } catch(e) {}
 }
 
+watch(haControl, (newVal, oldVal) => {
+  if (oldVal !== undefined && newVal !== oldVal && activeChatId.value) {
+    const msg = newVal
+      ? 'HA-Steuerung aktiviert. Für beste Ergebnisse empfehlen wir einen neuen Chat.'
+      : 'HA-Steuerung deaktiviert. Für beste Ergebnisse empfehlen wir einen neuen Chat.'
+    haControlChanged.value = msg
+    setTimeout(() => haControlChanged.value = '', 8000)
+  }
+})
+
 onMounted(async () => {
   try {
     const r = await fetch('api/config')
@@ -477,4 +498,19 @@ onMounted(async () => {
 }
 .send-btn:disabled { opacity: .4; cursor: default; }
 .send-btn:hover:not(:disabled) { opacity: .85; }
+.ha-changed-banner {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  background: color-mix(in srgb, var(--amber) 12%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--amber) 30%, var(--border));
+  font-size: 12px; color: var(--amber); flex-shrink: 0;
+}
+.banner-btn {
+  padding: 3px 10px; border-radius: 6px; border: 1px solid var(--amber);
+  background: transparent; color: var(--amber); cursor: pointer; font-size: 11px; margin-left: 4px;
+}
+.banner-btn:hover { background: color-mix(in srgb, var(--amber) 15%, transparent); }
+.banner-close {
+  margin-left: auto; padding: 2px; border: none; background: transparent;
+  color: var(--amber); cursor: pointer;
+}
 </style>
