@@ -141,8 +141,13 @@
 
       <!-- Upload-Vorschau -->
       <div v-if="uploadedFile" class="upload-preview">
-        <MdiIcon icon="mdi:file" :size="14" color="var(--accent)" />
+        <MdiIcon :icon="uploadedFile.error ? 'mdi:alert' : 'mdi:file-document'" :size="14"
+          :color="uploadedFile.error ? 'var(--red)' : 'var(--accent)'" />
         <span>{{ uploadedFile.name }}</span>
+        <span v-if="uploadedFile.content" class="upload-size">
+          {{ Math.round(uploadedFile.content.length / 1024 * 10) / 10 }} KB
+        </span>
+        <span v-if="uploadedFile.error" class="upload-error">{{ uploadedFile.error }}</span>
         <button @click="uploadedFile = null">
           <MdiIcon icon="mdi:close" :size="13" />
         </button>
@@ -151,7 +156,7 @@
       <!-- Input -->
       <div class="input-area" v-if="activeChat">
         <label class="upload-btn" title="Datei hochladen">
-          <input type="file" style="display:none" @change="onFileUpload" accept="image/*,.pdf,.txt,.md" />
+          <input type="file" style="display:none" @change="onFileUpload" accept=".txt,.md,.csv,.json,.yaml,.yml,.py,.js,.ts,.vue,.sh,.conf,.log,.xml,.html,.css" />
           <MdiIcon icon="mdi:paperclip" :size="18" />
         </label>
         <textarea
@@ -255,8 +260,21 @@ async function saveTitle() {
 
 async function sendMessage() {
   if (!canSend.value) return
-  const text = inputText.value.trim()
+  let text = inputText.value.trim()
   inputText.value = ''
+
+  // Datei-Inhalt anhängen
+  if (uploadedFile.value?.content) {
+    const ext = uploadedFile.value.name.split('.').pop()
+    text += `
+
+\`\`\`${ext}
+// Datei: ${uploadedFile.value.name}
+${uploadedFile.value.content}
+\`\`\``
+    uploadedFile.value = null
+  }
+
   streaming.value = true
   streamText.value = ''
 
@@ -332,8 +350,18 @@ async function deleteMessage(index) {
   await loadChatList()
 }
 
-function onFileUpload(e) {
-  uploadedFile.value = e.target.files[0] || null
+async function onFileUpload(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  uploadedFile.value = { name: file.name, content: null }
+  try {
+    const text = await file.text()
+    uploadedFile.value = { name: file.name, content: text }
+  } catch(err) {
+    uploadedFile.value = { name: file.name, content: null, error: 'Datei konnte nicht gelesen werden' }
+  }
+  // Input zurücksetzen damit dieselbe Datei nochmal gewählt werden kann
+  e.target.value = ''
 }
 
 function saveModel() {
@@ -540,6 +568,8 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   font-size: 12px; color: var(--text);
 }
+.upload-size { font-size: 10px; color: var(--muted); }
+.upload-error { font-size: 11px; color: var(--red); }
 .upload-preview button { border: none; background: transparent; color: var(--muted); cursor: pointer; }
 
 .input-area {
