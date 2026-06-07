@@ -10,12 +10,41 @@
 
 ## Features
 
-- 🏠 **Geräte** — Stockwerke → Bereiche → Geräte → Entities (hierarchische Ansicht)
-- ⚙️ **Automationen** — Automationen, Skripte, Szenen
-- 🔧 **Helfer** — Input-Helfer, Timer, Counter und mehr
-- 👥 **Personen** — Personen-Tracker und Zonen
-- 🤖 **Lokaler KI-Assistent** — Chat mit lokalem Ollama-Modell, optional mit HA-Steuerung
-- ⚙ **Einstellungen** — Alles konfigurierbar direkt im Dashboard
+### 🏠 Geräte
+- Hierarchische Ansicht: Stockwerke → Bereiche → Geräte → Entitäten
+- Brand-Icons und Integration-Badges
+- Alle Entitäten direkt ein-/ausklappen
+- Geräte manuell Bereichen zuordnen
+
+### 🎙️ Sprachassistent-Verwaltung
+- **Mikrofon-Icon** bei jeder Entität — ein Klick macht sie für den HA-Sprachassistenten verfügbar
+- **Expose-Zähler** im Zimmer-Header zeigt wie viele Entitäten verfügbar sind
+- **KI-Vorschläge** — direkt aus dem Zimmer-Header: der lokale KI-Assistent analysiert die Geräte und schlägt sinnvolle Entitäten vor
+  - Auswahl anpassbar (hinzufügen / abwählen)
+  - Nur steuerbare Geräte werden vorgeschlagen (Lichter, Schalter, Rollos, Heizung...)
+
+### 🤖 Jarvis KI-Assistent
+- Chat mit lokalem Ollama-Modell (empfohlen: `qwen2.5:14b-instruct`)
+- Mehrere persistente Chats mit automatischem KI-Titel
+- Umbenennen per Doppelklick
+- Code-Blöcke mit Syntax-Highlighting, Kopieren und Download
+- Datei-Upload (Text-Dateien) — Inhalt wird an die KI übergeben
+- **HA-Steuerung** — optional: KI kann Geräte steuern (Schalter, Rollläden, Beleuchtung etc.)
+- Modell-Auswahl aus verfügbaren Ollama-Modellen
+- Timestamp und Modell-Name unter jeder Nachricht
+
+### ⚙️ Automationen, Helfer & Zonen
+- Automationen, Skripte, Szenen verwalten
+- Input-Helfer, Timer, Counter
+- Personen-Tracker und Zonen-Übersicht
+
+### 🎨 Dashboard
+- Dark/Light Theme
+- Uhr und Wetter im Header (konfigurierbar)
+- **Tab-Reihenfolge** per Drag & Drop anpassbar und persistent gespeichert
+- Alle Einstellungen direkt im Dashboard — kein Zugriff auf HA-Konfigurationsdateien nötig
+
+---
 
 ## Installation
 
@@ -23,31 +52,39 @@
    **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**  
    URL: `https://github.com/Melle79/regis-lab`
 
-2. **Regis-Lab** installieren
+2. **Regis-Lab** installieren und starten
 
-3. App starten und über die Seitenleiste öffnen
+3. App über die Seitenleiste öffnen
 
 4. Einstellungen über das ⚙-Symbol im Dashboard vornehmen
 
+---
+
 ## Konfiguration
 
-Alle Einstellungen werden direkt im Dashboard vorgenommen — kein Zugriff auf die HA-Konfigurationsdateien nötig.
+### Home Assistant Token
+Ein Long-Lived Access Token ermöglicht erweiterte Funktionen (Sprachassistent-Verwaltung, HA-Steuerung).  
+Erstellen unter: **HA → Profil → Sicherheit → Langlebige Zugriffstoken**
 
-### Home Assistant Token (optional)
-Ein Long-Lived Access Token ermöglicht erweiterte Funktionen. Erstellen unter:  
-**HA → Profil → Sicherheit → Langlebige Zugriffstoken**
+### Lokaler KI-Assistent (Ollama)
+- Ollama URL eingeben (z.B. `http://192.168.0.220:11434`)
+- Modell auswählen (empfohlen: `qwen2.5:14b-instruct`)
+- Name des Assistenten frei wählbar
+- **HA-Steuerung**: standardmäßig deaktiviert — nur bewusst aktivieren
 
-### Lokaler KI-Assistent
-- Ollama URL und Modell konfigurierbar
-- Name des Assistenten frei wählbar in den Einstellungen
-- **HA-Steuerung**: standardmäßig deaktiviert — aktiviere sie nur bewusst, da der KI-Assistent dann Geräte steuern kann
+### Wetter
+Wetter-Entität in den Einstellungen eintragen (z.B. `weather.forecast_home`)
+
+---
 
 ## Sicherheitshinweise
 
 - Die KI-Steuerung von HA-Geräten ist experimentell
 - Fehlerhafte KI-Antworten können unbeabsichtigte Schaltaktionen auslösen
-- Der HA-Token wird im Addon gespeichert
+- Der HA-Token wird lokal im Addon gespeichert (`/data/regis_settings.json`)
 - Nutzung ausschließlich auf eigene Gefahr
+
+---
 
 ## Lizenz
 
