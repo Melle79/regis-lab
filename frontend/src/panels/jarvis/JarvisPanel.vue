@@ -400,23 +400,36 @@ function saveModel() {
 
 function formatMessage(text) {
   if (!text) return ''
-  // Attachments VOR dem Escaping extrahieren
-  const attachments = {}
+  const placeholders = {}
   let idx = 0
+
+  // Code-Blöcke VOR dem Escaping extrahieren
+  text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const key = `CODEBLOCK${idx++}CODEBLOCK`
+    const ext = (lang || 'txt').trim()
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const b64 = btoa(unescape(encodeURIComponent(code)))
+    placeholders[key] = `<div class="code-block"><div class="code-header"><span class="code-lang">${ext}</span><button class="code-download" onclick="(function(){var a=document.createElement('a');a.href='data:text/plain;base64,${b64}';a.download='download.${ext}';a.click()})()">⬇ Herunterladen</button></div><pre><code>${escaped}</code></pre></div>`
+    return key
+  })
+
+  // Attachments VOR dem Escaping extrahieren
   text = text.replace(/📎 ([^\n]+)/g, (_, filename) => {
     const key = `ATTACH${idx++}ATTACH`
     const fn = filename.trim()
-    attachments[key] = `<span class="file-attachment" data-filename="${fn}" title="Datei herunterladen">📎 ${fn}</span>`
+    placeholders[key] = `<span class="file-attachment" data-filename="${fn}" title="Datei herunterladen">📎 ${fn}</span>`
     return key
   })
+
   // HTML escapen und formatieren
   text = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
-  // Attachments zurückeinsetzen
-  for (const [key, html] of Object.entries(attachments)) {
+
+  // Platzhalter zurückeinsetzen
+  for (const [key, html] of Object.entries(placeholders)) {
     text = text.replace(key, html)
   }
   return text
@@ -748,4 +761,20 @@ onMounted(async () => {
 .code-download:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
 .code-block code { background: none; padding: 0; font-size: 11px; }
+.code-block {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin: 6px 0; text-align: left; width: 100%;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 10px; background: var(--border); font-size: 11px;
+}
+.code-lang { color: var(--muted); font-family: monospace; }
+.code-download {
+  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer; font-size: 10px;
+}
+.code-download:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.code-block pre { margin: 0; padding: 10px; overflow-x: auto; font-size: 11px; line-height: 1.5; }
+.code-block code { background: none; padding: 0; font-size: 11px; white-space: pre; }
 </style>
