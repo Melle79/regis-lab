@@ -78,7 +78,7 @@
       </div>
 
       <!-- Nachrichten -->
-      <div class="messages-area" ref="messagesEl">
+      <div class="messages-area" ref="messagesEl" @click.capture="onMessagesClick">
         <div v-if="!activeChat" class="empty-state">
           <MdiIcon icon="mdi:robot-outline" :size="52" color="var(--muted)" />
           <p>Wähle einen Chat oder erstelle einen neuen.</p>
