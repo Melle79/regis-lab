@@ -89,6 +89,7 @@ class Module(BaseModule):
         def chat(chat_id):
             body    = request.get_json() or {}
             message = body.get("message", "")
+            display  = body.get("display", message)  # Anzeige-Version (ohne Dateiinhalt)
             model   = body.get("model") or self._get_setting("jarvis_model", "")
             ollama_url = self._get_ollama_url()
 
@@ -111,7 +112,9 @@ class Module(BaseModule):
             ha_control = self.config._settings.get("jarvis_ha_control", False)
             system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
 
-            full_messages = [{"role": "system", "content": system_prompt}] + chat_data["messages"]
+            # KI bekommt vollen Text (inkl. Dateiinhalt), gespeichert wird display-Version
+            ki_messages = chat_data["messages"][:-1] + [{"role": "user", "content": message}]
+            full_messages = [{"role": "system", "content": system_prompt}] + ki_messages
 
             def generate():
                 full_text = ""

@@ -299,7 +299,7 @@ ${fileAttachment.content}
     const r = await fetch(`api/jarvis/chats/${activeChatId.value}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: sendText, model: currentModel.value }),
+      body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value }),
     })
 
     const reader  = r.body.getReader()
