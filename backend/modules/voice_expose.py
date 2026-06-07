@@ -55,8 +55,8 @@ class Module(BaseModule):
     def _ws_call(self, msg: dict) -> any:
         """Synchroner WebSocket-Call an HA."""
         token   = self.config.ha_long_token
-        ha_url  = self.ha.ha_url.replace("http://", "ws://").replace("https://", "wss://")
-        ws_url  = f"{ha_url}/api/websocket"
+        # Direkt HA WebSocket (nicht Supervisor-Proxy)
+        ws_url  = "ws://homeassistant.local.hass.io:8123/api/websocket"
         result  = [None]
         error   = [None]
         done    = threading.Event()
