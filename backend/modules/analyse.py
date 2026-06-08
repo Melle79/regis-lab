@@ -308,7 +308,7 @@ class Module(BaseModule):
 
             report = {
                 "timestamp":             datetime.now().isoformat(),
-                "offline":               offline[:20],
+                "offline":               offline,
                 "low_battery":           low_battery[:10],
                 "disabled_automations":  disabled_automations[:20],
                 "errors":                errors,
