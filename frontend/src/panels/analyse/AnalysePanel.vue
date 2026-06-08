@@ -57,6 +57,32 @@
         </div>
       </div>
 
+      <!-- Trend-Miniatur -->
+      <div v-if="trendData.length > 1" class="trend-section">
+        <div class="trend-title">
+          <MdiIcon icon="mdi:chart-timeline-variant" :size="14" />
+          Verlauf (letzte {{ trendData.length }} Messungen)
+        </div>
+        <div class="trend-bars">
+          <div
+            v-for="(t, i) in trendData"
+            :key="i"
+            class="trend-bar-wrap"
+            :title="formatDate(t.timestamp) + ': ' + (t.counts?.offline || 0) + ' offline'"
+          >
+            <div
+              class="trend-bar"
+              :style="{ height: Math.max(4, Math.min(40, (t.counts?.offline || 0) * 2)) + 'px' }"
+              :class="(t.counts?.offline || 0) > 10 ? 'bar-warn' : 'bar-ok'"
+            />
+          </div>
+        </div>
+        <div class="trend-labels">
+          <span>älter</span>
+          <span>jetzt</span>
+        </div>
+      </div>
+
       <!-- KI-Zusammenfassung -->
       <div class="ki-summary" v-if="report.summary">
         <div class="ki-summary-header">
@@ -130,22 +156,38 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const loading     = ref(false)
 const loadingStep = ref('Analysiere…')
 const report      = ref(null)
+const trendData   = ref([])
+
+onMounted(async () => {
+  try {
+    const r = await fetch('api/analyse/latest')
+    const d = await r.json()
+    if (d.timestamp) report.value = d
+    // Trend-Daten laden
+    const tr = await fetch('api/analyse/reports')
+    const td = await tr.json()
+    trendData.value = (td.reports || []).slice(0, 48).reverse()
+  } catch(e) {}
+})
 
 async function runAnalysis() {
   loading.value = true
   loadingStep.value = 'Lade Entitäten…'
-  report.value  = null
   try {
     const r = await fetch('api/analyse/run', { method: 'POST' })
     const d = await r.json()
     if (d.error) throw new Error(d.error)
     report.value = d
+    // Trend aktualisieren
+    const tr = await fetch('api/analyse/reports')
+    const td = await tr.json()
+    trendData.value = (td.reports || []).slice(0, 48).reverse()
   } catch(e) {
     console.error(e)
   } finally {
@@ -237,6 +279,14 @@ function formatSummary(text) {
   color: var(--accent); cursor: pointer; font-size: 11px; white-space: nowrap;
 }
 .action-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.trend-section { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.trend-title { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.trend-bars { display: flex; align-items: flex-end; gap: 2px; height: 44px; }
+.trend-bar-wrap { flex: 1; display: flex; align-items: flex-end; }
+.trend-bar { width: 100%; border-radius: 2px 2px 0 0; min-height: 4px; transition: height .3s; }
+.trend-bar.bar-ok   { background: var(--green); opacity: .7; }
+.trend-bar.bar-warn { background: #f59e0b; opacity: .8; }
+.trend-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
