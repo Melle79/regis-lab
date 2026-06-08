@@ -117,15 +117,17 @@ class Module(BaseModule):
         if data["lights_on"]:     infos.append(f"💡 {len(data['lights_on'])} Lichter an")
         subtitle = " · ".join(infos)
 
-        # Nur ersten Satz der KI-Zusammenfassung
-        summary = data["summary"].split(".")[0] + "." if "." in data["summary"] else data["summary"]
-        if len(summary) > 100:
-            summary = summary[:97] + "…"
-
         payload = {
-            "message": summary,
-            "title":   f"☀️ Guten Morgen, Sven! · {data['date']}",
-            "data":    {"subtitle": subtitle},
+            "message": data["summary"],
+            "title":   "☀️ Guten Morgen, Sven!",
+            "data": {
+                "subtitle": subtitle,
+                "push": {
+                    "sound": "default",
+                    "interruption-level": "active",
+                },
+                "url": "homeassistant://navigate/lovelace/0",
+            },
         }
         try:
             requests.post(
