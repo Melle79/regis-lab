@@ -249,9 +249,14 @@
           </div>
           <div class="log-status">
             <span v-if="entry.undone" class="undone-badge">Rückgängig</span>
-            <button v-else-if="canUndo(entry.type)" class="undo-btn" @click="undoAction(entry)">
-              <MdiIcon icon="mdi:undo" :size="13" /> Rückgängig
-            </button>
+            <template v-else>
+              <button v-if="lastSeenLog < entry.timestamp" class="mark-read-btn" @click.stop="markEntryRead(entry)" title="Als gelesen">
+                <MdiIcon icon="mdi:check" :size="13" />
+              </button>
+              <button v-if="canUndo(entry.type)" class="undo-btn" @click="undoAction(entry)">
+                <MdiIcon icon="mdi:undo" :size="13" /> Rückgängig
+              </button>
+            </template>
           </div>
         </div>
       </div>
