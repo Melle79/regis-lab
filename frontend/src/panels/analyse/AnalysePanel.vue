@@ -13,6 +13,17 @@
       </button>
     </div>
 
+    <!-- Sub-Tabs -->
+    <div class="sub-tabs">
+      <button :class="['sub-tab', { active: activeTab === 'status' }]" @click="activeTab = 'status'">
+        <MdiIcon icon="mdi:pulse" :size="14" /> Status
+      </button>
+      <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="activeTab = 'cleanup'; loadCleanup()">
+        <MdiIcon icon="mdi:broom" :size="14" /> Aufräumen
+      </button>
+    </div>
+
+    <template v-if="activeTab === 'status'">
     <!-- Leer -->
     <div v-if="!report && !loading" class="empty-state">
       <MdiIcon icon="mdi:robot-happy-outline" :size="48" color="var(--muted)" />
@@ -152,6 +163,46 @@
       </div>
 
     </div>
+      </template>
+
+    <!-- Aufräumen Tab -->
+    <template v-if="activeTab === 'cleanup'">
+      <div v-if="cleanupLoading" class="loading-state">
+        <MdiIcon icon="mdi:loading" :size="36" color="var(--accent)" class="spin" />
+        <p>Lade Integrations-Status...</p>
+      </div>
+      <div v-else class="cleanup-list">
+        <div v-for="group in cleanupGroups" :key="group.platform" class="cleanup-group">
+          <div class="cleanup-header" @click="toggleCleanupGroup(group.platform)">
+            <MdiIcon icon="mdi:puzzle-outline" :size="16" color="var(--accent)" />
+            <span class="cleanup-platform">{{ group.platform }}</span>
+            <span class="badge warn">{{ group.count }} offline</span>
+            <button class="ki-btn" @click.stop="suggestCleanup(group)" :disabled="group.suggesting">
+              <MdiIcon :icon="group.suggesting ? 'mdi:loading' : 'mdi:robot'" :size="13" :class="{ spin: group.suggesting }" />
+              Jarvis fragen
+            </button>
+            <MdiIcon :icon="expandedGroups.has(group.platform) ? 'mdi:chevron-up' : 'mdi:chevron-down'" :size="16" color="var(--muted)" />
+          </div>
+          <div v-if="group.suggestion" class="cleanup-suggestion">
+            <MdiIcon icon="mdi:robot" :size="13" color="var(--accent)" />
+            {{ group.suggestion }}
+          </div>
+          <div v-if="expandedGroups.has(group.platform)" class="cleanup-entities">
+            <div v-for="e in group.entities.slice(0,10)" :key="e.entity_id" class="cleanup-entity">
+              <span class="detail-entity">{{ e.name || e.entity_id }}</span>
+              <span class="detail-meta">{{ e.entity_id }}</span>
+              <span class="state-badge warn">{{ e.state }}</span>
+            </div>
+            <div v-if="group.entities.length > 10" class="cleanup-more">+ {{ group.entities.length - 10 }} weitere</div>
+          </div>
+        </div>
+        <div v-if="cleanupGroups.length === 0" class="empty-state">
+          <MdiIcon icon="mdi:check-circle" :size="40" color="var(--green)" />
+          <p>Keine problematischen Integrationen gefunden!</p>
+        </div>
+      </div>
+    </template>
+
   </div>
 </template>
 
@@ -162,7 +213,11 @@ import MdiIcon from '../../components/MdiIcon.vue'
 const loading     = ref(false)
 const loadingStep = ref('Diagnostiziere…')
 const report      = ref(null)
-const trendData   = ref([])
+const trendData      = ref([])
+const activeTab      = ref('status')
+const cleanupGroups  = ref([])
+const cleanupLoading = ref(false)
+const expandedGroups = ref(new Set())
 
 onMounted(async () => {
   try {
@@ -193,6 +248,38 @@ async function runAnalysis() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadCleanup() {
+  if (cleanupGroups.value.length > 0) return
+  cleanupLoading.value = true
+  try {
+    const r = await fetch('api/analyse/cleanup')
+    const d = await r.json()
+    cleanupGroups.value = (d.groups || []).map(g => ({ ...g, suggestion: '', suggesting: false }))
+  } catch(e) {}
+  cleanupLoading.value = false
+}
+
+function toggleCleanupGroup(platform) {
+  const s = new Set(expandedGroups.value)
+  if (s.has(platform)) s.delete(platform)
+  else s.add(platform)
+  expandedGroups.value = s
+}
+
+async function suggestCleanup(group) {
+  group.suggesting = true
+  try {
+    const r = await fetch('api/analyse/cleanup/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: group.platform, entities: group.entities }),
+    })
+    const d = await r.json()
+    group.suggestion = d.suggestion || ''
+  } catch(e) {}
+  group.suggesting = false
 }
 
 async function enableAutomation(entity_id) {
@@ -287,6 +374,39 @@ function formatSummary(text) {
 .trend-bar.bar-ok   { background: var(--green); opacity: .7; }
 .trend-bar.bar-warn { background: #f59e0b; opacity: .8; }
 .trend-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
+.sub-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+.sub-tab {
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+  border-radius: 8px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 12px; transition: all .15s;
+}
+.sub-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cleanup-list { display: flex; flex-direction: column; gap: 8px; }
+.cleanup-group { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.cleanup-header {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: var(--surface); cursor: pointer;
+}
+.cleanup-header:hover { background: var(--border); }
+.cleanup-platform { font-size: 13px; font-weight: 600; flex: 1; }
+.ki-btn {
+  display: flex; align-items: center; gap: 4px; padding: 3px 10px;
+  border-radius: 6px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 11px;
+}
+.ki-btn:disabled { opacity: .5; cursor: default; }
+.cleanup-suggestion {
+  display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  border-top: 1px solid var(--border); font-size: 12px; line-height: 1.5; color: var(--text);
+}
+.cleanup-entities { padding: 4px 0; border-top: 1px solid var(--border); }
+.cleanup-entity {
+  display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+  font-size: 11px; border-bottom: 1px solid var(--border);
+}
+.cleanup-entity:last-child { border-bottom: none; }
+.cleanup-more { padding: 6px 14px; font-size: 11px; color: var(--muted); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -32,6 +32,47 @@ class Module(BaseModule):
             reports = self._load_reports()
             return jsonify(reports[0] if reports else {})
 
+        @self.app.route("/api/analyse/cleanup")
+        def get_cleanup():
+            token = self.config.ha_long_token
+            ha    = "http://homeassistant.local.hass.io:8123"
+            hdrs  = {"Authorization": "Bearer " + token}
+            try:
+                states_r = requests.get(ha + "/api/states", headers=hdrs, timeout=15)
+                states   = states_r.json() if states_r.status_code == 200 else []
+                groups   = self._get_cleanup_data(states, token)
+                return jsonify({"groups": groups})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/analyse/cleanup/suggest", methods=["POST"])
+        def cleanup_suggest():
+            data     = request.get_json() or {}
+            platform = data.get("platform", "")
+            entities = data.get("entities", [])
+            model    = self.config._settings.get("jarvis_model", "")
+            ollama   = self.config.jarvis_ollama_url.rstrip("/")
+            if not model or not ollama:
+                return jsonify({"error": "Ollama nicht konfiguriert"}), 400
+
+            entity_list = "\n".join("- " + e['entity_id'] + " (" + e['name'] + ")" for e in entities[:20])
+            prompt = (
+                "Du bist ein Home Assistant Experte. Diese Geraete der Integration '" + platform + "' sind unavailable:\n\n"
+                + entity_list + "\n\n"
+                "Analysiere und gib eine kurze Einschaetzung (2-3 Saetze) auf Deutsch:\n"
+                "- Was koennte der Grund sein?\n"
+                "- Was sollte der Nutzer tun?\n"
+                "Sei praegnant und konkret."
+                "Sei praegnant und konkret."
+            )
+            try:
+                r = requests.post(ollama + "/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False}, timeout=20)
+                text = r.json().get("response", "").strip() if r.status_code == 200 else ""
+                return jsonify({"suggestion": text})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
         @self.app.route("/api/analyse/run", methods=["POST"])
         def run_analysis():
             token  = self.config.ha_long_token
@@ -211,3 +252,36 @@ class Module(BaseModule):
         except Exception:
             pass
         return None
+
+
+    def _get_cleanup_data(self, states, token):
+        """Gruppiert problematische Entitäten nach Integration für das Aufräumen."""
+        ha    = "http://homeassistant.local.hass.io:8123"
+        hdrs  = {"Authorization": "Bearer " + token}
+
+        # Entity-Registry laden für Integration-Info
+        try:
+            reg_r = requests.get(ha + "/api/config/entity_registry/list", headers=hdrs, timeout=10)
+            registry = {e["entity_id"]: e for e in (reg_r.json() if reg_r.status_code == 200 else [])}
+        except Exception:
+            registry = {}
+
+        # Alle unavailable/unknown Entitäten nach Platform gruppieren
+        groups = {}
+        for s in states:
+            if s.get("state") not in ("unavailable", "unknown"):
+                continue
+            eid      = s["entity_id"]
+            reg_info = registry.get(eid, {})
+            platform = reg_info.get("platform", eid.split(".")[0])
+            name     = s.get("attributes", {}).get("friendly_name", eid)
+            if platform not in groups:
+                groups[platform] = []
+            groups[platform].append({"entity_id": eid, "name": name, "state": s["state"]})
+
+        # Sortiert nach Anzahl, top 15 Integrationen
+        result = sorted(
+            [{"platform": k, "entities": v, "count": len(v)} for k, v in groups.items()],
+            key=lambda x: x["count"], reverse=True
+        )[:15]
+        return result
