@@ -4,19 +4,19 @@
     <!-- Header -->
     <div class="analyse-header">
       <div class="analyse-title">
-        <MdiIcon icon="mdi:chart-line" :size="20" color="var(--accent)" />
-        Smart Home Analyse
+        <MdiIcon icon="mdi:stethoscope" :size="20" color="var(--accent)" />
+        Smart Home Diagnose
       </div>
       <button class="refresh-btn" @click="runAnalysis" :disabled="loading">
         <MdiIcon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :size="16" :class="{ spin: loading }" />
-        {{ loading ? 'Analysiere…' : 'Analyse starten' }}
+        {{ loading ? 'Diagnostiziere…' : 'Diagnose starten' }}
       </button>
     </div>
 
     <!-- Leer -->
     <div v-if="!report && !loading" class="empty-state">
       <MdiIcon icon="mdi:robot-happy-outline" :size="48" color="var(--muted)" />
-      <p>Klicke auf "Analyse starten" — Jarvis prüft deinen Smart Home Zustand.</p>
+      <p>Klicke auf "Diagnose starten" — Jarvis prüft deinen Smart Home Zustand.</p>
     </div>
 
     <!-- Lädt -->
@@ -30,7 +30,7 @@
 
       <div class="report-meta">
         <MdiIcon icon="mdi:clock-outline" :size="13" />
-        Analyse vom {{ formatDate(report.timestamp) }}
+        Diagnose vom {{ formatDate(report.timestamp) }}
       </div>
 
       <!-- Status-Kacheln -->
@@ -160,7 +160,7 @@ import { ref, onMounted, computed } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const loading     = ref(false)
-const loadingStep = ref('Analysiere…')
+const loadingStep = ref('Diagnostiziere…')
 const report      = ref(null)
 const trendData   = ref([])
 
