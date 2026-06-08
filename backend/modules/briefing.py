@@ -1,139 +1,156 @@
 """
 Modul: briefing
-Generiert eine tägliche Morgen-Zusammenfassung via Ollama.
+Generiert eine tägliche Morgen-Zusammenfassung via Ollama und sendet sie per Push.
 """
 import json
+import os
 import requests
-from datetime import datetime
+import threading
+import time as _time
+from datetime import datetime, timedelta
 from flask import jsonify
 from modules.base import BaseModule
+
+DAYS_DE   = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"]
+MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"]
+WEATHER_DE = {
+    "sunny": "Sonnig", "clear-night": "Klare Nacht", "cloudy": "Bewölkt",
+    "partlycloudy": "Teils bewölkt", "rainy": "Regen", "snowy": "Schnee",
+    "windy": "Windig", "fog": "Nebel", "lightning": "Gewitter", "pouring": "Starkregen",
+    "exceptional": "Außergewöhnlich",
+}
 
 
 class Module(BaseModule):
     name    = "briefing"
     version = "1.0.0"
 
+    def _build_briefing(self) -> dict:
+        """Daten sammeln und KI-Zusammenfassung erstellen."""
+        ha   = "http://homeassistant.local.hass.io:8123"
+        hdrs = {"Authorization": "Bearer " + self.config.ha_long_token,
+                "Content-Type": "application/json"}
+
+        try:
+            states = requests.get(ha + "/api/states", headers=hdrs, timeout=15).json()
+        except Exception:
+            states = []
+
+        # Personen zuhause
+        persons_home = [
+            s.get("attributes", {}).get("friendly_name", s["entity_id"])
+            for s in states
+            if s["entity_id"].startswith("person.") and s["state"] == "home"
+        ]
+
+        # Wetter
+        weather_entity = self.config._settings.get("weather_entity", "")
+        weather = next((s for s in states if s["entity_id"] == weather_entity), None)
+        weather_text = ""
+        if weather:
+            temp = weather.get("attributes", {}).get("temperature", "?")
+            weather_text = f"{WEATHER_DE.get(weather.get('state',''), weather.get('state',''))}, {temp}°C"
+
+        # Offline-Geräte
+        offline_count = 0
+        try:
+            if os.path.exists("/data/analyse_reports.json"):
+                reports = json.load(open("/data/analyse_reports.json"))
+                if reports:
+                    offline_count = reports[0].get("counts", {}).get("offline", 0)
+        except Exception:
+            pass
+
+        # Lichter an (ohne Segmente)
+        seen, lights_on = set(), []
+        for s in states:
+            if not s["entity_id"].startswith("light.") or s["state"] != "on":
+                continue
+            name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+            base = name.split(" Segment ")[0]
+            if base not in seen:
+                seen.add(base)
+                lights_on.append(base)
+
+        now = datetime.now()
+        date_str = f"{DAYS_DE[now.weekday()]}, {now.day}. {MONTHS_DE[now.month-1]} {now.year}"
+
+        context = f"Datum: {date_str}\n"
+        if weather_text:   context += f"Wetter: {weather_text}\n"
+        if persons_home:   context += f"Zuhause: {', '.join(persons_home)}\n"
+        else:              context += "Niemand zuhause\n"
+        if offline_count:  context += f"Offline-Geräte: {offline_count}\n"
+        if lights_on:      context += f"Lichter noch an: {', '.join(lights_on[:5])}\n"
+
+        # KI-Zusammenfassung
+        model  = self.config._settings.get("jarvis_model", "")
+        ollama = self.config.jarvis_ollama_url.rstrip("/")
+        summary = context
+        if model and ollama:
+            try:
+                prompt = (
+                    "Du bist Jarvis. Erstelle eine kurze freundliche Morgen-Zusammenfassung "
+                    "(2-3 Sätze) auf Deutsch ohne Emojis:\n\n" + context
+                )
+                r = requests.post(ollama + "/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False}, timeout=30)
+                summary = r.json().get("response", "").strip() if r.status_code == 200 else context
+            except Exception:
+                pass
+
+        return {
+            "date": date_str, "weather": weather_text,
+            "persons_home": persons_home, "offline_count": offline_count,
+            "lights_on": lights_on, "summary": summary, "context": context,
+        }
+
+    def _send_push(self, data: dict):
+        """Push-Nachricht an Svens iPhone senden."""
+        ha   = "http://homeassistant.local.hass.io:8123"
+        hdrs = {"Authorization": "Bearer " + self.config.ha_long_token,
+                "Content-Type": "application/json"}
+        payload = {
+            "message": data["summary"],
+            "title":   "☀️ Guten Morgen, Sven!",
+            "data":    {"subtitle": f"{data['date']} · {data['weather']}"},
+        }
+        try:
+            requests.post(
+                ha + "/api/services/notify/mobile_app_svens_iphone",
+                headers=hdrs, data=json.dumps(payload), timeout=10,
+            )
+            self.log.info("Morgen-Briefing gesendet")
+        except Exception as e:
+            self.log.error(f"Push-Fehler: {e}")
+
+    def _send_morning_briefing(self):
+        data = self._build_briefing()
+        self._send_push(data)
+
+    def _scheduler(self):
+        while True:
+            now    = datetime.now()
+            target = now.replace(hour=7, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            wait = (target - now).total_seconds()
+            self.log.info(f"Nächstes Briefing in {wait/3600:.1f} Stunden")
+            _time.sleep(wait)
+            try:
+                self._send_morning_briefing()
+            except Exception as e:
+                self.log.error(f"Briefing-Fehler: {e}")
+
     def register(self):
 
         @self.app.route("/api/briefing/morning")
         def morning_briefing():
-            """Tägliche Morgen-Zusammenfassung für Push-Nachricht."""
-            ha    = "http://homeassistant.local.hass.io:8123"
-            hdrs  = {"Authorization": "Bearer " + self.config.ha_long_token}
-            model  = self.config._settings.get("jarvis_model", "")
-            ollama = self.config.jarvis_ollama_url.rstrip("/")
+            return jsonify(self._build_briefing())
 
-            # States laden
-            try:
-                states_r = requests.get(ha + "/api/states", headers=hdrs, timeout=15)
-                states   = states_r.json() if states_r.status_code == 200 else []
-            except Exception:
-                states = []
+        @self.app.route("/api/briefing/send-now", methods=["POST"])
+        def send_briefing_now():
+            threading.Thread(target=self._send_morning_briefing, daemon=True).start()
+            return jsonify({"ok": True, "message": "Briefing wird gesendet..."})
 
-            # Personen zuhause
-            persons_home = [
-                s.get("attributes", {}).get("friendly_name", s["entity_id"])
-                for s in states
-                if s["entity_id"].startswith("person.") and s["state"] == "home"
-            ]
-
-            # Wetter
-            weather_entity = self.config._settings.get("weather_entity", "")
-            weather = next((s for s in states if s["entity_id"] == weather_entity), None)
-            WEATHER_DE = {
-                "sunny": "Sonnig", "clear-night": "Klare Nacht",
-                "cloudy": "Bewölkt", "partlycloudy": "Teils bewölkt",
-                "rainy": "Regen", "snowy": "Schnee", "windy": "Windig",
-                "fog": "Nebel", "lightning": "Gewitter", "hail": "Hagel",
-                "pouring": "Starkregen", "exceptional": "Außergewöhnlich",
-            }
-            weather_text = ""
-            if weather:
-                temp  = weather.get("attributes", {}).get("temperature", "?")
-                state = weather.get("state", "")
-                cond  = WEATHER_DE.get(state, state)
-                weather_text = f"{cond}, {temp}°C"
-
-            # Offline-Geräte (aus letztem Diagnose-Bericht)
-            offline_count = 0
-            try:
-                import os, json as _json
-                if os.path.exists("/data/analyse_reports.json"):
-                    reports = _json.load(open("/data/analyse_reports.json"))
-                    if reports:
-                        offline_count = reports[0].get("counts", {}).get("offline", 0)
-            except Exception:
-                pass
-
-            # Lichter die noch an sind — ohne Segmente
-            lights_on = []
-            seen_lights = set()
-            for s in states:
-                if not s["entity_id"].startswith("light.") or s["state"] != "on":
-                    continue
-                name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
-                # Segmente überspringen
-                if " Segment " in name:
-                    # Basisname ohne Segment merken
-                    base = name.split(" Segment ")[0]
-                    if base not in seen_lights:
-                        seen_lights.add(base)
-                        lights_on.append(base)
-                    continue
-                if name not in seen_lights:
-                    seen_lights.add(name)
-                    lights_on.append(name)
-
-            # Kontext für KI
-            context_parts = []
-            import locale
-            try:
-                locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
-            except Exception:
-                pass
-            context_parts.append(f"Datum: {datetime.now().strftime('%A, %d. %B %Y')}")
-            context_parts.append(f"Uhrzeit: {datetime.now().strftime('%H:%M')} Uhr")
-            if weather_text:
-                context_parts.append(f"Wetter: {weather_text}")
-            if persons_home:
-                context_parts.append(f"Zuhause: {', '.join(persons_home)}")
-            else:
-                context_parts.append("Niemand zuhause")
-            if offline_count > 0:
-                context_parts.append(f"Offline-Geräte: {offline_count}")
-            if lights_on:
-                context_parts.append(f"Lichter noch an: {', '.join(lights_on[:5])}")
-
-            context = "\n".join(context_parts)
-
-            # KI-Zusammenfassung
-            summary = ""
-            if model and ollama:
-                try:
-                    prompt = (
-                        "Du bist Jarvis, ein freundlicher Smart Home Assistent. "
-                        "Erstelle eine kurze, freundliche Morgen-Zusammenfassung (max. 3 Sätze) auf Deutsch "
-                        "basierend auf diesen Informationen:\n\n" + context + "\n\n"
-                        "Keine Emojis. Sei prägnant und informativ."
-                    )
-                    r = requests.post(
-                        ollama + "/api/generate",
-                        json={"model": model, "prompt": prompt, "stream": False},
-                        timeout=30,
-                    )
-                    summary = r.json().get("response", "").strip() if r.status_code == 200 else ""
-                except Exception:
-                    pass
-
-            return jsonify({
-                "date":          datetime.now().strftime("%A, %d. %B %Y").replace("Monday","Montag").replace("Tuesday","Dienstag").replace("Wednesday","Mittwoch").replace("Thursday","Donnerstag").replace("Friday","Freitag").replace("Saturday","Samstag").replace("Sunday","Sonntag").replace("January","Januar").replace("February","Februar").replace("March","März").replace("April","April").replace("May","Mai").replace("June","Juni").replace("July","Juli").replace("August","August").replace("September","September").replace("October","Oktober").replace("November","November").replace("December","Dezember"),
-                "time":          datetime.now().strftime("%H:%M"),
-                "weather":       weather_text,
-                "persons_home":  persons_home,
-                "offline_count": offline_count,
-                "lights_on":     lights_on,
-                "summary":       summary,
-                "context":       context,
-            })
-
-        self.log.info("Briefing-Modul registriert")
+        threading.Thread(target=self._scheduler, daemon=True).start()
+        self.log.info("Briefing-Modul registriert (Scheduler aktiv)")
