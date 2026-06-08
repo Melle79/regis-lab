@@ -221,6 +221,36 @@
       </div>
     </template>
 
+    <!-- Log Tab -->
+    <template v-if="activeTab === 'log'">
+      <div v-if="logLoading" class="loading-state">
+        <MdiIcon icon="mdi:loading" :size="36" color="var(--accent)" class="spin" />
+        <p>Lade Aktivitäten...</p>
+      </div>
+      <div v-else-if="logEntries.length === 0" class="empty-state">
+        <MdiIcon icon="mdi:history" :size="40" color="var(--muted)" />
+        <p>Noch keine Aktivitäten aufgezeichnet.</p>
+      </div>
+      <div v-else class="log-list">
+        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone }">
+          <div class="log-icon">
+            <MdiIcon :icon="logIcon(entry.type)" :size="16" :color="logColor(entry.type)" />
+          </div>
+          <div class="log-info">
+            <div class="log-action">{{ logLabel(entry.type) }}</div>
+            <div class="log-entity">{{ entry.name || entry.entity_id }}</div>
+            <div class="log-time">{{ formatDate(entry.timestamp) }}</div>
+          </div>
+          <div class="log-status">
+            <span v-if="entry.undone" class="undone-badge">Rückgängig</span>
+            <button v-else-if="canUndo(entry.type)" class="undo-btn" @click="undoAction(entry)">
+              <MdiIcon icon="mdi:undo" :size="13" /> Rückgängig
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
   </div>
 </template>
 
