@@ -50,22 +50,22 @@
 
       <!-- Status-Kacheln -->
       <div class="status-grid">
-        <div class="status-card" :class="report.offline.length > 0 ? 'warn' : 'ok'">
+        <div class="status-card clickable" :class="report.offline.length > 0 ? 'warn' : 'ok'" @click="showDiagPopup('Offline / Unavailable', report.offline, 'mdi:wifi-off')">
           <MdiIcon :icon="report.offline.length > 0 ? 'mdi:wifi-off' : 'mdi:wifi-check'" :size="24" />
           <div class="status-number">{{ report.offline.length }}</div>
           <div class="status-label">Offline / Unavailable</div>
         </div>
-        <div class="status-card" :class="report.low_battery.length > 0 ? 'warn' : 'ok'">
+        <div class="status-card clickable" :class="report.low_battery.length > 0 ? 'warn' : 'ok'" @click="showDiagPopup('Niedriger Akku', report.low_battery, 'mdi:battery-low')">
           <MdiIcon :icon="report.low_battery.length > 0 ? 'mdi:battery-low' : 'mdi:battery-check'" :size="24" />
           <div class="status-number">{{ report.low_battery.length }}</div>
           <div class="status-label">Niedriger Akku</div>
         </div>
-        <div class="status-card" :class="report.disabled_automations.length > 0 ? 'info' : 'ok'">
+        <div class="status-card clickable" :class="report.disabled_automations.length > 0 ? 'info' : 'ok'" @click="showDiagPopup('Automationen deaktiviert', report.disabled_automations, 'mdi:robot-off')">
           <MdiIcon icon="mdi:robot-off" :size="24" />
           <div class="status-number">{{ report.disabled_automations.length }}</div>
           <div class="status-label">Automationen deaktiviert</div>
         </div>
-        <div class="status-card" :class="report.errors.length > 0 ? 'error' : 'ok'">
+        <div class="status-card clickable" :class="report.errors.length > 0 ? 'error' : 'ok'" @click="showDiagPopup('Log-Fehler', report.errors.map(e => ({name: e, entity_id: ''})), 'mdi:alert-circle')">
           <MdiIcon :icon="report.errors.length > 0 ? 'mdi:alert-circle' : 'mdi:check-circle'" :size="24" />
           <div class="status-number">{{ report.errors.length }}</div>
           <div class="status-label">Log-Fehler</div>
@@ -262,6 +262,32 @@
       </div>
     </template>
 
+    <!-- Diagnose Popup -->
+    <Teleport to="body">
+      <div v-if="diagPopup" class="popup-overlay" @click.self="diagPopup = null">
+        <div class="popup-card">
+          <div class="popup-header">
+            <MdiIcon :icon="diagPopup.icon" :size="18" color="var(--accent)" />
+            <span class="popup-title">{{ diagPopup.title }}</span>
+            <button class="popup-close" @click="diagPopup = null">
+              <MdiIcon icon="mdi:close" :size="18" />
+            </button>
+          </div>
+          <div class="popup-list">
+            <div v-if="diagPopup.items.length === 0" class="popup-empty">Keine Einträge</div>
+            <div v-for="(item, i) in diagPopup.items" :key="i" class="popup-item">
+              <MdiIcon :icon="diagPopup.icon" :size="14" color="var(--accent)" />
+              <div class="popup-item-info">
+                <span class="popup-item-name">{{ item.name || item }}</span>
+                <span v-if="item.entity_id" class="popup-item-detail">{{ item.entity_id }}</span>
+              </div>
+              <span v-if="item.state" class="popup-item-state">{{ item.state }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -270,6 +296,7 @@ import { ref, onMounted, computed } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const loading     = ref(false)
+const diagPopup   = ref(null)
 const loadingStep = ref('Diagnostiziere…')
 const report      = ref(null)
 const trendData      = ref([])
@@ -336,6 +363,10 @@ const unreadLogCount = computed(() => {
   const ids = Array.isArray(readIds.value) ? readIds.value : []
   return logEntries.value.filter(e => !e.undone && !ids.includes(e.id)).length
 })
+
+function showDiagPopup(title, items, icon) {
+  diagPopup.value = { title, items, icon }
+}
 
 function markAllRead() {
   const ids = logEntries.value.filter(e => !e.undone).map(e => e.id)
@@ -816,6 +847,22 @@ function formatSummary(text) {
 }
 .cleanup-entity:last-child { border-bottom: none; }
 .cleanup-more { padding: 6px 14px; font-size: 11px; color: var(--muted); }
+.status-card.clickable { cursor: pointer; transition: transform .15s; }
+.status-card.clickable:hover { transform: translateY(-2px); }
+.popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.popup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 420px; max-height: 70vh; display: flex; flex-direction: column; overflow: hidden; }
+.popup-header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.popup-title { font-size: 15px; font-weight: 700; flex: 1; }
+.popup-close { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; border-radius: 6px; margin-left: auto; }
+.popup-close:hover { color: var(--text); background: var(--border); }
+.popup-list { overflow-y: auto; padding: 8px 0; }
+.popup-empty { padding: 20px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.popup-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.popup-item:last-child { border-bottom: none; }
+.popup-item-info { flex: 1; min-width: 0; }
+.popup-item-name { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popup-item-detail { display: block; font-size: 11px; color: var(--muted); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popup-item-state { font-size: 11px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); white-space: nowrap; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

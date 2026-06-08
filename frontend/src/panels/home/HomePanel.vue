@@ -16,25 +16,25 @@
 
     <!-- Status-Kacheln -->
     <div class="status-grid">
-      <div class="stat-card">
+      <div class="stat-card clickable" @click="showPopup('Personen zuhause', personsHome.map(p => ({name: p.name, detail: 'zuhause', icon: 'mdi:account'})))">
         <MdiIcon icon="mdi:home-outline" :size="22" color="var(--accent)" />
         <div class="stat-number">{{ personsHome.length }}</div>
         <div class="stat-label">Personen zuhause</div>
         <div class="stat-detail">{{ personsHome.map(p => p.name).join(', ') || '–' }}</div>
       </div>
-      <div class="stat-card" :class="offlineCount > 0 ? 'warn' : 'ok'">
+      <div class="stat-card clickable" :class="offlineCount > 0 ? 'warn' : 'ok'" @click="showPopup('Geräte offline', offlineEntities.map(s => ({name: s.attributes?.friendly_name || s.entity_id, detail: s.entity_id, icon: 'mdi:wifi-off', state: s.state})))">
         <MdiIcon :icon="offlineCount > 0 ? 'mdi:wifi-off' : 'mdi:wifi-check'" :size="22" />
         <div class="stat-number">{{ offlineCount }}</div>
         <div class="stat-label">Geräte offline</div>
         <div class="stat-detail">{{ offlineCount === 0 ? 'Alles in Ordnung' : 'Prüfe Diagnose' }}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card clickable" @click="showPopup('Lichter an', allStates.filter(s => s.entity_id.startsWith('light.') && s.state === 'on').map(s => ({name: s.attributes?.friendly_name || s.entity_id, detail: s.entity_id, icon: 'mdi:lightbulb'})))">
         <MdiIcon icon="mdi:lightning-bolt" :size="22" color="var(--accent)" />
         <div class="stat-number">{{ lightsOn }}</div>
         <div class="stat-label">Lichter an</div>
         <div class="stat-detail">von {{ lightsTotal }} gesamt</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card clickable" @click="showPopup('Automationen aktiv', allStates.filter(s => s.entity_id.startsWith('automation.') && s.state === 'on').map(s => ({name: s.attributes?.friendly_name || s.entity_id, detail: s.entity_id, icon: 'mdi:robot'})))">
         <MdiIcon icon="mdi:robot" :size="22" color="var(--accent)" />
         <div class="stat-number">{{ automationsOn }}</div>
         <div class="stat-label">Automationen aktiv</div>
@@ -141,6 +141,32 @@
       </div>
 
     </div>
+
+    <!-- Popup -->
+    <Teleport to="body">
+      <div v-if="popup" class="popup-overlay" @click.self="popup = null">
+        <div class="popup-card">
+          <div class="popup-header">
+            <span class="popup-title">{{ popup.title }}</span>
+            <button class="popup-close" @click="popup = null">
+              <MdiIcon icon="mdi:close" :size="18" />
+            </button>
+          </div>
+          <div class="popup-list">
+            <div v-if="popup.items.length === 0" class="popup-empty">Keine Einträge</div>
+            <div v-for="(item, i) in popup.items" :key="i" class="popup-item">
+              <MdiIcon :icon="item.icon || 'mdi:information'" :size="16" color="var(--accent)" />
+              <div class="popup-item-info">
+                <span class="popup-item-name">{{ item.name }}</span>
+                <span class="popup-item-detail">{{ item.detail }}</span>
+              </div>
+              <span v-if="item.state" class="popup-item-state">{{ item.state }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -159,7 +185,12 @@ const jarvisLoading = ref(false)
 const msgContainer  = ref(null)
 
 const kiName = computed(() => config.value.ki_name || 'Jarvis')
-const userName = ref('')
+const userName   = ref('')
+const popup      = ref(null)  // { title, items: [{name, detail, icon, state}] }
+
+function showPopup(title, items) {
+  popup.value = { title, items }
+}
 
 async function loadUserName() {
   try {
@@ -204,9 +235,11 @@ const automationsOn    = computed(() => allStates.value.filter(s => s.entity_id.
 const automationsTotal = computed(() => allStates.value.filter(s => s.entity_id.startsWith('automation.')).length)
 
 const RELEVANT = ['light', 'switch', 'cover', 'climate', 'lock', 'fan', 'media_player']
-const offlineCount = computed(() =>
-  allStates.value.filter(s => RELEVANT.includes(s.entity_id.split('.')[0]) && ['unavailable', 'unknown'].includes(s.state)).length
+const offlineEntities = computed(() =>
+  allStates.value.filter(s => RELEVANT.includes(s.entity_id.split('.')[0]) && ['unavailable', 'unknown'].includes(s.state))
 )
+
+const offlineCount = computed(() => offlineEntities.value.length)
 
 const topLights = computed(() =>
   allStates.value.filter(s => s.entity_id.startsWith('light.') && s.state !== 'unavailable')
@@ -379,6 +412,22 @@ onMounted(async () => {
   background: var(--accent); color: #fff; cursor: pointer;
 }
 .jarvis-send:disabled { opacity: .5; cursor: default; }
+.stat-card.clickable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.popup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 400px; max-height: 70vh; display: flex; flex-direction: column; overflow: hidden; }
+.popup-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.popup-title { font-size: 15px; font-weight: 700; }
+.popup-close { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; border-radius: 6px; }
+.popup-close:hover { color: var(--text); background: var(--border); }
+.popup-list { overflow-y: auto; padding: 8px 0; }
+.popup-empty { padding: 20px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.popup-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.popup-item:last-child { border-bottom: none; }
+.popup-item-info { flex: 1; }
+.popup-item-name { display: block; font-size: 13px; font-weight: 500; }
+.popup-item-detail { display: block; font-size: 11px; color: var(--muted); font-family: monospace; }
+.popup-item-state { font-size: 11px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
