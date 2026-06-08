@@ -24,6 +24,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_system_prompt": "",
     "jarvis_ha_control":   False,
     "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "analyse"],
+    "filter_labels":       ["no-dboard"],
 }
 
 
@@ -118,6 +119,7 @@ class AddonConfig:
 
     def frontend_config(self) -> dict:
         return {
+            "version":              self._version,
             "title":                self._settings.get("title", "Regis-Lab"),
             "theme":                self._settings.get("theme", "dark"),
             "show_clock":           self._settings.get("show_clock", True),

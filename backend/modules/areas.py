@@ -54,12 +54,22 @@ class Module(BaseModule):
             states = self.ha.get_cached_states()
 
             entity_info = {}
+            nodboard_ids = set()
+            nodboard_device_ids = set()
+            filter_labels = set(self.config._settings.get("filter_labels", ["no-dboard"]))
             for e in entities:
+                if filter_labels & set(e.get("labels", [])):
+                    nodboard_ids.add(e["entity_id"])
+                    if e.get("device_id"):
+                        nodboard_device_ids.add(e["device_id"])
+                    continue
                 area_id = e.get("area_id") or device_area.get(e.get("device_id"))
                 entity_info[e["entity_id"]] = {
                     "area_id":   area_id,
                     "device_id": e.get("device_id"),
                 }
+            # Globalen Cache für andere Module befüllen
+            self.config._label_filtered_ids = nodboard_ids
 
             area_map = {}
             for a in areas:
@@ -90,6 +100,8 @@ class Module(BaseModule):
                 assigned.add(eid)
                 entity_state = states[eid]
 
+                if did and did in nodboard_device_ids:
+                    continue
                 if did and did in device_map:
                     dev = device_map[did]
                     if did not in area_map[aid]["devices"]:

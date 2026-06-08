@@ -59,6 +59,28 @@
             </div>
           </div>
 
+          <!-- Label-Filter -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:label-off-outline" :size="20" color="var(--accent)" />
+              Label-Filter
+            </div>
+            <p class="card-desc">
+              Entitäten mit diesen Labels werden im Dashboard <strong>nicht angezeigt</strong>.
+            </p>
+            <div class="field">
+              <label>Gefilterte Labels</label>
+              <div v-if="allLabels.length === 0" class="label-hint">Keine Labels in HA gefunden.</div>
+              <div class="label-grid">
+                <label v-for="l in allLabels" :key="l.id" class="label-checkbox">
+                  <input type="checkbox" :value="l.id" v-model="form.filter_labels" />
+                  <span class="label-dot" :style="l.color ? { background: l.color } : {}" />
+                  {{ l.name }}
+                </label>
+              </div>
+            </div>
+          </div>
+
           <!-- HA Token -->
           <div class="settings-card">
             <div class="card-title">
@@ -201,16 +223,18 @@ const form = ref({
   jarvis_max_tokens: 2048,
   jarvis_system_prompt: '',
   jarvis_ha_control: false,
+  filter_labels: ['no-dboard'],
 })
 
-const showToken      = ref(false)
+const showToken       = ref(false)
 const availableModels = ref([])
 const loadingModels   = ref(false)
 const modelsError     = ref('')
-const saving         = ref(false)
-const saved          = ref(false)
-const tokenError     = ref('')
-const tokenSaved     = ref(false)
+const saving          = ref(false)
+const saved           = ref(false)
+const tokenError      = ref('')
+const tokenSaved      = ref(false)
+const allLabels       = ref([])
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
@@ -254,6 +278,13 @@ async function load() {
   if (form.value.jarvis_ollama_url) {
     await loadOllamaModels()
   }
+  // Labels laden
+  try {
+    const lr = await fetch('api/settings/labels')
+    const ld = await lr.json()
+    allLabels.value = ld.labels || []
+    if (!form.value.filter_labels) form.value.filter_labels = ld.filter_labels || ['no-dboard']
+  } catch(e) {}
 }
 
 function clearToken() {
@@ -379,6 +410,12 @@ onMounted(load)
 
 .radio-group { display: flex; gap: 16px; }
 .radio-label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.label-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.label-checkbox { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); }
+.label-checkbox:hover { border-color: var(--accent); }
+.label-checkbox input { cursor: pointer; }
+.label-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.label-hint { font-size: 12px; color: var(--muted); }
 
 .token-row { display: flex; gap: 8px; align-items: center; }
 .icon-btn {
