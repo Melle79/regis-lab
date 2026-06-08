@@ -73,6 +73,68 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+        @self.app.route("/api/analyse/cleanup/repair", methods=["POST"])
+        def repair_integration():
+            data      = request.get_json() or {}
+            platform  = data.get("platform", "")
+            token     = self.config.ha_long_token
+            ha        = "http://homeassistant.local.hass.io:8123"
+            hdrs      = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
+            try:
+                # Config-Entries für diese Platform laden
+                entries_r = requests.get(ha + "/api/config/config_entries/entry", headers=hdrs, timeout=10)
+                entries   = entries_r.json() if entries_r.status_code == 200 else []
+                reloaded  = 0
+                for entry in entries:
+                    if entry.get("domain") == platform and entry.get("state") not in ("loaded",):
+                        requests.post(
+                            ha + "/api/config/config_entries/entry/" + entry["entry_id"] + "/reload",
+                            headers=hdrs, timeout=10,
+                        )
+                        reloaded += 1
+                if reloaded == 0:
+                    # Alle Entries dieser Platform neu laden
+                    for entry in entries:
+                        if entry.get("domain") == platform:
+                            requests.post(
+                                ha + "/api/config/config_entries/entry/" + entry["entry_id"] + "/reload",
+                                headers=hdrs, timeout=10,
+                            )
+                            reloaded += 1
+                return jsonify({"ok": True, "reloaded": reloaded})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/analyse/cleanup/ignore", methods=["POST"])
+        def ignore_entities():
+            data      = request.get_json() or {}
+            entity_ids = data.get("entity_ids", [])
+            try:
+                ignore_path = "/data/analyse_ignore.json"
+                ignored = []
+                if os.path.exists(ignore_path):
+                    with open(ignore_path) as f:
+                        ignored = json.load(f)
+                for eid in entity_ids:
+                    if eid not in ignored:
+                        ignored.append(eid)
+                with open(ignore_path, "w") as f:
+                    json.dump(ignored, f)
+                return jsonify({"ok": True, "ignored": len(ignored)})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+        @self.app.route("/api/analyse/cleanup/ignored")
+        def get_ignored():
+            try:
+                ignore_path = "/data/analyse_ignore.json"
+                if os.path.exists(ignore_path):
+                    with open(ignore_path) as f:
+                        return jsonify({"ignored": json.load(f)})
+            except Exception:
+                pass
+            return jsonify({"ignored": []})
+
         @self.app.route("/api/analyse/run", methods=["POST"])
         def run_analysis():
             token  = self.config.ha_long_token
@@ -266,6 +328,16 @@ class Module(BaseModule):
         except Exception:
             registry = {}
 
+        # Ignorier-Liste laden
+        ignore_path = "/data/analyse_ignore.json"
+        ignored_set = set()
+        try:
+            if os.path.exists(ignore_path):
+                with open(ignore_path) as f:
+                    ignored_set = set(json.load(f))
+        except Exception:
+            pass
+
         # Alle unavailable/unknown Entitäten nach Platform gruppieren
         groups = {}
         for s in states:
@@ -275,6 +347,8 @@ class Module(BaseModule):
             reg_info = registry.get(eid, {})
             platform = reg_info.get("platform", eid.split(".")[0])
             name     = s.get("attributes", {}).get("friendly_name", eid)
+            if eid in ignored_set:
+                continue
             if platform not in groups:
                 groups[platform] = []
             groups[platform].append({"entity_id": eid, "name": name, "state": s["state"]})

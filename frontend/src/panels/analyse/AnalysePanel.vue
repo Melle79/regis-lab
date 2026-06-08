@@ -177,10 +177,20 @@
             <MdiIcon icon="mdi:puzzle-outline" :size="16" color="var(--accent)" />
             <span class="cleanup-platform">{{ group.platform }}</span>
             <span class="badge warn">{{ group.count }} offline</span>
-            <button class="ki-btn" @click.stop="suggestCleanup(group)" :disabled="group.suggesting">
-              <MdiIcon :icon="group.suggesting ? 'mdi:loading' : 'mdi:robot'" :size="13" :class="{ spin: group.suggesting }" />
-              Jarvis fragen
-            </button>
+            <div class="cleanup-actions">
+              <button class="ki-btn" @click.stop="suggestCleanup(group)" :disabled="group.suggesting" title="Jarvis um Einschätzung bitten">
+                <MdiIcon :icon="group.suggesting ? 'mdi:loading' : 'mdi:robot'" :size="13" :class="{ spin: group.suggesting }" />
+                Jarvis
+              </button>
+              <button class="repair-btn" @click.stop="repairIntegration(group)" :disabled="group.repairing" title="Integration neu laden">
+                <MdiIcon :icon="group.repairing ? 'mdi:loading' : 'mdi:wrench'" :size="13" :class="{ spin: group.repairing }" />
+                Reparieren
+              </button>
+              <button class="ignore-btn" @click.stop="ignoreGroup(group)" title="Alle ignorieren">
+                <MdiIcon icon="mdi:eye-off" :size="13" />
+                Ignorieren
+              </button>
+            </div>
             <MdiIcon :icon="expandedGroups.has(group.platform) ? 'mdi:chevron-up' : 'mdi:chevron-down'" :size="16" color="var(--muted)" />
           </div>
           <div v-if="group.suggestion" class="cleanup-suggestion">
@@ -192,6 +202,9 @@
               <span class="detail-entity">{{ e.name || e.entity_id }}</span>
               <span class="detail-meta">{{ e.entity_id }}</span>
               <span class="state-badge warn">{{ e.state }}</span>
+              <button class="ignore-btn-sm" @click.stop="ignoreEntity(e.entity_id, group)" title="Ignorieren">
+                <MdiIcon icon="mdi:eye-off" :size="11" />
+              </button>
             </div>
             <div v-if="group.entities.length > 10" class="cleanup-more">+ {{ group.entities.length - 10 }} weitere</div>
           </div>
@@ -256,7 +269,7 @@ async function loadCleanup() {
   try {
     const r = await fetch('api/analyse/cleanup')
     const d = await r.json()
-    cleanupGroups.value = (d.groups || []).map(g => ({ ...g, suggestion: '', suggesting: false }))
+    cleanupGroups.value = (d.groups || []).map(g => ({ ...g, suggestion: '', suggesting: false, repairing: false }))
   } catch(e) {}
   cleanupLoading.value = false
 }
@@ -266,6 +279,42 @@ function toggleCleanupGroup(platform) {
   if (s.has(platform)) s.delete(platform)
   else s.add(platform)
   expandedGroups.value = s
+}
+
+async function repairIntegration(group) {
+  group.repairing = true
+  try {
+    const r = await fetch('api/analyse/cleanup/repair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: group.platform }),
+    })
+    const d = await r.json()
+    group.suggestion = d.error || ('Integration neu geladen (' + (d.reloaded || 0) + ' Einträge). Bitte warte einen Moment und lade dann die Liste neu.')
+  } catch(e) { group.suggestion = 'Fehler: ' + e.message }
+  group.repairing = false
+}
+
+async function ignoreGroup(group) {
+  const ids = group.entities.map(e => e.entity_id)
+  await fetch('api/analyse/cleanup/ignore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entity_ids: ids }),
+  })
+  cleanupGroups.value = cleanupGroups.value.filter(g => g.platform !== group.platform)
+}
+
+async function ignoreEntity(entity_id, group) {
+  await fetch('api/analyse/cleanup/ignore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entity_ids: [entity_id] }),
+  })
+  group.entities = group.entities.filter(e => e.entity_id !== entity_id)
+  group.count    = group.entities.length
+  if (group.entities.length === 0)
+    cleanupGroups.value = cleanupGroups.value.filter(g => g.platform !== group.platform)
 }
 
 async function suggestCleanup(group) {
@@ -389,12 +438,30 @@ function formatSummary(text) {
 }
 .cleanup-header:hover { background: var(--border); }
 .cleanup-platform { font-size: 13px; font-weight: 600; flex: 1; }
+.cleanup-actions { display: flex; gap: 4px; }
 .ki-btn {
   display: flex; align-items: center; gap: 4px; padding: 3px 10px;
   border-radius: 6px; border: 1px solid var(--accent); background: transparent;
   color: var(--accent); cursor: pointer; font-size: 11px;
 }
 .ki-btn:disabled { opacity: .5; cursor: default; }
+.repair-btn {
+  display: flex; align-items: center; gap: 4px; padding: 3px 8px;
+  border-radius: 6px; border: 1px solid var(--green); background: transparent;
+  color: var(--green); cursor: pointer; font-size: 11px;
+}
+.repair-btn:disabled { opacity: .5; cursor: default; }
+.ignore-btn {
+  display: flex; align-items: center; gap: 4px; padding: 3px 8px;
+  border-radius: 6px; border: 1px solid var(--muted); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.ignore-btn:hover { border-color: var(--red); color: var(--red); }
+.ignore-btn-sm {
+  padding: 2px 4px; border-radius: 4px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s;
+}
+.cleanup-entity:hover .ignore-btn-sm { opacity: 1; }
 .cleanup-suggestion {
   display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px;
   background: color-mix(in srgb, var(--accent) 5%, var(--surface));
