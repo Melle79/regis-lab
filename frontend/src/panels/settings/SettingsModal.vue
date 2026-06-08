@@ -408,6 +408,11 @@ async function save() {
         jarvis_max_tokens:    form.value.jarvis_max_tokens,
         jarvis_system_prompt: form.value.jarvis_system_prompt,
         jarvis_ha_control:    !!form.value.jarvis_ha_control,
+        tab_order:            form.value.tab_order,
+        filter_labels:        form.value.filter_labels,
+        briefing_enabled:     !!form.value.briefing_enabled,
+        briefing_targets:     form.value.briefing_targets,
+        briefing_time:        form.value.briefing_time,
       }),
     })
     const d = await r.json()
