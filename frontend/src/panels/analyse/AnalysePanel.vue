@@ -21,9 +21,9 @@
       <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="activeTab = 'cleanup'; loadCleanup()">
         <MdiIcon icon="mdi:broom" :size="14" /> Aufräumen
       </button>
-      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="activeTab = 'log'; loadLog()">
+      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="activeTab = 'log'; loadLog(); markLogSeen()">
         <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
-        <span v-if="logEntries.filter(e => !e.undone).length > 0" class="log-count">{{ logEntries.filter(e => !e.undone).length }}</span>
+        <span v-if="unreadLogCount > 0" class="log-count">{{ unreadLogCount }}</span>
       </button>
     </div>
 
@@ -268,6 +268,7 @@ const cleanupLoading = ref(false)
 const expandedGroups = ref(new Set())
 const logEntries     = ref([])
 const logLoading     = ref(false)
+const lastSeenLog    = ref(localStorage.getItem('regis_log_seen') || '')
 
 onMounted(async () => {
   try {
@@ -316,6 +317,17 @@ function toggleCleanupGroup(platform) {
   if (s.has(platform)) s.delete(platform)
   else s.add(platform)
   expandedGroups.value = s
+}
+
+const unreadLogCount = computed(() => {
+  if (!lastSeenLog.value) return logEntries.value.filter(e => !e.undone).length
+  return logEntries.value.filter(e => !e.undone && e.timestamp > lastSeenLog.value).length
+})
+
+function markLogSeen() {
+  const now = new Date().toISOString()
+  lastSeenLog.value = now
+  localStorage.setItem('regis_log_seen', now)
 }
 
 async function loadLog() {
