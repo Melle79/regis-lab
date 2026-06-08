@@ -109,10 +109,23 @@ class Module(BaseModule):
         ha   = "http://homeassistant.local.hass.io:8123"
         hdrs = {"Authorization": "Bearer " + self.config.ha_long_token,
                 "Content-Type": "application/json"}
+
+        # Kurze Infos für Subtitle
+        infos = []
+        if data["weather"]:       infos.append(data["weather"])
+        if data["offline_count"]: infos.append(f"⚠️ {data['offline_count']} offline")
+        if data["lights_on"]:     infos.append(f"💡 {len(data['lights_on'])} Lichter an")
+        subtitle = " · ".join(infos)
+
+        # Nur ersten Satz der KI-Zusammenfassung
+        summary = data["summary"].split(".")[0] + "." if "." in data["summary"] else data["summary"]
+        if len(summary) > 100:
+            summary = summary[:97] + "…"
+
         payload = {
-            "message": data["summary"],
-            "title":   "☀️ Guten Morgen, Sven!",
-            "data":    {"subtitle": f"{data['date']} · {data['weather']}"},
+            "message": summary,
+            "title":   f"☀️ Guten Morgen, Sven! · {data['date']}",
+            "data":    {"subtitle": subtitle},
         }
         try:
             requests.post(
