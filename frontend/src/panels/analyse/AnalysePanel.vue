@@ -21,7 +21,7 @@
       <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="if (activeTab === 'log') markLogSeen(); activeTab = 'cleanup'; loadCleanup()">
         <MdiIcon icon="mdi:broom" :size="14" /> Aufräumen
       </button>
-      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="markLogSeen(); activeTab = 'log'; loadLog()">
+      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="activeTab = 'log'; loadLog()">
         <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
         <span v-if="unreadLogCount > 0" class="log-count">{{ unreadLogCount }}</span>
       </button>
