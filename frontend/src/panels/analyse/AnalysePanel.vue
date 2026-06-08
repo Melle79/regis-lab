@@ -183,12 +183,8 @@
                 Jarvis
               </button>
               <button class="repair-btn" @click.stop="repairIntegration(group)" :disabled="group.repairing" title="Integration neu laden">
-                <MdiIcon :icon="group.repairing ? 'mdi:loading' : 'mdi:wrench'" :size="13" :class="{ spin: group.repairing }" />
-                Reparieren
-              </button>
-              <button class="ignore-btn" @click.stop="ignoreGroup(group)" title="Alle ignorieren">
-                <MdiIcon icon="mdi:eye-off" :size="13" />
-                Ignorieren
+                <MdiIcon :icon="group.repairing ? 'mdi:loading' : 'mdi:reload'" :size="13" :class="{ spin: group.repairing }" />
+                Neu laden
               </button>
             </div>
             <MdiIcon :icon="expandedGroups.has(group.platform) ? 'mdi:chevron-up' : 'mdi:chevron-down'" :size="16" color="var(--muted)" />
@@ -202,9 +198,14 @@
               <span class="detail-entity">{{ e.name || e.entity_id }}</span>
               <span class="detail-meta">{{ e.entity_id }}</span>
               <span class="state-badge warn">{{ e.state }}</span>
-              <button class="ignore-btn-sm" @click.stop="ignoreEntity(e.entity_id, group)" title="Ignorieren">
-                <MdiIcon icon="mdi:eye-off" :size="11" />
-              </button>
+              <div class="entity-actions">
+                <button class="entity-action-btn repair" @click.stop="repairEntity(e, group)" title="Gerät neu starten">
+                  <MdiIcon icon="mdi:wrench" :size="12" /> Reparieren
+                </button>
+                <button class="entity-action-btn ignore" @click.stop="ignoreEntity(e.entity_id, group)" title="Ignorieren">
+                  <MdiIcon icon="mdi:eye-off" :size="12" /> Ignorieren
+                </button>
+              </div>
             </div>
             <div v-if="group.entities.length > 10" class="cleanup-more">+ {{ group.entities.length - 10 }} weitere</div>
           </div>
@@ -279,6 +280,26 @@ function toggleCleanupGroup(platform) {
   if (s.has(platform)) s.delete(platform)
   else s.add(platform)
   expandedGroups.value = s
+}
+
+async function repairEntity(entity, group) {
+  // Versuche das Gerät über HA-Services neu zu starten
+  try {
+    const domain = entity.entity_id.split('.')[0]
+    // Für bekannte Domains: reload service aufrufen
+    const reloadServices = {
+      'switch': 'homeassistant/reload_core_config',
+    }
+    await fetch('api/analyse/cleanup/repair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: group.platform, entity_id: entity.entity_id }),
+    })
+    entity.repaired = true
+    group.suggestion = 'Reparatur-Versuch für ' + (entity.name || entity.entity_id) + ' gestartet. Bitte warte einen Moment.'
+  } catch(e) {
+    group.suggestion = 'Fehler: ' + e.message
+  }
 }
 
 async function repairIntegration(group) {
@@ -457,11 +478,29 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .ignore-btn:hover { border-color: var(--red); color: var(--red); }
+.entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
+.cleanup-entity:hover .entity-actions { opacity: 1; }
+.entity-action-btn {
+  display: flex; align-items: center; gap: 3px; padding: 2px 8px;
+  border-radius: 5px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 10px; white-space: nowrap;
+}
+.entity-action-btn.repair:hover { color: var(--green); border-color: var(--green); }
+.entity-action-btn.ignore:hover { color: var(--red); border-color: var(--red); }
 .ignore-btn-sm {
   padding: 2px 4px; border-radius: 4px; border: none; background: transparent;
   color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s;
 }
-.cleanup-entity:hover .ignore-btn-sm { opacity: 1; }
+.cleanup-entity:hover .entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
+.cleanup-entity:hover .entity-actions { opacity: 1; }
+.entity-action-btn {
+  display: flex; align-items: center; gap: 3px; padding: 2px 8px;
+  border-radius: 5px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 10px; white-space: nowrap;
+}
+.entity-action-btn.repair:hover { color: var(--green); border-color: var(--green); }
+.entity-action-btn.ignore:hover { color: var(--red); border-color: var(--red); }
+.ignore-btn-sm { opacity: 1; }
 .cleanup-suggestion {
   display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px;
   background: color-mix(in srgb, var(--accent) 5%, var(--surface));
