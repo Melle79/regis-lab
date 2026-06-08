@@ -110,7 +110,10 @@
               <div v-if="notifyServices.length === 0" class="label-hint">Keine Geräte gefunden.</div>
               <div class="label-grid">
                 <label v-for="svc in notifyServices" :key="svc.id" class="label-checkbox">
-                  <input type="checkbox" :value="svc.id" v-model="form.briefing_targets" />
+                  <input type="checkbox"
+                    :checked="form.briefing_targets.includes(svc.id)"
+                    @change="toggleTarget(svc.id)"
+                  />
                   <MdiIcon icon="mdi:cellphone" :size="13" color="var(--accent)" />
                   {{ svc.name }}
                 </label>
@@ -344,6 +347,15 @@ async function load() {
   // briefing_targets explizit als neues Array setzen (Vue-Reaktivität)
   if (Array.isArray(form.value.briefing_targets)) {
     form.value.briefing_targets = [...form.value.briefing_targets]
+  }
+}
+
+function toggleTarget(id) {
+  const idx = form.value.briefing_targets.indexOf(id)
+  if (idx === -1) {
+    form.value.briefing_targets = [...form.value.briefing_targets, id]
+  } else {
+    form.value.briefing_targets = form.value.briefing_targets.filter(t => t !== id)
   }
 }
 
