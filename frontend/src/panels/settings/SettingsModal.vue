@@ -341,6 +341,10 @@ async function load() {
     const nd = await nr.json()
     notifyServices.value = nd.services || []
   } catch(e) {}
+  // briefing_targets explizit als neues Array setzen (Vue-Reaktivität)
+  if (Array.isArray(form.value.briefing_targets)) {
+    form.value.briefing_targets = [...form.value.briefing_targets]
+  }
 }
 
 function clearToken() {
