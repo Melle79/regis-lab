@@ -242,7 +242,6 @@ class Module(BaseModule):
                 "light", "switch", "cover", "climate", "lock", "fan",
                 "vacuum", "alarm_control_panel",
             }
-            # Interne/Konfigurations-Entitäten überspringen
             SKIP_PATTERNS = [
                 "_config_", "config_overtemp", "_outlet", "_music_mode",
                 "_led_", "_debug", "_test", "testkamera_", "woox_smart_camera_",
@@ -254,7 +253,30 @@ class Module(BaseModule):
                 "fritz_box_", "fritz_repeater_", "event_stream", "internetzugang",
                 "internet_access", "port_forward", "wi_fi_wlan", "gastzugang",
             ]
-            offline = []
+
+            # Entity-Registry laden für device_id → Gerätename
+            try:
+                reg_r = requests.get(
+                    ha + "/api/config/entity_registry/list",
+                    headers=hdrs, timeout=10
+                )
+                entity_reg = {e["entity_id"]: e for e in (reg_r.json() if reg_r.status_code == 200 else [])}
+            except Exception:
+                entity_reg = {}
+
+            try:
+                dev_r = requests.get(
+                    ha + "/api/config/device_registry/list",
+                    headers=hdrs, timeout=10
+                )
+                device_reg = {d["id"]: d for d in (dev_r.json() if dev_r.status_code == 200 else [])}
+            except Exception:
+                device_reg = {}
+
+            # Pro Gerät nur einen Eintrag — Gerät gilt als offline wenn ALLE Entitäten unavailable
+            device_entities = {}  # device_id → list of states
+            no_device_offline = []  # Entitäten ohne device_id
+
             for s in states:
                 domain = s.get("entity_id", "").split(".")[0]
                 if domain not in RELEVANT_DOMAINS:
@@ -262,12 +284,33 @@ class Module(BaseModule):
                 eid = s.get("entity_id", "")
                 if any(p in eid for p in SKIP_PATTERNS):
                     continue
-                if s.get("state") in ("unavailable", "unknown"):
-                    offline.append({
+                reg = entity_reg.get(eid, {})
+                did = reg.get("device_id")
+                if did:
+                    device_entities.setdefault(did, []).append(s)
+                elif s.get("state") in ("unavailable", "unknown"):
+                    no_device_offline.append({
                         "entity_id": eid,
                         "name":      s.get("attributes", {}).get("friendly_name", eid),
                         "state":     s["state"],
                     })
+
+            offline = []
+            for did, ents in device_entities.items():
+                # Gerät offline wenn mindestens eine steuerbare Entität unavailable ist
+                unavail = [e for e in ents if e.get("state") in ("unavailable", "unknown")]
+                if not unavail:
+                    continue
+                dev = device_reg.get(did, {})
+                dev_name = dev.get("name_by_user") or dev.get("name") or did
+                # Erste unavailable Entität als Referenz
+                ref = unavail[0]
+                offline.append({
+                    "entity_id": ref.get("entity_id", ""),
+                    "name":      dev_name,
+                    "state":     ref.get("state", "unavailable"),
+                })
+            offline.extend(no_device_offline)
 
             # Niedriger Akku (< 20%)
             low_battery = []
