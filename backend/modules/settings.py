@@ -29,6 +29,10 @@ class Module(BaseModule):
             if "ha_token" in updates and not updates["ha_token"]:
                 del updates["ha_token"]
             self.config.save_settings(updates)
+            # Label-Filter Cache aktualisieren
+            if "filter_labels" in updates:
+                import threading
+                threading.Thread(target=self._reload_label_cache, daemon=True).start()
             return jsonify({"ok": True})
 
         @self.app.route("/api/validate-token", methods=["POST"])
@@ -82,3 +86,52 @@ class Module(BaseModule):
             return jsonify({"labels": all_labels, "filter_labels": filtered})
 
         self.log.info("Settings-Modul registriert")
+
+    def _reload_label_cache(self):
+        """Label-Filter Cache nach Einstellungsänderung neu laden."""
+        try:
+            # areas Modul finden und _preload_labels aufrufen
+            from modules.areas import Module as AreasModule
+            for mod in getattr(self, '_siblings', []):
+                if isinstance(mod, AreasModule):
+                    mod._preload_labels()
+                    break
+            else:
+                # Direkt neu laden
+                import websocket as wslib, threading, json as _json
+                token  = self.config.ha_long_token
+                ws_url = self.ha.ha_url.replace("http://", "ws://") + "/api/websocket"
+                results = {}
+                done    = threading.Event()
+                REQS    = {2: "config/area_registry/list", 3: "config/floor_registry/list",
+                           4: "config/device_registry/list", 5: "config/entity_registry/list"}
+                def on_msg(ws, raw):
+                    msg = _json.loads(raw)
+                    t   = msg.get("type")
+                    if t == "auth_required":
+                        ws.send(_json.dumps({"type": "auth", "access_token": token}))
+                    elif t == "auth_ok":
+                        for mid, rtype in REQS.items():
+                            ws.send(_json.dumps({"id": mid, "type": rtype}))
+                    elif t == "result":
+                        results[msg["id"]] = msg.get("result", [])
+                        if len(results) == len(REQS):
+                            ws.close(); done.set()
+                conn = wslib.WebSocketApp(ws_url, on_message=on_msg,
+                    on_error=lambda ws,e: done.set(), on_close=lambda ws,*a: done.set())
+                threading.Thread(target=conn.run_forever, daemon=True).start()
+                done.wait(10)
+                filter_labels = set(self.config._settings.get("filter_labels", []))
+                entities = results.get(5, [])
+                filtered = set()
+                all_labels = {}
+                for e in entities:
+                    for lid in e.get("labels", []):
+                        all_labels[lid] = {"id": lid, "name": lid, "color": ""}
+                    if filter_labels & set(e.get("labels", [])):
+                        filtered.add(e["entity_id"])
+                self.config._label_filtered_ids = filtered
+                self.config._all_labels = all_labels
+                self.log.info(f"Label-Cache aktualisiert: {len(filtered)} gefiltert")
+        except Exception as e:
+            self.log.warning(f"Label-Cache-Reload fehlgeschlagen: {e}")
