@@ -76,13 +76,46 @@ class Module(BaseModule):
 
         @self.app.route("/api/settings/labels")
         def get_labels():
-            """Alle HA-Labels aus der Entity-Registry laden."""
-            labels_raw = self.ha.ws_request({"type": "label_registry/list"})
-            labels = [
-                {"id": l["label_id"], "name": l.get("name", l["label_id"]), "color": l.get("color", "")}
-                for l in (labels_raw or [])
-            ]
+            """Alle Labels aus gecachter Entity-Registry laden."""
+            import threading
+            import websocket as wslib
+            token  = self.config.ha_long_token
+            ws_url = self.ha.ha_url.replace("http://", "ws://").replace("https://", "wss://") + "/api/websocket"
+            results = {}
+            done    = threading.Event()
+
+            def on_message(ws, raw):
+                msg = json.loads(raw)
+                t   = msg.get("type")
+                if t == "auth_required":
+                    ws.send(json.dumps({"type": "auth", "access_token": token}))
+                elif t == "auth_ok":
+                    ws.send(json.dumps({"id": 2, "type": "config/area_registry/list"}))
+                    ws.send(json.dumps({"id": 3, "type": "config/floor_registry/list"}))
+                    ws.send(json.dumps({"id": 4, "type": "config/device_registry/list"}))
+                    ws.send(json.dumps({"id": 5, "type": "config/entity_registry/list"}))
+                elif t == "result":
+                    mid = msg.get("id")
+                    results[mid] = msg.get("result", []) if msg.get("success") else []
+                    if len(results) == 4:
+                        ws.close()
+                        done.set()
+
+            conn = wslib.WebSocketApp(ws_url, on_message=on_message,
+                                      on_error=lambda ws, e: done.set(),
+                                      on_close=lambda ws, *a: done.set())
+            threading.Thread(target=conn.run_forever, daemon=True).start()
+            done.wait(timeout=10)
+
+            # Labels aus Entity-Registry extrahieren
+            entities = results.get(5, [])
+            label_set = {}
+            for e in entities:
+                for lid in e.get("labels", []):
+                    if lid not in label_set:
+                        label_set[lid] = {"id": lid, "name": lid, "color": ""}
+
             filtered = self.config._settings.get("filter_labels", [])
-            return jsonify({"labels": labels, "filter_labels": filtered})
+            return jsonify({"labels": list(label_set.values()), "filter_labels": filtered})
 
         self.log.info("Settings-Modul registriert")
