@@ -159,9 +159,19 @@ const jarvisLoading = ref(false)
 const msgContainer  = ref(null)
 
 const kiName = computed(() => config.value.ki_name || 'Jarvis')
+const userName = ref('')
+
+async function loadUserName() {
+  try {
+    const r = await fetch('api/user')
+    const d = await r.json()
+    userName.value = d.name || d.username || ''
+  } catch(e) {}
+}
+
 const firstName = computed(() => {
-  const name = config.value.title || 'Sven'
-  return name.split(' ')[0]
+  const name = userName.value || config.value.title || ''
+  return name.split(' ')[0] || 'dort'
 })
 
 const greeting = computed(() => {
@@ -278,6 +288,7 @@ async function sendQuick() {
 }
 
 onMounted(async () => {
+  loadUserName()
   try {
     const [cr, sr, dr] = await Promise.all([
       fetch('api/config'),

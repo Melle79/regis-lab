@@ -50,4 +50,28 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"ok": False, "error": str(e)})
 
+        @self.app.route("/api/user")
+        def get_user():
+            """Gibt den aktuell konfigurierten HA-Benutzer zurück."""
+            import requests as _req
+            token = self.config.ha_long_token
+            try:
+                r = _req.get(
+                    "http://homeassistant.local.hass.io:8123/api/",
+                    headers={"Authorization": "Bearer " + token},
+                    timeout=5,
+                )
+                # Token-Info via /auth/token endpoint
+                r2 = _req.get(
+                    "http://homeassistant.local.hass.io:8123/auth/userinfo",
+                    headers={"Authorization": "Bearer " + token},
+                    timeout=5,
+                )
+                if r2.status_code == 200:
+                    d = r2.json()
+                    return jsonify({"name": d.get("name", ""), "username": d.get("username", "")})
+            except Exception:
+                pass
+            return jsonify({"name": "", "username": ""})
+
         self.log.info("Settings-Modul registriert")
