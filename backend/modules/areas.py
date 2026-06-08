@@ -227,6 +227,28 @@ class Module(BaseModule):
 
         self.log.info("Areas-Modul registriert")
 
+        # Labels beim Start im Hintergrund laden
+        import threading as _t
+        _t.Thread(target=self._preload_labels, daemon=True).start()
+
+
+    def _preload_labels(self):
+        """Labels beim Start laden und in config cachen."""
+        try:
+            data = self._fetch_registry()
+            if not data:
+                return
+            _, _, _, entities = data
+            all_labels = {}
+            for e in entities:
+                for lid in e.get("labels", []):
+                    if lid not in all_labels:
+                        all_labels[lid] = {"id": lid, "name": lid, "color": ""}
+            self.config._all_labels = all_labels
+            self.log.info(f"Labels gecacht: {list(all_labels.keys())}")
+        except Exception as e:
+            self.log.warning(f"Label-Preload fehlgeschlagen: {e}")
+
     def _update_device_area(self, device_id: str, area_id) -> bool:
         """Aktualisiert die Bereich-Zuweisung eines Geräts via HA WebSocket."""
         ws_url = self.ha.ha_url.replace("http://", "ws://").replace("https://", "wss://") + "/api/websocket"
