@@ -235,10 +235,15 @@ const automationsOn    = computed(() => allStates.value.filter(s => s.entity_id.
 const automationsTotal = computed(() => allStates.value.filter(s => s.entity_id.startsWith('automation.')).length)
 
 const RELEVANT = ['light', 'switch', 'cover', 'climate', 'lock', 'fan', 'vacuum', 'alarm_control_panel']
-const SKIP_PATTERNS = ['_config_', 'config_overtemp', '_outlet', '_music_mode', '_led_', '_debug', '_test',
+const SKIP_PATTERNS = [
+  '_config_', 'config_overtemp', '_outlet', '_music_mode', '_led_', '_debug', '_test',
   'testkamera_', 'woox_smart_camera_', '_privacy', '_flip', '_watermark', '_motion', '_sound',
   '_videoaufnahme', '_gerauscherkennung', '_umdrehen', '_zeit_wasserzeichen', '_bewegungsalarm',
-  '_bewegungsverfolgung', '_datenschutzmodus']
+  '_bewegungsverfolgung', '_datenschutzmodus',
+  '_shuffle', '_repeat', '_do_not_disturb', '_bitte_nicht_storen', '_bitte_nicht_st',
+  'fritz_box_', 'fritz_repeater_', 'event_stream', 'internetzugang', 'internet_access',
+  'port_forward', 'wi_fi_wlan', 'gastzugang', '_led', 'steckdose_2_led',
+]
 
 const offlineEntities = computed(() => {
   // Aus Diagnose-Bericht wenn vorhanden (konsistent mit Diagnose-Panel)

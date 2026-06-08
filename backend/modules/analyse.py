@@ -250,6 +250,9 @@ class Module(BaseModule):
                 "_videoaufnahme", "_gerauscherkennung", "_umdrehen",
                 "_zeit_wasserzeichen", "_bewegungsalarm", "_bewegungsverfolgung",
                 "_datenschutzmodus",
+                "_shuffle", "_repeat", "_do_not_disturb", "_bitte_nicht_st",
+                "fritz_box_", "fritz_repeater_", "event_stream", "internetzugang",
+                "internet_access", "port_forward", "wi_fi_wlan", "gastzugang",
             ]
             offline = []
             for s in states:
