@@ -287,7 +287,6 @@ const tokenSaved      = ref(false)
 const allLabels       = ref([])
 const iconRegistered  = ref(null)
 const notifyServices  = ref([])
-const testingBriefing = ref(false)
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
@@ -348,6 +347,16 @@ async function load() {
   if (Array.isArray(form.value.briefing_targets)) {
     form.value.briefing_targets = [...form.value.briefing_targets]
   }
+}
+
+const testingBriefing = ref(false)
+
+async function testBriefing() {
+  testingBriefing.value = true
+  try {
+    await fetch('api/briefing/send-now', { method: 'POST' })
+  } catch(e) {}
+  setTimeout(() => testingBriefing.value = false, 3000)
 }
 
 function toggleTarget(id) {
