@@ -238,7 +238,7 @@
         <p>Noch keine Aktivitäten aufgezeichnet.</p>
       </div>
       <div v-else class="log-list">
-        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone, 'new-entry': !entry.undone && !readIds.value.has(entry.id) }">
+        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone, 'new-entry': !entry.undone && !readIds.value.includes(entry.id) }">
           <div class="log-icon">
             <MdiIcon :icon="logIcon(entry.type)" :size="16" :color="logColor(entry.type)" />
           </div>
@@ -250,7 +250,7 @@
           <div class="log-status">
             <span v-if="entry.undone" class="undone-badge">Rückgängig</span>
             <template v-else>
-              <button v-if="!readIds.has(entry.id)" class="mark-read-btn" @click.stop="markEntryRead(entry)" title="Als gelesen">
+              <button v-if="!readIds.value.includes(entry.id)" class="mark-read-btn" @click.stop="markEntryRead(entry)" title="Als gelesen">
                 <MdiIcon icon="mdi:check" :size="13" />
               </button>
               <button v-if="canUndo(entry.type)" class="undo-btn" @click="undoAction(entry)">
@@ -280,7 +280,7 @@ const expandedGroups = ref(new Set())
 const logEntries     = ref([])
 const logLoading     = ref(false)
 const lastSeenLog    = ref(localStorage.getItem('regis_log_seen') || '')
-const readIds        = ref(new Set(JSON.parse(localStorage.getItem('regis_log_read') || '[]')))
+const readIds        = ref(JSON.parse(localStorage.getItem('regis_log_read') || '[]'))
 
 onMounted(async () => {
   try {
@@ -333,18 +333,18 @@ function toggleCleanupGroup(platform) {
 }
 
 const unreadLogCount = computed(() => {
-  return logEntries.value.filter(e => !e.undone && !readIds.value.has(e.id)).length
+  return logEntries.value.filter(e => !e.undone && !readIds.value.includes(e.id)).length
 })
 
 function markAllRead() {
   const ids = logEntries.value.filter(e => !e.undone).map(e => e.id)
-  ids.forEach(id => readIds.value.add(id))
-  localStorage.setItem('regis_log_read', JSON.stringify([...readIds.value]))
+  ids.forEach(id => { if (!readIds.value.includes(id)) readIds.value.push(id) })
+  localStorage.setItem('regis_log_read', JSON.stringify(readIds.value))
 }
 
 function markEntryRead(entry) {
-  readIds.value.add(entry.id)
-  localStorage.setItem('regis_log_read', JSON.stringify([...readIds.value]))
+  if (!readIds.value.includes(entry.id)) readIds.value.push(entry.id)
+  localStorage.setItem('regis_log_read', JSON.stringify(readIds.value))
 }
 
 function markLogSeen() {
