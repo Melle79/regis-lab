@@ -235,6 +235,7 @@ const saved           = ref(false)
 const tokenError      = ref('')
 const tokenSaved      = ref(false)
 const allLabels       = ref([])
+const iconRegistered  = ref(null)
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
