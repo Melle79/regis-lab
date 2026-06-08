@@ -70,6 +70,13 @@ class Module(BaseModule):
                 }
             # Globalen Cache für andere Module befüllen
             self.config._label_filtered_ids = nodboard_ids
+            # Alle Labels cachen
+            all_labels = {}
+            for e in entities:
+                for lid in e.get("labels", []):
+                    if lid not in all_labels:
+                        all_labels[lid] = {"id": lid, "name": lid, "color": ""}
+            self.config._all_labels = all_labels
 
             area_map = {}
             for a in areas:
