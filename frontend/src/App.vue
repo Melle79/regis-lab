@@ -65,6 +65,7 @@ async function loadTabOrder() {
     const d = await r.json()
     if (d.tab_order && Array.isArray(d.tab_order)) {
       tabOrder.value = d.tab_order
+      activeTab.value = d.tab_order[0]
     }
   } catch(e) {}
 }
