@@ -15,13 +15,13 @@
 
     <!-- Sub-Tabs -->
     <div class="sub-tabs">
-      <button :class="['sub-tab', { active: activeTab === 'status' }]" @click="activeTab = 'status'">
+      <button :class="['sub-tab', { active: activeTab === 'status' }]" @click="if (activeTab === 'log') markLogSeen(); activeTab = 'status'">
         <MdiIcon icon="mdi:pulse" :size="14" /> Status
       </button>
-      <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="activeTab = 'cleanup'; loadCleanup()">
+      <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="if (activeTab === 'log') markLogSeen(); activeTab = 'cleanup'; loadCleanup()">
         <MdiIcon icon="mdi:broom" :size="14" /> Aufräumen
       </button>
-      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="activeTab = 'log'; loadLog(); markLogSeen()">
+      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="markLogSeen(); activeTab = 'log'; loadLog()">
         <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
         <span v-if="unreadLogCount > 0" class="log-count">{{ unreadLogCount }}</span>
       </button>
@@ -328,10 +328,9 @@ const unreadLogCount = computed(() => {
 })
 
 function markLogSeen() {
-  // Neuester Eintrag-Timestamp als "gesehen" markieren
-  const newest = logEntries.value.length > 0 ? logEntries.value[0].timestamp : new Date().toISOString()
-  lastSeenLog.value = newest
-  localStorage.setItem('regis_log_seen', newest)
+  const now = new Date().toISOString()
+  lastSeenLog.value = now
+  localStorage.setItem('regis_log_seen', now)
 }
 
 async function loadLog() {
