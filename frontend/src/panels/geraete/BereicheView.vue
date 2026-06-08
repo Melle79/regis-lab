@@ -153,7 +153,9 @@ import { getEntityIcon } from '../../utils/haIcons.js'
 import AssignAreaModal from '../../components/AssignAreaModal.vue'
 import MdiIcon    from '../../components/MdiIcon.vue'
 
-const emit = defineEmits(['suggest'])const { callService, state } = useDashboardStore()
+const emit = defineEmits(['suggest'])
+
+const { callService, state } = useDashboardStore()
 
 // Expose-Status für Sprachassistenten
 const exposeMap = reactive({})
@@ -411,6 +413,7 @@ onMounted(async () => { await loadAreas(); await loadExposeStatus() })
   color: var(--muted); cursor: pointer; border-radius: 5px; opacity: 0;
   transition: all .15s;
 }
+.entity-row { display: flex; align-items: center; width: 100%; }
 .entity-row:hover .expose-btn { opacity: 0.6; }
 .expose-btn.active {
   color: var(--accent); opacity: 1 !important;
