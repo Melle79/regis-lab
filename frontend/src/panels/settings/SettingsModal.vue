@@ -489,17 +489,17 @@ onMounted(load)
 .label-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 .label-hint { font-size: 12px; color: var(--muted); }
 .toggle-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
-.toggle-input { display: none; }
+.toggle-label .toggle-input { display: none; }
 .toggle-track {
   width: 40px; height: 22px; border-radius: 11px; background: var(--border);
   display: flex; align-items: center; padding: 2px; transition: background .2s;
 }
-.toggle-input:checked ~ .toggle-track { background: var(--accent); }
+.toggle-label .toggle-input:checked ~ .toggle-track { background: var(--accent); }
 .toggle-thumb {
   width: 18px; height: 18px; border-radius: 50%; background: #fff;
   transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
 }
-.toggle-input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
+.toggle-label .toggle-input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
 .btn-test {
   display: flex; align-items: center; gap: 6px; padding: 7px 16px;
   border-radius: 8px; border: 1px solid var(--accent); background: transparent;
