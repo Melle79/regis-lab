@@ -281,12 +281,12 @@ onMounted(async () => {
   try {
     const [cr, sr, dr] = await Promise.all([
       fetch('api/config'),
-      fetch('api/entities/states'),
+      fetch('api/entities'),
       fetch('api/analyse/latest'),
     ])
     config.value    = await cr.json()
     const sd        = await sr.json()
-    allStates.value = sd.states || []
+    allStates.value = Array.isArray(sd) ? sd : (sd.states || sd.entities || [])
     const dd        = await dr.json()
     if (dd.timestamp) lastDiagnose.value = dd
   } catch(e) {}
