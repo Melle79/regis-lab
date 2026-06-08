@@ -250,7 +250,7 @@
           <div class="log-status">
             <span v-if="entry.undone" class="undone-badge">Rückgängig</span>
             <template v-else>
-              <button v-if="!readIds.value.includes(entry.id)" class="mark-read-btn" @click.stop="markEntryRead(entry)" title="Als gelesen">
+              <button v-if="!readIds.includes(entry.id)" class="mark-read-btn" @click.stop="markEntryRead(entry)" title="Als gelesen">
                 <MdiIcon icon="mdi:check" :size="13" />
               </button>
               <button v-if="canUndo(entry.type)" class="undo-btn" @click="undoAction(entry)">
