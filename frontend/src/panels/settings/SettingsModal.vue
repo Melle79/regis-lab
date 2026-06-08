@@ -322,6 +322,12 @@ async function load() {
     allLabels.value = ld.labels || []
     if (!form.value.filter_labels) form.value.filter_labels = ld.filter_labels || ['no-dboard']
   } catch(e) {}
+  // Notify-Services laden
+  try {
+    const nr = await fetch('api/settings/notify-services')
+    const nd = await nr.json()
+    notifyServices.value = nd.services || []
+  } catch(e) {}
 }
 
 function clearToken() {
