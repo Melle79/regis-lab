@@ -21,6 +21,10 @@
       <button :class="['sub-tab', { active: activeTab === 'cleanup' }]" @click="activeTab = 'cleanup'; loadCleanup()">
         <MdiIcon icon="mdi:broom" :size="14" /> Aufräumen
       </button>
+      <button :class="['sub-tab', { active: activeTab === 'log' }]" @click="activeTab = 'log'; loadLog()">
+        <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
+        <span v-if="logEntries.filter(e => !e.undone).length > 0" class="log-count">{{ logEntries.filter(e => !e.undone).length }}</span>
+      </button>
     </div>
 
     <template v-if="activeTab === 'status'">
@@ -142,7 +146,7 @@
         <div class="detail-list">
           <div v-for="a in report.disabled_automations" :key="a.entity_id" class="detail-item">
             <span class="detail-entity">{{ a.name }}</span>
-            <button class="action-btn" @click="enableAutomation(a.entity_id)">
+            <button class="action-btn" @click="enableAutomation(a.entity_id, a.name)">
               <MdiIcon icon="mdi:play" :size="12" /> Aktivieren
             </button>
           </div>
@@ -232,6 +236,8 @@ const activeTab      = ref('status')
 const cleanupGroups  = ref([])
 const cleanupLoading = ref(false)
 const expandedGroups = ref(new Set())
+const logEntries     = ref([])
+const logLoading     = ref(false)
 
 onMounted(async () => {
   try {
@@ -280,6 +286,62 @@ function toggleCleanupGroup(platform) {
   if (s.has(platform)) s.delete(platform)
   else s.add(platform)
   expandedGroups.value = s
+}
+
+async function loadLog() {
+  logLoading.value = true
+  try {
+    const r = await fetch('api/analyse/log')
+    const d = await r.json()
+    logEntries.value = d.log || []
+  } catch(e) {}
+  logLoading.value = false
+}
+
+async function undoAction(entry) {
+  try {
+    await fetch('api/analyse/log/undo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: entry.id }),
+    })
+    entry.undone = true
+    // Cleanup neu laden wenn nötig
+    if (entry.type === 'ignore' || entry.type === 'ignore_group') {
+      cleanupGroups.value = []
+    }
+  } catch(e) {}
+}
+
+function canUndo(type) {
+  return ['ignore', 'ignore_group', 'enable_automation'].includes(type)
+}
+
+function logIcon(type) {
+  const icons = {
+    ignore: 'mdi:eye-off', ignore_group: 'mdi:eye-off',
+    repair: 'mdi:reload', enable_automation: 'mdi:robot',
+    repairEntity: 'mdi:wrench',
+  }
+  return icons[type] || 'mdi:information'
+}
+
+function logColor(type) {
+  if (type === 'ignore' || type === 'ignore_group') return 'var(--muted)'
+  if (type === 'repair' || type === 'repairEntity') return 'var(--green)'
+  if (type === 'enable_automation') return 'var(--accent)'
+  return 'var(--text)'
+}
+
+function logLabel(type) {
+  const labels = {
+    ignore: 'Entität ignoriert',
+    ignore_group: 'Gruppe ignoriert',
+    repair: 'Integration neu geladen',
+    repairEntity: 'Gerät repariert',
+    enable_automation: 'Automation aktiviert',
+  }
+  return labels[type] || type
 }
 
 async function repairEntity(entity, group) {
@@ -352,12 +414,13 @@ async function suggestCleanup(group) {
   group.suggesting = false
 }
 
-async function enableAutomation(entity_id) {
+async function enableAutomation(entity_id, name) {
   await fetch('api/analyse/enable_automation', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entity_id }),
+    body: JSON.stringify({ entity_id, name }),
   })
+  logEntries.value = []
   runAnalysis()
 }
 
@@ -478,8 +541,50 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .ignore-btn:hover { border-color: var(--red); color: var(--red); }
+.log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
+.log-list { display: flex; flex-direction: column; gap: 4px; }
+.log-entry {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+  transition: opacity .2s;
+}
+.log-entry.undone { opacity: .45; }
+.log-icon { flex-shrink: 0; }
+.log-info { flex: 1; }
+.log-action { font-size: 12px; font-weight: 600; }
+.log-entity { font-size: 11px; color: var(--muted); font-family: monospace; }
+.log-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.log-status { flex-shrink: 0; }
+.undone-badge { font-size: 10px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
+.undo-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 6px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.undo-btn:hover { color: var(--accent); border-color: var(--accent); }
 .entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
-.cleanup-entity:hover .entity-actions { opacity: 1; }
+.cleanup-entity:hover .log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
+.log-list { display: flex; flex-direction: column; gap: 4px; }
+.log-entry {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+  transition: opacity .2s;
+}
+.log-entry.undone { opacity: .45; }
+.log-icon { flex-shrink: 0; }
+.log-info { flex: 1; }
+.log-action { font-size: 12px; font-weight: 600; }
+.log-entity { font-size: 11px; color: var(--muted); font-family: monospace; }
+.log-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.log-status { flex-shrink: 0; }
+.undone-badge { font-size: 10px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
+.undo-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 6px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.entity-actions { opacity: 1; }
 .entity-action-btn {
   display: flex; align-items: center; gap: 3px; padding: 2px 8px;
   border-radius: 5px; border: 1px solid var(--border); background: transparent;
@@ -491,8 +596,50 @@ function formatSummary(text) {
   padding: 2px 4px; border-radius: 4px; border: none; background: transparent;
   color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s;
 }
-.cleanup-entity:hover .entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
-.cleanup-entity:hover .entity-actions { opacity: 1; }
+.cleanup-entity:hover .log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
+.log-list { display: flex; flex-direction: column; gap: 4px; }
+.log-entry {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+  transition: opacity .2s;
+}
+.log-entry.undone { opacity: .45; }
+.log-icon { flex-shrink: 0; }
+.log-info { flex: 1; }
+.log-action { font-size: 12px; font-weight: 600; }
+.log-entity { font-size: 11px; color: var(--muted); font-family: monospace; }
+.log-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.log-status { flex-shrink: 0; }
+.undone-badge { font-size: 10px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
+.undo-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 6px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
+.cleanup-entity:hover .log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
+.log-list { display: flex; flex-direction: column; gap: 4px; }
+.log-entry {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface);
+  transition: opacity .2s;
+}
+.log-entry.undone { opacity: .45; }
+.log-icon { flex-shrink: 0; }
+.log-info { flex: 1; }
+.log-action { font-size: 12px; font-weight: 600; }
+.log-entity { font-size: 11px; color: var(--muted); font-family: monospace; }
+.log-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.log-status { flex-shrink: 0; }
+.undone-badge { font-size: 10px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
+.undo-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 6px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.entity-actions { opacity: 1; }
 .entity-action-btn {
   display: flex; align-items: center; gap: 3px; padding: 2px 8px;
   border-radius: 5px; border: 1px solid var(--border); background: transparent;

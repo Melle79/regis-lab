@@ -73,6 +73,93 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+        LOG_PATH = "/data/analyse_log.json"
+
+        def _log_action(action_type, entity_id, name, extra=None):
+            try:
+                log = []
+                if os.path.exists(LOG_PATH):
+                    with open(LOG_PATH) as f:
+                        log = json.load(f)
+                log.insert(0, {
+                    "id":        str(len(log) + 1) + "_" + datetime.now().strftime("%H%M%S"),
+                    "timestamp": datetime.now().isoformat(),
+                    "type":      action_type,
+                    "entity_id": entity_id,
+                    "name":      name,
+                    "extra":     extra or {},
+                    "undone":    False,
+                })
+                log = log[:200]
+                with open(LOG_PATH, "w") as f:
+                    json.dump(log, f)
+            except Exception as e:
+                self.log.warning("Log-Fehler: " + str(e))
+
+        @self.app.route("/api/analyse/log")
+        def get_log():
+            try:
+                if os.path.exists(LOG_PATH):
+                    with open(LOG_PATH) as f:
+                        return jsonify({"log": json.load(f)})
+            except Exception:
+                pass
+            return jsonify({"log": []})
+
+        @self.app.route("/api/analyse/log/undo", methods=["POST"])
+        def undo_action():
+            data   = request.get_json() or {}
+            log_id = data.get("id", "")
+            token  = self.config.ha_long_token
+            ha     = "http://homeassistant.local.hass.io:8123"
+            hdrs   = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
+            try:
+                if not os.path.exists(LOG_PATH):
+                    return jsonify({"error": "Kein Log"}), 404
+                with open(LOG_PATH) as f:
+                    log = json.load(f)
+                entry = next((e for e in log if e["id"] == log_id), None)
+                if not entry:
+                    return jsonify({"error": "Eintrag nicht gefunden"}), 404
+
+                action_type = entry["type"]
+                entity_id   = entry["entity_id"]
+
+                if action_type == "ignore":
+                    # Aus Ignore-Liste entfernen
+                    ignore_path = "/data/analyse_ignore.json"
+                    if os.path.exists(ignore_path):
+                        with open(ignore_path) as f:
+                            ignored = json.load(f)
+                        ignored = [e for e in ignored if e != entity_id]
+                        with open(ignore_path, "w") as f:
+                            json.dump(ignored, f)
+
+                elif action_type == "enable_automation":
+                    # Automation wieder deaktivieren
+                    requests.post(ha + "/api/services/automation/turn_off",
+                        headers=hdrs, json={"entity_id": entity_id}, timeout=10)
+
+                elif action_type == "ignore_group":
+                    # Alle Entitäten der Gruppe aus Ignore-Liste entfernen
+                    entities = entry.get("extra", {}).get("entities", [])
+                    ignore_path = "/data/analyse_ignore.json"
+                    if os.path.exists(ignore_path):
+                        with open(ignore_path) as f:
+                            ignored = json.load(f)
+                        ignored = [e for e in ignored if e not in entities]
+                        with open(ignore_path, "w") as f:
+                            json.dump(ignored, f)
+
+                # Als rückgängig markieren
+                entry["undone"] = True
+                with open(LOG_PATH, "w") as f:
+                    json.dump(log, f)
+
+                return jsonify({"ok": True})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
         @self.app.route("/api/analyse/cleanup/repair", methods=["POST"])
         def repair_integration():
             data      = request.get_json() or {}
@@ -101,6 +188,7 @@ class Module(BaseModule):
                                 headers=hdrs, timeout=10,
                             )
                             reloaded += 1
+                _log_action("repair", platform, platform, {"reloaded": reloaded})
                 return jsonify({"ok": True, "reloaded": reloaded})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
@@ -120,6 +208,8 @@ class Module(BaseModule):
                         ignored.append(eid)
                 with open(ignore_path, "w") as f:
                     json.dump(ignored, f)
+                for eid in entity_ids:
+                    _log_action("ignore", eid, eid)
                 return jsonify({"ok": True, "ignored": len(ignored)})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
@@ -238,12 +328,14 @@ class Module(BaseModule):
             ha        = "http://homeassistant.local.hass.io:8123"
             hdrs      = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
             try:
-                requests.post(
+                r2 = requests.post(
                     ha + "/api/services/automation/turn_on",
                     headers=hdrs,
                     json={"entity_id": entity_id},
                     timeout=10,
                 )
+                name = data.get("name", entity_id)
+                _log_action("enable_automation", entity_id, name)
                 return jsonify({"ok": True})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
