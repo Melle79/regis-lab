@@ -269,6 +269,8 @@ const expandedGroups = ref(new Set())
 const logEntries     = ref([])
 const logLoading     = ref(false)
 const lastSeenLog    = ref(localStorage.getItem('regis_log_seen') || '')
+// Reaktive Version für Template
+const lastSeenLogVal = computed(() => lastSeenLog.value)
 
 onMounted(async () => {
   try {
@@ -326,9 +328,10 @@ const unreadLogCount = computed(() => {
 })
 
 function markLogSeen() {
-  const now = new Date().toISOString()
-  lastSeenLog.value = now
-  localStorage.setItem('regis_log_seen', now)
+  // Neuester Eintrag-Timestamp als "gesehen" markieren
+  const newest = logEntries.value.length > 0 ? logEntries.value[0].timestamp : new Date().toISOString()
+  lastSeenLog.value = newest
+  localStorage.setItem('regis_log_seen', newest)
 }
 
 async function loadLog() {
@@ -608,6 +611,15 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.new-entry {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.new-entry .log-action::after {
+  content: ' •';
+  color: var(--accent);
+  font-size: 14px;
+}
 .entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
 .cleanup-entity:hover .log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
 .log-list { display: flex; flex-direction: column; gap: 4px; }
@@ -630,6 +642,15 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.new-entry {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.new-entry .log-action::after {
+  content: ' •';
+  color: var(--accent);
+  font-size: 14px;
+}
 .entity-actions { opacity: 1; }
 .entity-action-btn {
   display: flex; align-items: center; gap: 3px; padding: 2px 8px;
@@ -663,6 +684,15 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.new-entry {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.new-entry .log-action::after {
+  content: ' •';
+  color: var(--accent);
+  font-size: 14px;
+}
 .entity-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity .15s; }
 .cleanup-entity:hover .log-count { background: var(--accent); color: #fff; border-radius: 10px; font-size: 10px; padding: 0 5px; min-width: 16px; text-align: center; }
 .log-list { display: flex; flex-direction: column; gap: 4px; }
@@ -685,6 +715,15 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.new-entry {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.new-entry .log-action::after {
+  content: ' •';
+  color: var(--accent);
+  font-size: 14px;
+}
 .entity-actions { opacity: 1; }
 .entity-action-btn {
   display: flex; align-items: center; gap: 3px; padding: 2px 8px;
