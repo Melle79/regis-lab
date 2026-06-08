@@ -240,14 +240,19 @@ const SKIP_PATTERNS = ['_config_', 'config_overtemp', '_outlet', '_music_mode', 
   '_videoaufnahme', '_gerauscherkennung', '_umdrehen', '_zeit_wasserzeichen', '_bewegungsalarm',
   '_bewegungsverfolgung', '_datenschutzmodus']
 
-const offlineEntities = computed(() =>
-  allStates.value.filter(s => {
+const offlineEntities = computed(() => {
+  // Aus Diagnose-Bericht wenn vorhanden (konsistent mit Diagnose-Panel)
+  if (lastDiagnose.value?.offline?.length >= 0) {
+    return lastDiagnose.value.offline
+  }
+  // Fallback: Live-Filter
+  return allStates.value.filter(s => {
     const domain = s.entity_id.split('.')[0]
     if (!RELEVANT.includes(domain)) return false
     if (SKIP_PATTERNS.some(p => s.entity_id.includes(p))) return false
     return ['unavailable', 'unknown'].includes(s.state)
   })
-)
+})
 
 const offlineCount = computed(() => offlineEntities.value.length)
 
