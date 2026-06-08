@@ -280,7 +280,7 @@ const expandedGroups = ref(new Set())
 const logEntries     = ref([])
 const logLoading     = ref(false)
 const lastSeenLog    = ref(localStorage.getItem('regis_log_seen') || '')
-const readIds        = ref(JSON.parse(localStorage.getItem('regis_log_read') || '[]'))
+const readIds        = ref(JSON.parse(localStorage.getItem('regis_log_read') || '[]') || [])
 
 onMounted(async () => {
   try {
