@@ -223,6 +223,12 @@
 
     <!-- Log Tab -->
     <template v-if="activeTab === 'log'">
+      <div class="log-header">
+        <span class="log-header-title">{{ logEntries.length }} Einträge</span>
+        <button v-if="unreadLogCount > 0" class="mark-all-btn" @click="markAllRead">
+          <MdiIcon icon="mdi:check-all" :size="13" /> Alle als gelesen
+        </button>
+      </div>
       <div v-if="logLoading" class="loading-state">
         <MdiIcon icon="mdi:loading" :size="36" color="var(--accent)" class="spin" />
         <p>Lade Aktivitäten...</p>
@@ -326,6 +332,16 @@ const unreadLogCount = computed(() => {
   if (!lastSeenLog.value) return logEntries.value.filter(e => !e.undone).length
   return logEntries.value.filter(e => !e.undone && e.timestamp > lastSeenLog.value).length
 })
+
+function markAllRead() {
+  markLogSeen()
+}
+
+function markEntryRead(entry) {
+  // Timestamp dieses Eintrags als "gesehen" setzen
+  lastSeenLog.value = entry.timestamp
+  localStorage.setItem('regis_log_seen', entry.timestamp)
+}
 
 function markLogSeen() {
   const now = new Date().toISOString()
@@ -610,6 +626,19 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; flex-shrink: 0; }
+.log-header-title { font-size: 12px; color: var(--muted); }
+.mark-all-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 12px;
+  border-radius: 7px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 11px;
+}
+.mark-all-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.mark-read-btn {
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.mark-read-btn:hover { color: var(--accent); border-color: var(--accent); }
 .new-entry {
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
@@ -641,6 +670,19 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; flex-shrink: 0; }
+.log-header-title { font-size: 12px; color: var(--muted); }
+.mark-all-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 12px;
+  border-radius: 7px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 11px;
+}
+.mark-all-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.mark-read-btn {
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.mark-read-btn:hover { color: var(--accent); border-color: var(--accent); }
 .new-entry {
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
@@ -683,6 +725,19 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; flex-shrink: 0; }
+.log-header-title { font-size: 12px; color: var(--muted); }
+.mark-all-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 12px;
+  border-radius: 7px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 11px;
+}
+.mark-all-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.mark-read-btn {
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.mark-read-btn:hover { color: var(--accent); border-color: var(--accent); }
 .new-entry {
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
@@ -714,6 +769,19 @@ function formatSummary(text) {
   color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .undo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; flex-shrink: 0; }
+.log-header-title { font-size: 12px; color: var(--muted); }
+.mark-all-btn {
+  display: flex; align-items: center; gap: 4px; padding: 4px 12px;
+  border-radius: 7px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 11px;
+}
+.mark-all-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.mark-read-btn {
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.mark-read-btn:hover { color: var(--accent); border-color: var(--accent); }
 .new-entry {
   background: color-mix(in srgb, var(--accent) 6%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
