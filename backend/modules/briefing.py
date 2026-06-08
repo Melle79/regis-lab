@@ -40,10 +40,18 @@ class Module(BaseModule):
             # Wetter
             weather_entity = self.config._settings.get("weather_entity", "")
             weather = next((s for s in states if s["entity_id"] == weather_entity), None)
+            WEATHER_DE = {
+                "sunny": "Sonnig", "clear-night": "Klare Nacht",
+                "cloudy": "Bewölkt", "partlycloudy": "Teils bewölkt",
+                "rainy": "Regen", "snowy": "Schnee", "windy": "Windig",
+                "fog": "Nebel", "lightning": "Gewitter", "hail": "Hagel",
+                "pouring": "Starkregen", "exceptional": "Außergewöhnlich",
+            }
             weather_text = ""
             if weather:
-                temp   = weather.get("attributes", {}).get("temperature", "?")
-                cond   = weather.get("attributes", {}).get("friendly_name", weather.get("state", ""))
+                temp  = weather.get("attributes", {}).get("temperature", "?")
+                state = weather.get("state", "")
+                cond  = WEATHER_DE.get(state, state)
                 weather_text = f"{cond}, {temp}°C"
 
             # Offline-Geräte (aus letztem Diagnose-Bericht)
@@ -57,15 +65,32 @@ class Module(BaseModule):
             except Exception:
                 pass
 
-            # Lichter die noch an sind
-            lights_on = [
-                s.get("attributes", {}).get("friendly_name", s["entity_id"])
-                for s in states
-                if s["entity_id"].startswith("light.") and s["state"] == "on"
-            ]
+            # Lichter die noch an sind — ohne Segmente
+            lights_on = []
+            seen_lights = set()
+            for s in states:
+                if not s["entity_id"].startswith("light.") or s["state"] != "on":
+                    continue
+                name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+                # Segmente überspringen
+                if " Segment " in name:
+                    # Basisname ohne Segment merken
+                    base = name.split(" Segment ")[0]
+                    if base not in seen_lights:
+                        seen_lights.add(base)
+                        lights_on.append(base)
+                    continue
+                if name not in seen_lights:
+                    seen_lights.add(name)
+                    lights_on.append(name)
 
             # Kontext für KI
             context_parts = []
+            import locale
+            try:
+                locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
+            except Exception:
+                pass
             context_parts.append(f"Datum: {datetime.now().strftime('%A, %d. %B %Y')}")
             context_parts.append(f"Uhrzeit: {datetime.now().strftime('%H:%M')} Uhr")
             if weather_text:
@@ -101,7 +126,7 @@ class Module(BaseModule):
                     pass
 
             return jsonify({
-                "date":          datetime.now().strftime("%A, %d. %B %Y"),
+                "date":          datetime.now().strftime("%A, %d. %B %Y").replace("Monday","Montag").replace("Tuesday","Dienstag").replace("Wednesday","Mittwoch").replace("Thursday","Donnerstag").replace("Friday","Freitag").replace("Saturday","Samstag").replace("Sunday","Sonntag").replace("January","Januar").replace("February","Februar").replace("March","März").replace("April","April").replace("May","Mai").replace("June","Juni").replace("July","Juli").replace("August","August").replace("September","September").replace("October","Oktober").replace("November","November").replace("December","Dezember"),
                 "time":          datetime.now().strftime("%H:%M"),
                 "weather":       weather_text,
                 "persons_home":  persons_home,
