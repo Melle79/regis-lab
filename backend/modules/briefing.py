@@ -159,10 +159,13 @@ class Module(BaseModule):
             wait = (target - now).total_seconds()
             self.log.info(f"Nächstes Briefing um {hour:02d}:{minute:02d} Uhr (in {wait/3600:.1f}h)")
             _time.sleep(wait)
-            try:
-                self._send_morning_briefing()
-            except Exception as e:
-                self.log.error(f"Briefing-Fehler: {e}")
+            if self.config._settings.get("briefing_enabled", True):
+                try:
+                    self._send_morning_briefing()
+                except Exception as e:
+                    self.log.error(f"Briefing-Fehler: {e}")
+            else:
+                self.log.info("Briefing deaktiviert, wird übersprungen")
 
     def register(self):
 

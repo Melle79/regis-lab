@@ -91,6 +91,17 @@
               Täglich automatische Zusammenfassung per Push-Nachricht.
             </p>
             <div class="field">
+              <label>Aktiviert</label>
+              <label class="toggle-label">
+                <input type="checkbox" v-model="form.briefing_enabled" class="toggle-input" />
+                <span class="toggle-track">
+                  <span class="toggle-thumb" />
+                </span>
+                <span>{{ form.briefing_enabled ? 'Ein' : 'Aus' }}</span>
+              </label>
+            </div>
+            <template v-if="form.briefing_enabled">
+            <div class="field">
               <label>Uhrzeit</label>
               <input type="time" v-model="form.briefing_time" class="input" style="width:120px" />
             </div>
@@ -111,6 +122,7 @@
                 {{ testingBriefing ? 'Wird gesendet…' : 'Jetzt testen' }}
               </button>
             </div>
+            </template>
           </div>
 
           <!-- HA Token -->
@@ -256,6 +268,7 @@ const form = ref({
   jarvis_system_prompt: '',
   jarvis_ha_control: false,
   filter_labels: ['no-dboard'],
+  briefing_enabled: true,
   briefing_targets: [],
   briefing_time: '07:00',
 })
@@ -459,6 +472,18 @@ onMounted(load)
 .label-checkbox input { cursor: pointer; }
 .label-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 .label-hint { font-size: 12px; color: var(--muted); }
+.toggle-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+.toggle-input { display: none; }
+.toggle-track {
+  width: 40px; height: 22px; border-radius: 11px; background: var(--border);
+  display: flex; align-items: center; padding: 2px; transition: background .2s;
+}
+.toggle-input:checked ~ .toggle-track { background: var(--accent); }
+.toggle-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
 .btn-test {
   display: flex; align-items: center; gap: 6px; padding: 7px 16px;
   border-radius: 8px; border: 1px solid var(--accent); background: transparent;
