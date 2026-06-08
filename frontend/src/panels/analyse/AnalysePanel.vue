@@ -232,7 +232,7 @@
         <p>Noch keine Aktivitäten aufgezeichnet.</p>
       </div>
       <div v-else class="log-list">
-        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone }">
+        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone, 'new-entry': !entry.undone && lastSeenLog < entry.timestamp }">
           <div class="log-icon">
             <MdiIcon :icon="logIcon(entry.type)" :size="16" :color="logColor(entry.type)" />
           </div>
