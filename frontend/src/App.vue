@@ -13,7 +13,8 @@
     />
 
     <main class="app-content">
-      <GeraetePanel   v-if="activeTab === 'geraete'" />
+      <HomePanel      v-if="activeTab === 'home'" />
+      <GeraetePanel   v-else-if="activeTab === 'geraete'" />
       <PersonenPanel  v-else-if="activeTab === 'personen'" />
       <ZonenPanel     v-else-if="activeTab === 'zonen'" />
       <JarvisPanel    v-else-if="activeTab === 'jarvis'" />
@@ -32,6 +33,7 @@ import { useDashboardStore } from './store/dashboard.js'
 import { registerRegisIcon } from './utils/registerIcon.js'
 
 import AppHeader    from './components/header/AppHeader.vue'
+import HomePanel    from './panels/home/HomePanel.vue'
 import GeraetePanel from './panels/geraete/GeraetePanel.vue'
 import PersonenPanel from './panels/personen/PersonenPanel.vue'
 import ZonenPanel   from './panels/zonen/ZonenPanel.vue'
@@ -46,11 +48,12 @@ const config       = ref({})
 const addonVersion = ref('?')
 
 const ALL_TABS = [
+  { id: 'home',     label: 'Übersicht', icon: 'mdi:view-dashboard' },
   { id: 'geraete',  label: 'Geräte',  icon: 'mdi:home' },
   { id: 'personen', label: 'Personen', icon: 'mdi:account-group' },
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
   { id: 'jarvis',   label: 'Jarvis',  icon: 'mdi:robot' },
-  { id: 'analyse',  label: 'Analyse', icon: 'mdi:chart-line' },
+  { id: 'analyse',  label: 'Diagnose', icon: 'mdi:stethoscope' },
 ]
 
 // Tab-Reihenfolge aus Backend laden

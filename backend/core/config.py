@@ -23,7 +23,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_ollama_url":    "",
     "jarvis_system_prompt": "",
     "jarvis_ha_control":   False,
-    "tab_order":           ["geraete", "personen", "zonen", "jarvis", "analyse"],
+    "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "analyse"],
 }
 
 
