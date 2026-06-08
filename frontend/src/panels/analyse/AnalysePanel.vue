@@ -238,7 +238,7 @@
         <p>Noch keine Aktivitäten aufgezeichnet.</p>
       </div>
       <div v-else class="log-list">
-        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone, 'new-entry': !entry.undone && !readIds.value.includes(entry.id) }">
+        <div v-for="entry in logEntries" :key="entry.id" class="log-entry" :class="{ undone: entry.undone, 'new-entry': !entry.undone && !(Array.isArray(readIds) ? readIds : []).includes(entry.id) }">
           <div class="log-icon">
             <MdiIcon :icon="logIcon(entry.type)" :size="16" :color="logColor(entry.type)" />
           </div>
@@ -280,7 +280,7 @@ const expandedGroups = ref(new Set())
 const logEntries     = ref([])
 const logLoading     = ref(false)
 const lastSeenLog    = ref(localStorage.getItem('regis_log_seen') || '')
-const readIds        = ref(JSON.parse(localStorage.getItem('regis_log_read') || '[]') || [])
+const readIds        = ref([])
 
 onMounted(async () => {
   try {
@@ -333,7 +333,8 @@ function toggleCleanupGroup(platform) {
 }
 
 const unreadLogCount = computed(() => {
-  return logEntries.value.filter(e => !e.undone && !readIds.value.includes(e.id)).length
+  const ids = Array.isArray(readIds.value) ? readIds.value : []
+  return logEntries.value.filter(e => !e.undone && !ids.includes(e.id)).length
 })
 
 function markAllRead() {
@@ -343,6 +344,7 @@ function markAllRead() {
 }
 
 function markEntryRead(entry) {
+  if (!Array.isArray(readIds.value)) readIds.value = []
   if (!readIds.value.includes(entry.id)) readIds.value.push(entry.id)
   localStorage.setItem('regis_log_read', JSON.stringify(readIds.value))
 }
