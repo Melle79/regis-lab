@@ -214,9 +214,11 @@ const topLights = computed(() =>
     .slice(0, 6)
 )
 
+const SKIP_SWITCH = ['_config_', 'kamera', 'camera', 'motion', 'bewegung', 'pir', '_led_', 'videoaufnahme', 'gerauscherkennung', 'umdrehen', 'wasserzeichen', 'bewegungsalarm', 'datenschutz', 'music_mode', 'outlet', 'overtemp']
+
 const topSwitches = computed(() =>
   allStates.value.filter(s => s.entity_id.startsWith('switch.') && s.state !== 'unavailable'
-    && !s.entity_id.includes('_config_') && !s.entity_id.includes('kamera'))
+    && !SKIP_SWITCH.some(p => s.entity_id.includes(p)))
     .sort((a, b) => (b.state === 'on') - (a.state === 'on'))
     .slice(0, 6)
 )
