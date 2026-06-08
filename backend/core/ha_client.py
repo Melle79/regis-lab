@@ -67,7 +67,31 @@ class HAClient:
         with self._lock:
             return dict(self._entity_cache)
 
-    # ── WebSocket-Brücke (HA → Frontend) ────────────────────────
+    def ws_request(self, msg: dict, timeout: int = 8):
+        """Einmalige synchrone WebSocket-Anfrage an HA."""
+        import threading, websocket as wslib
+        result = [None]
+        done   = threading.Event()
+        msg_id = 99
+
+        def on_message(ws, raw):
+            d = json.loads(raw)
+            if d.get("type") == "auth_required":
+                ws.send(json.dumps({"type": "auth", "access_token": self.token}))
+            elif d.get("type") == "auth_ok":
+                ws.send(json.dumps({"id": msg_id, **msg}))
+            elif d.get("id") == msg_id:
+                result[0] = d.get("result")
+                done.set()
+                ws.close()
+
+        ws_url = self.ha_url.replace("http://", "ws://").replace("https://", "wss://") + "/api/websocket"
+        w = wslib.WebSocketApp(ws_url, on_message=on_message)
+        threading.Thread(target=w.run_forever, daemon=True).start()
+        done.wait(timeout)
+        return result[0]
+
+
     def register_ws_client(self, ws):
         with self._lock:
             self._ws_clients.append(ws)

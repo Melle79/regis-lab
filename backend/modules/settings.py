@@ -77,26 +77,12 @@ class Module(BaseModule):
         @self.app.route("/api/settings/labels")
         def get_labels():
             """Alle HA-Labels aus der Entity-Registry laden."""
-            import threading, websocket as wslib
-            token  = self.config.ha_long_token
-            ws_url = "ws://homeassistant.local.hass.io:8123/api/websocket"
-            result = [None]
-            done   = threading.Event()
-            def on_msg(ws, raw):
-                d = json.loads(raw)
-                if d.get("type") == "auth_required":
-                    ws.send(json.dumps({"type": "auth", "access_token": token}))
-                elif d.get("type") == "auth_ok":
-                    ws.send(json.dumps({"type": "label_registry/list", "id": 1}))
-                elif d.get("id") == 1:
-                    result[0] = d.get("result", [])
-                    done.set(); ws.close()
-            w = wslib.WebSocketApp(ws_url, on_message=on_msg)
-            import threading as t
-            t.Thread(target=w.run_forever, daemon=True).start()
-            done.wait(5)
-            labels = [{"id": l["label_id"], "name": l.get("name", l["label_id"]), "color": l.get("color", "")} for l in (result[0] or [])]
-            filtered = self.config._settings.get("filter_labels", ["no-dboard"])
+            labels_raw = self.ha.ws_request({"type": "label_registry/list"})
+            labels = [
+                {"id": l["label_id"], "name": l.get("name", l["label_id"]), "color": l.get("color", "")}
+                for l in (labels_raw or [])
+            ]
+            filtered = self.config._settings.get("filter_labels", [])
             return jsonify({"labels": labels, "filter_labels": filtered})
 
         self.log.info("Settings-Modul registriert")

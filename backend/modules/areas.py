@@ -56,7 +56,7 @@ class Module(BaseModule):
             entity_info = {}
             nodboard_ids = set()
             nodboard_device_ids = set()
-            filter_labels = set(self.config._settings.get("filter_labels", ["no-dboard"]))
+            filter_labels = set(self.config._settings.get("filter_labels", []))
             for e in entities:
                 if filter_labels & set(e.get("labels", [])):
                     nodboard_ids.add(e["entity_id"])

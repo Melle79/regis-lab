@@ -24,7 +24,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_system_prompt": "",
     "jarvis_ha_control":   False,
     "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "analyse"],
-    "filter_labels":       ["no-dboard"],
+    "filter_labels":       [],
 }
 
 
