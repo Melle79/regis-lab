@@ -48,9 +48,9 @@
   - KI-gestützte Einschätzung des Systemzustands
 - **Verlaufsdiagramm** der letzten 24 Stunden
 - **Aufräumen** — problematische Integrationen gruppiert mit:
-  - Jarvis-Einschätzung pro Integration
-  - Integration neu laden
-  - Entitäten ignorieren
+  - KI-gestützter Einschätzung pro Integration
+  - Möglichkeit, Integrationen neu zu laden
+  - Entitäten einzeln oder als Gruppe ignorieren
 - **Aktivitätenprotokoll** mit Undo-Funktion:
   - Alle Änderungen werden aufgezeichnet
   - Aktionen können rückgängig gemacht werden
