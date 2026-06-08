@@ -14,11 +14,15 @@ class Module(BaseModule):
     def register(self):
         @self.app.route("/api/entities")
         def get_entities():
-            """Alle gecachten Entity-Zustände zurückgeben."""
+            """Alle gecachten Entity-Zustände zurückgeben (ohne gefilterte Labels)."""
             domain = request.args.get("domain")   # ?domain=light
             states = list(self.ha.get_cached_states().values())
             if domain:
                 states = [s for s in states if s["entity_id"].startswith(f"{domain}.")]
+            # Label-Filter anwenden
+            filtered_ids = getattr(self.config, "_label_filtered_ids", set())
+            if filtered_ids:
+                states = [s for s in states if s["entity_id"] not in filtered_ids]
             return jsonify(states)
 
         @self.app.route("/api/entities/<entity_id>")
