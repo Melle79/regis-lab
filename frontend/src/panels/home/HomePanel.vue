@@ -234,9 +234,19 @@ const lightsTotal = computed(() => allStates.value.filter(s => s.entity_id.start
 const automationsOn    = computed(() => allStates.value.filter(s => s.entity_id.startsWith('automation.') && s.state === 'on').length)
 const automationsTotal = computed(() => allStates.value.filter(s => s.entity_id.startsWith('automation.')).length)
 
-const RELEVANT = ['light', 'switch', 'cover', 'climate', 'lock', 'fan', 'media_player']
+const RELEVANT = ['light', 'switch', 'cover', 'climate', 'lock', 'fan', 'vacuum', 'alarm_control_panel']
+const SKIP_PATTERNS = ['_config_', 'config_overtemp', '_outlet', '_music_mode', '_led_', '_debug', '_test',
+  'testkamera_', 'woox_smart_camera_', '_privacy', '_flip', '_watermark', '_motion', '_sound',
+  '_videoaufnahme', '_gerauscherkennung', '_umdrehen', '_zeit_wasserzeichen', '_bewegungsalarm',
+  '_bewegungsverfolgung', '_datenschutzmodus']
+
 const offlineEntities = computed(() =>
-  allStates.value.filter(s => RELEVANT.includes(s.entity_id.split('.')[0]) && ['unavailable', 'unknown'].includes(s.state))
+  allStates.value.filter(s => {
+    const domain = s.entity_id.split('.')[0]
+    if (!RELEVANT.includes(domain)) return false
+    if (SKIP_PATTERNS.some(p => s.entity_id.includes(p))) return false
+    return ['unavailable', 'unknown'].includes(s.state)
+  })
 )
 
 const offlineCount = computed(() => offlineEntities.value.length)
