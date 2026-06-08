@@ -81,6 +81,38 @@
             </div>
           </div>
 
+          <!-- Morgen-Briefing -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:weather-sunset-up" :size="20" color="var(--accent)" />
+              Morgen-Briefing
+            </div>
+            <p class="card-desc">
+              Täglich automatische Zusammenfassung per Push-Nachricht.
+            </p>
+            <div class="field">
+              <label>Uhrzeit</label>
+              <input type="time" v-model="form.briefing_time" class="input" style="width:120px" />
+            </div>
+            <div class="field">
+              <label>Empfänger</label>
+              <div v-if="notifyServices.length === 0" class="label-hint">Keine Geräte gefunden.</div>
+              <div class="label-grid">
+                <label v-for="svc in notifyServices" :key="svc.id" class="label-checkbox">
+                  <input type="checkbox" :value="svc.id" v-model="form.briefing_targets" />
+                  <MdiIcon icon="mdi:cellphone" :size="13" color="var(--accent)" />
+                  {{ svc.name }}
+                </label>
+              </div>
+            </div>
+            <div class="field">
+              <button class="btn-test" @click="testBriefing" :disabled="testingBriefing">
+                <MdiIcon :icon="testingBriefing ? 'mdi:loading' : 'mdi:send'" :size="14" :class="{ spin: testingBriefing }" />
+                {{ testingBriefing ? 'Wird gesendet…' : 'Jetzt testen' }}
+              </button>
+            </div>
+          </div>
+
           <!-- HA Token -->
           <div class="settings-card">
             <div class="card-title">
@@ -224,6 +256,8 @@ const form = ref({
   jarvis_system_prompt: '',
   jarvis_ha_control: false,
   filter_labels: ['no-dboard'],
+  briefing_targets: [],
+  briefing_time: '07:00',
 })
 
 const showToken       = ref(false)
@@ -236,6 +270,8 @@ const tokenError      = ref('')
 const tokenSaved      = ref(false)
 const allLabels       = ref([])
 const iconRegistered  = ref(null)
+const notifyServices  = ref([])
+const testingBriefing = ref(false)
 
 async function loadOllamaModels() {
   const url = form.value.jarvis_ollama_url?.trim()
@@ -417,6 +453,13 @@ onMounted(load)
 .label-checkbox input { cursor: pointer; }
 .label-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 .label-hint { font-size: 12px; color: var(--muted); }
+.btn-test {
+  display: flex; align-items: center; gap: 6px; padding: 7px 16px;
+  border-radius: 8px; border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); cursor: pointer; font-size: 12px;
+}
+.btn-test:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.btn-test:disabled { opacity: .5; cursor: default; }
 
 .token-row { display: flex; gap: 8px; align-items: center; }
 .icon-btn {

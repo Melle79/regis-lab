@@ -25,6 +25,8 @@ SETTINGS_DEFAULTS = {
     "jarvis_ha_control":   False,
     "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "analyse"],
     "filter_labels":       [],
+    "briefing_targets":    ["mobile_app_svens_iphone"],
+    "briefing_time":       "07:00",
 }
 
 
@@ -135,5 +137,7 @@ class AddonConfig:
             "jarvis_ha_control":    self._settings.get("jarvis_ha_control", False),
             "tab_order":            self._settings.get("tab_order", ["geraete", "personen", "zonen", "jarvis"]),
             "filter_labels":        self._settings.get("filter_labels", []),
+            "briefing_targets":     self._settings.get("briefing_targets", ["mobile_app_svens_iphone"]),
+            "briefing_time":        self._settings.get("briefing_time", "07:00"),
             "ha_token_set":         bool(self.ha_long_token),
         }

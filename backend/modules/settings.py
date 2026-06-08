@@ -22,7 +22,7 @@ class Module(BaseModule):
             allowed = [
                 "title", "theme", "show_clock", "show_weather", "weather_entity",
                 "ki_name", "ha_token", "jarvis_ollama_url", "jarvis_model",
-                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels",
+                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             # Token nur speichern wenn nicht leer
@@ -84,6 +84,28 @@ class Module(BaseModule):
             all_labels = list(getattr(self.config, "_all_labels", {}).values())
             filtered   = self.config._settings.get("filter_labels", [])
             return jsonify({"labels": all_labels, "filter_labels": filtered})
+
+        @self.app.route("/api/settings/notify-services")
+        def get_notify_services():
+            """Alle verfügbaren notify.*-Services aus HA laden."""
+            token = self.config.ha_long_token
+            ha    = "http://homeassistant.local.hass.io:8123"
+            hdrs  = {"Authorization": "Bearer " + token}
+            try:
+                r = requests.get(ha + "/api/services", headers=hdrs, timeout=10)
+                services = r.json() if r.status_code == 200 else []
+                notify = []
+                for domain in services:
+                    if domain.get("domain") == "notify":
+                        for svc_name in domain.get("services", {}).keys():
+                            if svc_name.startswith("mobile_app_"):
+                                notify.append({
+                                    "id":   svc_name,
+                                    "name": svc_name.replace("mobile_app_", "").replace("_", " ").title()
+                                })
+                return jsonify({"services": notify})
+            except Exception as e:
+                return jsonify({"services": [], "error": str(e)})
 
         self.log.info("Settings-Modul registriert")
 

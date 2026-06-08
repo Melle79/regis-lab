@@ -129,14 +129,16 @@ class Module(BaseModule):
                 "url": "homeassistant://navigate/lovelace/0",
             },
         }
-        try:
-            requests.post(
-                ha + "/api/services/notify/mobile_app_svens_iphone",
-                headers=hdrs, data=json.dumps(payload), timeout=10,
-            )
-            self.log.info("Morgen-Briefing gesendet")
-        except Exception as e:
-            self.log.error(f"Push-Fehler: {e}")
+        targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
+        for target in targets:
+            try:
+                requests.post(
+                    ha + f"/api/services/notify/{target}",
+                    headers=hdrs, data=json.dumps(payload), timeout=10,
+                )
+                self.log.info(f"Briefing gesendet an {target}")
+            except Exception as e:
+                self.log.error(f"Push-Fehler ({target}): {e}")
 
     def _send_morning_briefing(self):
         data = self._build_briefing()
@@ -144,12 +146,18 @@ class Module(BaseModule):
 
     def _scheduler(self):
         while True:
-            now    = datetime.now()
-            target = now.replace(hour=7, minute=0, second=0, microsecond=0)
+            now = datetime.now()
+            # Uhrzeit aus Settings lesen
+            time_str = self.config._settings.get("briefing_time", "07:00")
+            try:
+                hour, minute = int(time_str.split(":")[0]), int(time_str.split(":")[1])
+            except Exception:
+                hour, minute = 7, 0
+            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
             if now >= target:
                 target += timedelta(days=1)
             wait = (target - now).total_seconds()
-            self.log.info(f"Nächstes Briefing in {wait/3600:.1f} Stunden")
+            self.log.info(f"Nächstes Briefing um {hour:02d}:{minute:02d} Uhr (in {wait/3600:.1f}h)")
             _time.sleep(wait)
             try:
                 self._send_morning_briefing()
