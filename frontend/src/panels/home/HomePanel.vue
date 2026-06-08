@@ -163,9 +163,12 @@ const userName = ref('')
 
 async function loadUserName() {
   try {
-    const r = await fetch('api/user')
-    const d = await r.json()
-    userName.value = d.name || d.username || ''
+    const r = await fetch('api/entities?domain=person')
+    const persons = await r.json()
+    if (Array.isArray(persons) && persons.length > 0) {
+      const name = persons[0].attributes?.friendly_name || persons[0].entity_id.split('.')[1]
+      userName.value = name.split(' ')[0]
+    }
   } catch(e) {}
 }
 
@@ -182,7 +185,7 @@ const greeting = computed(() => {
 })
 
 const dateStr = computed(() => new Date().toLocaleDateString('de-DE', {
-  weekday: 'long', day: 'numeric', month: 'long'
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 }))
 
 const weather = computed(() => allStates.value.find(s =>
