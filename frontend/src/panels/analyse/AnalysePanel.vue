@@ -275,11 +275,12 @@ onMounted(async () => {
     const r = await fetch('api/analyse/latest')
     const d = await r.json()
     if (d.timestamp) report.value = d
-    // Trend-Daten laden
     const tr = await fetch('api/analyse/reports')
     const td = await tr.json()
     trendData.value = (td.reports || []).slice(0, 48).reverse()
   } catch(e) {}
+  // Log immer beim Start laden für Badge-Zähler
+  loadLog()
 })
 
 async function runAnalysis() {
@@ -418,6 +419,7 @@ async function repairIntegration(group) {
     group.suggestion = d.error || ('Integration neu geladen (' + (d.reloaded || 0) + ' Einträge). Bitte warte einen Moment und lade dann die Liste neu.')
   } catch(e) { group.suggestion = 'Fehler: ' + e.message }
   group.repairing = false
+  await loadLog()
 }
 
 async function ignoreGroup(group) {
@@ -428,6 +430,7 @@ async function ignoreGroup(group) {
     body: JSON.stringify({ entity_ids: ids }),
   })
   cleanupGroups.value = cleanupGroups.value.filter(g => g.platform !== group.platform)
+  await loadLog()
 }
 
 async function ignoreEntity(entity_id, group) {
@@ -440,6 +443,7 @@ async function ignoreEntity(entity_id, group) {
   group.count    = group.entities.length
   if (group.entities.length === 0)
     cleanupGroups.value = cleanupGroups.value.filter(g => g.platform !== group.platform)
+  await loadLog()
 }
 
 async function suggestCleanup(group) {
