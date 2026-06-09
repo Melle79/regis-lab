@@ -232,7 +232,7 @@ class Module(BaseModule):
             return jsonify({"ok": True})
 
         @self.app.route("/api/suggestions/analyze", methods=["POST"])
-        def run_analysis():
+        def run_suggestions_analysis():
             def _run():
                 new = self._generate_suggestions()
                 if new:
