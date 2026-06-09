@@ -1054,6 +1054,7 @@ function formatSummary(text) {
 .ha-link { color: var(--green); font-size: 10px; margin-left: 8px; }
 .auto-preview-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
 .auto-preview-json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 11px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; color: var(--text); }
+/* v3-preview-popup */
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
 .status-card.clickable:hover { transform: translateY(-2px); }
 .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
