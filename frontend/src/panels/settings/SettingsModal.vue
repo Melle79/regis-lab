@@ -122,6 +122,7 @@
             <div class="field">
               <label>Externe HA-URL <small>(optional, für Push-Link)</small></label>
               <input v-model="form.ha_external_url" class="input" placeholder="https://mein-ha.duckdns.org" />
+              <div class="field-hint" v-if="form.ha_external_url">Link: {{ form.ha_external_url }}/hassio/ingress/a291494a_regis_lab</div>
             </div>
             <div class="field">
               <button class="btn-test" @click="testBriefing" :disabled="testingBriefing">
