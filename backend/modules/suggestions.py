@@ -228,15 +228,13 @@ class Module(BaseModule):
     def _generate_automation_json(self, suggestion: dict, model: str, ollama: str):
         """KI generiert eine HA-Automation als JSON."""
         import re
+        example = '{"alias":"Licht aus","description":"Schaltet Licht aus","trigger":[{"platform":"time","at":"22:00:00"}],"condition":[],"action":[{"service":"light.turn_off","target":{"entity_id":"light.wohnzimmer"}}],"mode":"single"}'
         prompt = (
-            "Erstelle eine Home Assistant Automation als valides JSON.\n"
-            "Titel: " + suggestion["title"] + "\n"
-            "Beschreibung: " + suggestion["description"] + "\n\n"
-            "Antworte NUR mit einem JSON-Objekt (kein Markdown, keine Backticks, kein Text).\n"
-            "Format: {\"alias\": \"...\", \"description\": \"...\", "
-            "\"trigger\": [...], \"condition\": [], \"action\": [...], \"mode\": \"single\"}\n"
-            "Verwende echte HA-Syntax. Beispiel-Trigger: {\"platform\": \"time\", \"at\": \"07:00:00\"}\n"
-            "Beispiel-Action: {\"service\": \"light.turn_on\", \"target\": {\"entity_id\": \"light.wohnzimmer\"}}"
+            "Du bist ein Home Assistant Experte. Erstelle eine Automation."
+            " Titel: " + suggestion["title"] +
+            " Beschreibung: " + suggestion["description"] +
+            " Antworte AUSSCHLIESSLICH mit einem JSON-Objekt ohne Text oder Erklaerung."
+            " Beispiel: " + example
         )
         try:
             r = requests.post(
@@ -245,14 +243,20 @@ class Module(BaseModule):
                 timeout=60,
             )
             response = r.json().get("response", "").strip() if r.status_code == 200 else ""
-            # Markdown-Backticks entfernen
-            response = re.sub(r"```json|```", "", response).strip()
-            # JSON extrahieren
-            json_match = re.search(r"\{[\s\S]*\}", response)
-            if not json_match:
-                self.log.warning(f"Keine JSON in KI-Antwort: {response[:200]}")
+            self.log.info(f"KI-Antwort (erste 300 Zeichen): {response[:300]}")
+            # Bereinigen
+            response = re.sub(r"```(?:json)?|```", "", response).strip()
+            # Ersten { bis letzten } extrahieren
+            start = response.find("{")
+            end   = response.rfind("}") + 1
+            if start == -1 or end == 0:
+                self.log.warning(f"Kein JSON gefunden in: {response[:200]}")
                 return None
-            return json.loads(json_match.group(0))
+            json_str = response[start:end]
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            self.log.error(f"JSON-Parse-Fehler: {e} | Text: {json_str[:200] if 'json_str' in dir() else '?'}")
+            return None
         except Exception as e:
             self.log.error(f"Automation-Generierung fehlgeschlagen: {e}")
             return None
