@@ -571,6 +571,9 @@ async function confirmCreate(s) {
     if (d.ok) {
       autoPreview.value = null
       await loadSuggestions()
+      // HA-Automationsseite öffnen
+      const haUrl = window.location.origin.replace(':8099', ':8123')
+      window.open(haUrl + '/config/automation/edit/' + d.automation_id, '_blank')
     } else {
       alert('Fehler: ' + (d.error || 'Unbekannt'))
       autoPreview.value.creating = false

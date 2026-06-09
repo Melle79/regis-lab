@@ -228,11 +228,29 @@ class Module(BaseModule):
     def _generate_automation_json(self, suggestion: dict, model: str, ollama: str):
         """KI generiert eine HA-Automation als JSON."""
         import re
+        # Echte Entity-IDs aus HA laden
+        ha   = "http://homeassistant.local.hass.io:8123"
+        hdrs = {"Authorization": "Bearer " + self.config.ha_long_token}
+        entity_list = ""
+        try:
+            r0 = requests.get(ha + "/api/states", headers=hdrs, timeout=10)
+            states = r0.json() if r0.status_code == 200 else []
+            relevant = [
+                s["entity_id"] + " (" + s.get("attributes", {}).get("friendly_name", "") + ")"
+                for s in states
+                if s["entity_id"].split(".")[0] in ("light", "switch", "cover", "climate", "input_boolean", "scene")
+                and s["state"] not in ("unavailable", "unknown")
+            ][:40]
+            entity_list = " | ".join(relevant)
+        except Exception:
+            pass
+
         example = '{"alias":"Licht aus","description":"Schaltet Licht aus","trigger":[{"platform":"time","at":"22:00:00"}],"condition":[],"action":[{"service":"light.turn_off","target":{"entity_id":"light.wohnzimmer"}}],"mode":"single"}'
         prompt = (
             "Du bist ein Home Assistant Experte. Erstelle eine Automation."
             " Titel: " + suggestion["title"] +
             " Beschreibung: " + suggestion["description"] +
+            " Verfuegbare Entitaeten (NUR diese verwenden): " + entity_list +
             " Antworte AUSSCHLIESSLICH mit einem JSON-Objekt ohne Text oder Erklaerung."
             " Beispiel: " + example
         )
