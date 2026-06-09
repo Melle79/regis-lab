@@ -293,6 +293,44 @@
       </div>
     </Teleport>
 
+    <!-- Vorschläge Tab -->
+    <template v-if="activeTab === 'suggestions'">
+      <div class="suggestions-toolbar">
+        <span class="suggestions-info">{{ suggestions.length }} Vorschläge</span>
+        <button class="ki-btn" @click="runSuggestionsAnalysis" :disabled="analysisRunning">
+          <MdiIcon :icon="analysisRunning ? 'mdi:loading' : 'mdi:magnify'" :size="13" :class="{ spin: analysisRunning }" />
+          {{ analysisRunning ? 'Analysiere…' : 'Jetzt analysieren' }}
+        </button>
+      </div>
+      <div v-if="suggestionsLoading" class="loading-state">
+        <MdiIcon icon="mdi:loading" :size="36" color="var(--accent)" class="spin" />
+        <p>Lade Vorschläge...</p>
+      </div>
+      <div v-else-if="suggestions.length === 0" class="empty-state">
+        <MdiIcon icon="mdi:lightbulb-outline" :size="40" color="var(--muted)" />
+        <p>Noch keine Vorschläge. Starte die Analyse um Muster zu erkennen.</p>
+      </div>
+      <div v-else class="suggestions-list">
+        <div v-for="s in suggestions" :key="s.id" class="suggestion-card" :class="s.status">
+          <div class="suggestion-header">
+            <MdiIcon icon="mdi:lightbulb" :size="16" color="var(--accent)" />
+            <span class="suggestion-title">{{ s.title }}</span>
+            <span class="suggestion-badge" :class="s.status">{{ statusLabel(s.status) }}</span>
+          </div>
+          <div class="suggestion-desc">{{ s.description }}</div>
+          <div class="suggestion-date">{{ formatDate(s.created_at) }}</div>
+          <div v-if="s.status === 'new'" class="suggestion-actions">
+            <button class="sug-btn accept" @click="updateSuggestion(s.id, 'accepted')">
+              <MdiIcon icon="mdi:check" :size="13" /> Annehmen
+            </button>
+            <button class="sug-btn reject" @click="updateSuggestion(s.id, 'rejected')">
+              <MdiIcon icon="mdi:close" :size="13" /> Ablehnen
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
   </div>
 </template>
 
