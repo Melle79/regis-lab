@@ -225,6 +225,38 @@ class Module(BaseModule):
             except Exception:
                 pass
 
+    def _generate_automation_json(self, suggestion: dict, model: str, ollama: str):
+        """KI generiert eine HA-Automation als JSON."""
+        import re
+        prompt = (
+            "Erstelle eine Home Assistant Automation als valides JSON.\n"
+            "Titel: " + suggestion["title"] + "\n"
+            "Beschreibung: " + suggestion["description"] + "\n\n"
+            "Antworte NUR mit einem JSON-Objekt (kein Markdown, keine Backticks, kein Text).\n"
+            "Format: {\"alias\": \"...\", \"description\": \"...\", "
+            "\"trigger\": [...], \"condition\": [], \"action\": [...], \"mode\": \"single\"}\n"
+            "Verwende echte HA-Syntax. Beispiel-Trigger: {\"platform\": \"time\", \"at\": \"07:00:00\"}\n"
+            "Beispiel-Action: {\"service\": \"light.turn_on\", \"target\": {\"entity_id\": \"light.wohnzimmer\"}}"
+        )
+        try:
+            r = requests.post(
+                ollama + "/api/generate",
+                json={"model": model, "prompt": prompt, "stream": False},
+                timeout=60,
+            )
+            response = r.json().get("response", "").strip() if r.status_code == 200 else ""
+            # Markdown-Backticks entfernen
+            response = re.sub(r"```json|```", "", response).strip()
+            # JSON extrahieren
+            json_match = re.search(r"\{[\s\S]*\}", response)
+            if not json_match:
+                self.log.warning(f"Keine JSON in KI-Antwort: {response[:200]}")
+                return None
+            return json.loads(json_match.group(0))
+        except Exception as e:
+            self.log.error(f"Automation-Generierung fehlgeschlagen: {e}")
+            return None
+
     def _daily_analysis(self):
         """Tägliche Analyse um 08:00 Uhr."""
         while True:
@@ -283,6 +315,23 @@ class Module(BaseModule):
             threading.Thread(target=_run, daemon=True).start()
             return jsonify({"ok": True, "message": "Analyse gestartet..."})
 
+        @self.app.route("/api/suggestions/<suggestion_id>/preview-automation", methods=["POST"])
+        def preview_automation(suggestion_id):
+            """Automation-Vorschau generieren ohne zu speichern."""
+            model  = self.config._settings.get("jarvis_model", "")
+            ollama = self.config.jarvis_ollama_url.rstrip("/")
+            suggestions = self._load_suggestions()
+            s = next((x for x in suggestions if x["id"] == suggestion_id), None)
+            if not s:
+                return jsonify({"error": "Vorschlag nicht gefunden"}), 404
+            if not model or not ollama:
+                return jsonify({"error": "Ollama nicht konfiguriert"}), 400
+
+            auto_json = self._generate_automation_json(s, model, ollama)
+            if auto_json is None:
+                return jsonify({"error": "KI konnte keine valide Automation generieren"}), 400
+            return jsonify({"ok": True, "automation": auto_json})
+
         @self.app.route("/api/suggestions/<suggestion_id>/create-automation", methods=["POST"])
         def create_automation(suggestion_id):
             """Aus einem Vorschlag eine echte HA-Automation erstellen."""
@@ -300,32 +349,10 @@ class Module(BaseModule):
             if not model or not ollama:
                 return jsonify({"error": "Ollama nicht konfiguriert"}), 400
 
-            # KI: Automation-YAML generieren
-            prompt = (
-                "Erstelle eine Home Assistant Automation als valides JSON für die folgende Beschreibung.\n"
-                "Titel: " + s["title"] + "\n"
-                "Beschreibung: " + s["description"] + "\n\n"
-                "Antworte NUR mit einem JSON-Objekt im folgenden Format (kein Markdown, kein Text davor/danach):\n"
-                '{"alias": "...", "description": "...", "trigger": [...], "condition": [], "action": [...], "mode": "single"}\n\n'
-                "Verwende echte HA-Trigger und Actions. Beispiel-Trigger: platform: time, at: \"07:00:00\"\n"
-                "Beispiel-Action: service: light.turn_on, target: {entity_id: light.wohnzimmer}"
-            )
-
-            try:
-                r = requests.post(
-                    ollama + "/api/generate",
-                    json={"model": model, "prompt": prompt, "stream": False},
-                    timeout=60,
-                )
-                response = r.json().get("response", "").strip() if r.status_code == 200 else ""
-                # JSON extrahieren
-                import re
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if not json_match:
-                    return jsonify({"error": "KI konnte keine valide Automation generieren", "raw": response}), 400
-                auto_json = json.loads(json_match.group(0))
-            except Exception as e:
-                return jsonify({"error": f"KI-Fehler: {str(e)}"}), 500
+            # Automation über Hilfsmethode generieren
+            auto_json = self._generate_automation_json(s, model, ollama)
+            if auto_json is None:
+                return jsonify({"error": "KI konnte keine valide Automation generieren"}), 400
 
             # Automation in HA speichern
             try:

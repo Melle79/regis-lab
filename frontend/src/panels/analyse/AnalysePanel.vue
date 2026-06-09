@@ -339,9 +339,9 @@
             <span v-if="s.ha_automation_id" class="ha-link">✅ Automation in HA erstellt</span>
           </div>
           <div v-if="s.status === 'new'" class="suggestion-actions">
-            <button class="sug-btn accept" @click="acceptAndCreate(s)" :disabled="s.creating">
-              <MdiIcon :icon="s.creating ? 'mdi:loading' : 'mdi:check'" :size="13" :class="{ spin: s.creating }" />
-              {{ s.creating ? 'Erstelle…' : 'Annehmen & in HA erstellen' }}
+            <button class="sug-btn accept" @click="previewAutomation(s)" :disabled="s.previewing">
+              <MdiIcon :icon="s.previewing ? 'mdi:loading' : 'mdi:eye'" :size="13" :class="{ spin: s.previewing }" />
+              {{ s.previewing ? 'Lade Vorschau…' : 'Vorschau & erstellen' }}
             </button>
             <button class="sug-btn" @click="startEdit(s)">
               <MdiIcon icon="mdi:pencil" :size="13" /> Bearbeiten
@@ -367,6 +367,7 @@ const suggestions       = ref([])
 const suggestionsLoading = ref(false)
 const analysisRunning    = ref(false)
 const editingSuggestion  = ref(null)
+const autoPreview        = ref(null)
 const editTitle          = ref('')
 const editDesc           = ref('')
 const newSuggestionsCount = computed(() => suggestions.value.filter(s => s.status === 'new').length)
@@ -476,6 +477,38 @@ async function saveEdit(id) {
   })
   editingSuggestion.value = null
   await loadSuggestions()
+}
+
+async function previewAutomation(s) {
+  s.previewing = true
+  try {
+    const r = await fetch(`api/suggestions/${s.id}/preview-automation`, { method: 'POST' })
+    const d = await r.json()
+    if (d.ok) {
+      autoPreview.value = { suggestion: s, automation: d.automation, creating: false }
+    } else {
+      alert('Fehler: ' + (d.error || 'Unbekannt'))
+    }
+  } catch(e) { alert('Fehler: ' + e.message) }
+  s.previewing = false
+}
+
+async function confirmCreate(s) {
+  autoPreview.value.creating = true
+  try {
+    const r = await fetch(`api/suggestions/${s.id}/create-automation`, { method: 'POST' })
+    const d = await r.json()
+    if (d.ok) {
+      autoPreview.value = null
+      await loadSuggestions()
+    } else {
+      alert('Fehler: ' + (d.error || 'Unbekannt'))
+      autoPreview.value.creating = false
+    }
+  } catch(e) {
+    alert('Fehler: ' + e.message)
+    autoPreview.value.creating = false
+  }
 }
 
 async function acceptAndCreate(s) {
@@ -1019,6 +1052,8 @@ function formatSummary(text) {
 .sug-textarea { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; resize: vertical; }
 .sug-edit-actions { display: flex; gap: 8px; }
 .ha-link { color: var(--green); font-size: 10px; margin-left: 8px; }
+.auto-preview-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.auto-preview-json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 11px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; color: var(--text); }
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
 .status-card.clickable:hover { transform: translateY(-2px); }
 .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
