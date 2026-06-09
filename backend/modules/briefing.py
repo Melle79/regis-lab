@@ -128,9 +128,16 @@ class Module(BaseModule):
                     "sound": "default",
                     "interruption-level": "active",
                 },
-                "url": ingress_uri,
             },
         }
+        try:
+            requests.post(
+                ha + f"/api/services/notify/{target}",
+                headers=hdrs, data=json.dumps(payload), timeout=10,
+            )
+            self.log.info(f"Briefing gesendet an {target}")
+        except Exception as e:
+            self.log.error(f"Push-Fehler ({target}): {e}")
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
         for target in targets:
             try:
@@ -141,6 +148,23 @@ class Module(BaseModule):
                 self.log.info(f"Briefing gesendet an {target}")
             except Exception as e:
                 self.log.error(f"Push-Fehler ({target}): {e}")
+
+        # Persistente Benachrichtigung in HA anlegen
+        try:
+            from datetime import datetime as _dt
+            now = _dt.now()
+            persistent_payload = {
+                "message": data["context"],
+                "title":   f"☀️ Morgen-Briefing {now.strftime('%d.%m.%Y')}",
+                "notification_id": "regis_lab_morning_briefing",
+            }
+            requests.post(
+                ha + "/api/services/persistent_notification/create",
+                headers=hdrs, data=json.dumps(persistent_payload), timeout=10,
+            )
+            self.log.info("Persistente Benachrichtigung angelegt")
+        except Exception as e:
+            self.log.error(f"Persistente Benachrichtigung Fehler: {e}")
 
     def _send_morning_briefing(self):
         data = self._build_briefing()
