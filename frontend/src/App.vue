@@ -23,6 +23,7 @@
 
     <!-- Settings Modal -->
     <SettingsModal v-if="showSettings" @close="showSettings = false; reloadConfig()" />
+    <!-- settings-v5 -->
 
   </div>
 </template>
