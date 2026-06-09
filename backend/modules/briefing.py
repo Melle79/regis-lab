@@ -118,10 +118,7 @@ class Module(BaseModule):
         subtitle = " · ".join(infos)
 
         ext_url = self.config._settings.get("ha_external_url", "").rstrip("/")
-        if ext_url:
-            ingress_url = ext_url + "/hassio/ingress/a291494a_regis_lab"
-        else:
-            ingress_url = ""
+        ingress_uri = "homeassistant://navigate/hassio/ingress/a291494a_regis_lab"
         payload = {
             "message": data["summary"],
             "title":   "☀️ Guten Morgen, Sven!",
@@ -131,7 +128,7 @@ class Module(BaseModule):
                     "sound": "default",
                     "interruption-level": "active",
                 },
-                **({"url": ingress_url} if ingress_url else {}),
+                "url": ingress_uri,
             },
         }
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
