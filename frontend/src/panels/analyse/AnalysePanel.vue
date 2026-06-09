@@ -354,6 +354,32 @@
       </div>
     </template>
 
+    <!-- Automation-Vorschau Popup -->
+    <Teleport to="body">
+      <div v-if="autoPreview" class="popup-overlay" @click.self="autoPreview = null">
+        <div class="popup-card" style="width:560px;max-height:80vh;display:flex;flex-direction:column">
+          <div class="popup-header">
+            <MdiIcon icon="mdi:robot" :size="18" color="var(--accent)" />
+            <span class="popup-title">Automation-Vorschau</span>
+            <button class="popup-close" @click="autoPreview = null">
+              <MdiIcon icon="mdi:close" :size="18" />
+            </button>
+          </div>
+          <div style="padding:14px;overflow-y:auto;flex:1">
+            <div class="auto-preview-title">{{ autoPreview.suggestion.title }}</div>
+            <pre class="auto-preview-json">{{ JSON.stringify(autoPreview.automation, null, 2) }}</pre>
+          </div>
+          <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px">
+            <button class="sug-btn accept" @click="confirmCreate(autoPreview.suggestion)" :disabled="autoPreview.creating">
+              <MdiIcon :icon="autoPreview.creating ? 'mdi:loading' : 'mdi:check'" :size="13" :class="{ spin: autoPreview.creating }" />
+              {{ autoPreview.creating ? 'Erstelle…' : 'In HA erstellen' }}
+            </button>
+            <button class="sug-btn" @click="autoPreview = null">Abbrechen</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
