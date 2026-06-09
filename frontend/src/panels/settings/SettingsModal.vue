@@ -120,6 +120,10 @@
               </div>
             </div>
             <div class="field">
+              <label>Externe HA-URL <small>(optional, für Push-Link)</small></label>
+              <input v-model="form.ha_external_url" class="input" placeholder="https://mein-ha.duckdns.org" />
+            </div>
+            <div class="field">
               <button class="btn-test" @click="testBriefing" :disabled="testingBriefing">
                 <MdiIcon :icon="testingBriefing ? 'mdi:loading' : 'mdi:send'" :size="14" :class="{ spin: testingBriefing }" />
                 {{ testingBriefing ? 'Wird gesendet…' : 'Jetzt testen' }}
@@ -272,6 +276,7 @@ const form = ref({
   jarvis_ha_control: false,
   filter_labels: ['no-dboard'],
   briefing_enabled: true,
+  ha_external_url: '',
   briefing_targets: [],
   briefing_time: '07:00',
 })
@@ -422,6 +427,7 @@ async function save() {
         briefing_enabled:     !!form.value.briefing_enabled,
         briefing_targets:     form.value.briefing_targets,
         briefing_time:        form.value.briefing_time,
+        ha_external_url:      form.value.ha_external_url,
       }),
     })
     const d = await r.json()

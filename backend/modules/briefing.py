@@ -117,6 +117,7 @@ class Module(BaseModule):
         if data["lights_on"]:     infos.append(f"💡 {len(data['lights_on'])} Lichter an")
         subtitle = " · ".join(infos)
 
+        ext_url = self.config._settings.get("ha_external_url", "").rstrip("/")
         payload = {
             "message": data["summary"],
             "title":   "☀️ Guten Morgen, Sven!",
@@ -126,6 +127,7 @@ class Module(BaseModule):
                     "sound": "default",
                     "interruption-level": "active",
                 },
+                **({"url": ext_url} if ext_url else {}),
             },
         }
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
