@@ -202,21 +202,17 @@
             </div>
 
             <div class="field">
-              <label>KI-Anbieter</label>
-              <div class="radio-group">
-                <label class="radio-label">
-                  <input type="radio" v-model="form.jarvis_provider" value="ollama" /> Ollama (lokal)
+              <label>Anthropic Fallback</label>
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="form.use_anthropic_fallback" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
+                  <span class="toggle-slider"></span>
                 </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="form.jarvis_provider" value="anthropic" /> Anthropic (Claude API)
-                </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="form.jarvis_provider" value="ollama_with_fallback" /> Ollama mit Anthropic-Fallback
-                </label>
+                <span class="field-hint">Bei Ollama-Ausfall automatisch Claude API nutzen</span>
               </div>
             </div>
-            <div class="field" v-if="form.jarvis_provider !== 'ollama'">
-              <label>Anthropic API-Key</label>
+            <div class="field">
+              <label>Cloud KI (Anthropic API-Key)</label>
               <div class="token-row">
                 <input v-model="form.anthropic_api_key" :type="showAnthropicKey ? 'text' : 'password'" class="input" placeholder="sk-ant-..." />
                 <button class="btn-eye" @click="showAnthropicKey = !showAnthropicKey">
@@ -291,6 +287,7 @@ const form = ref({
   ha_token: '',
   ha_token_set: false,
   jarvis_provider: 'ollama',
+  use_anthropic_fallback: false,
   anthropic_api_key: '',
   anthropic_api_key_set: false,
   show_clock: true,
