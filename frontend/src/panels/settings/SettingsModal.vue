@@ -465,6 +465,7 @@ async function save() {
         ha_external_url:      form.value.ha_external_url,
         jarvis_provider:      form.value.jarvis_provider,
         anthropic_api_key:    form.value.anthropic_api_key,
+        use_anthropic_fallback: !!form.value.use_anthropic_fallback,
       }),
     })
     const d = await r.json()
