@@ -202,6 +202,31 @@
             </div>
 
             <div class="field">
+              <label>KI-Anbieter</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input type="radio" v-model="form.jarvis_provider" value="ollama" /> Ollama (lokal)
+                </label>
+                <label class="radio-label">
+                  <input type="radio" v-model="form.jarvis_provider" value="anthropic" /> Anthropic (Claude API)
+                </label>
+                <label class="radio-label">
+                  <input type="radio" v-model="form.jarvis_provider" value="ollama_with_fallback" /> Ollama mit Anthropic-Fallback
+                </label>
+              </div>
+            </div>
+            <div class="field" v-if="form.jarvis_provider !== 'ollama'">
+              <label>Anthropic API-Key</label>
+              <div class="token-row">
+                <input v-model="form.anthropic_api_key" :type="showAnthropicKey ? 'text' : 'password'" class="input" placeholder="sk-ant-..." />
+                <button class="btn-eye" @click="showAnthropicKey = !showAnthropicKey">
+                  <MdiIcon :icon="showAnthropicKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
+                </button>
+              </div>
+              <span class="field-hint" v-if="form.anthropic_api_key_set && !form.anthropic_api_key">✓ API-Key gespeichert</span>
+            </div>
+
+            <div class="field">
               <label>Ollama URL</label>
               <div class="token-row">
                 <input v-model="form.jarvis_ollama_url" class="input" placeholder="http://192.168.0.220:11434" @blur="loadOllamaModels" />
