@@ -365,6 +365,8 @@ async function load() {
   delete d.ha_token
   form.value = { ...form.value, ...d }
   form.value.ha_token_set = tokenSet
+  // use_anthropic_fallback aus jarvis_provider ableiten
+  form.value.use_anthropic_fallback = d.use_anthropic_fallback || d.jarvis_provider === 'ollama_with_fallback'
   iconRegistered.value = null  // Reset beim Laden
   // Modelle laden wenn Ollama URL gesetzt
   if (form.value.jarvis_ollama_url) {
