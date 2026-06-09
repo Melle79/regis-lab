@@ -25,6 +25,7 @@
         <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
         <span v-if="unreadLogCount > 0" class="log-count">{{ unreadLogCount }}</span>
       </button>
+      <!-- v2: Vorschläge-Tab -->
       <button :class="['sub-tab', { active: activeTab === 'suggestions' }]" @click="activeTab = 'suggestions'; loadSuggestions()">
         <MdiIcon icon="mdi:lightbulb-on" :size="14" /> Vorschläge
         <span v-if="newSuggestionsCount > 0" class="log-count">{{ newSuggestionsCount }}</span>
