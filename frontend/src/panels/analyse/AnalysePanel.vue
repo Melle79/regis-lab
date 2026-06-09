@@ -985,10 +985,10 @@ function formatSummary(text) {
 .suggestion-desc  { padding: 10px 14px; font-size: 12px; line-height: 1.6; color: var(--text); }
 .suggestion-date  { padding: 0 14px 8px; font-size: 10px; color: var(--muted); }
 .suggestion-actions { display: flex; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--border); }
-.sug-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 11px; }
+.sug-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 11px; color: var(--text); }
 .sug-btn.accept { color: var(--green); border-color: var(--green); }
 .sug-btn.accept:hover { background: color-mix(in srgb, var(--green) 10%, transparent); }
-.sug-btn.reject { color: var(--muted); }
+.sug-btn.reject { color: var(--red); border-color: var(--red); }
 .sug-btn.reject:hover { color: var(--red); border-color: var(--red); }
 .sug-warning { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 11px; color: #f59e0b; background: color-mix(in srgb, #f59e0b 8%, transparent); border-bottom: 1px solid color-mix(in srgb, #f59e0b 20%, transparent); }
 .suggestion-edit { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }
