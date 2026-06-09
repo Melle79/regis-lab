@@ -130,14 +130,6 @@ class Module(BaseModule):
                 },
             },
         }
-        try:
-            requests.post(
-                ha + f"/api/services/notify/{target}",
-                headers=hdrs, data=json.dumps(payload), timeout=10,
-            )
-            self.log.info(f"Briefing gesendet an {target}")
-        except Exception as e:
-            self.log.error(f"Push-Fehler ({target}): {e}")
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
         for target in targets:
             try:
