@@ -202,27 +202,6 @@
             </div>
 
             <div class="field">
-              <label>Anthropic Fallback</label>
-              <div class="toggle-row">
-                <label class="toggle">
-                  <input type="checkbox" v-model="form.use_anthropic_fallback" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="field-hint">Bei Ollama-Ausfall automatisch Claude API nutzen</span>
-              </div>
-            </div>
-            <div class="field">
-              <label>Cloud KI (Anthropic API-Key)</label>
-              <div class="token-row">
-                <input v-model="form.anthropic_api_key" :type="showAnthropicKey ? 'text' : 'password'" class="input" placeholder="sk-ant-..." />
-                <button class="btn-eye" @click="showAnthropicKey = !showAnthropicKey">
-                  <MdiIcon :icon="showAnthropicKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
-                </button>
-              </div>
-              <span class="field-hint" v-if="form.anthropic_api_key_set && !form.anthropic_api_key">✓ API-Key gespeichert</span>
-            </div>
-
-            <div class="field">
               <label>Ollama URL</label>
               <div class="token-row">
                 <input v-model="form.jarvis_ollama_url" class="input" placeholder="http://192.168.0.220:11434" @blur="loadOllamaModels" />
@@ -256,6 +235,35 @@
               <label>System-Prompt <span class="field-hint">(optional)</span></label>
               <textarea v-model="form.jarvis_system_prompt" class="input" rows="4"
                 placeholder="Du bist ein intelligenter Smart Home Assistent. Antworte auf Deutsch, praezise und hilfreich. Keine Emojis." />
+            </div>
+          </div>
+
+          <!-- Cloud KI -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:cloud-outline" :size="20" color="var(--accent)" />
+              Cloud KI (Anthropic)
+            </div>
+            <p class="card-desc">Nutze Claude als Cloud-KI — direkt oder als Fallback wenn Ollama nicht erreichbar ist.</p>
+            <div class="field">
+              <label>Anthropic API-Key</label>
+              <div class="token-row">
+                <input v-model="form.anthropic_api_key" :type="showAnthropicKey ? 'text' : 'password'" class="input" placeholder="sk-ant-..." />
+                <button class="btn-eye" @click="showAnthropicKey = !showAnthropicKey">
+                  <MdiIcon :icon="showAnthropicKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
+                </button>
+              </div>
+              <span class="field-hint" v-if="form.anthropic_api_key_set && !form.anthropic_api_key">✓ API-Key gespeichert</span>
+            </div>
+            <div class="field">
+              <label>Als Fallback nutzen</label>
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="form.use_anthropic_fallback" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="field-hint">Bei Ollama-Ausfall automatisch Claude API nutzen</span>
+              </div>
             </div>
           </div>
 
