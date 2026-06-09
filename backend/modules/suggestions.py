@@ -311,6 +311,13 @@ class Module(BaseModule):
             suggestions = self._load_suggestions()
             return jsonify({"suggestions": suggestions})
 
+        @self.app.route("/api/suggestions/<suggestion_id>", methods=["DELETE"])
+        def delete_suggestion(suggestion_id):
+            suggestions = self._load_suggestions()
+            suggestions = [s for s in suggestions if s["id"] != suggestion_id]
+            self._save_suggestions(suggestions)
+            return jsonify({"ok": True})
+
         @self.app.route("/api/suggestions/<suggestion_id>", methods=["PATCH"])
         def update_suggestion(suggestion_id):
             data   = request.get_json() or {}

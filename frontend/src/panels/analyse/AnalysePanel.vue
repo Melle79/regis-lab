@@ -316,6 +316,9 @@
             <MdiIcon icon="mdi:lightbulb" :size="16" color="var(--accent)" />
             <span class="suggestion-title">{{ s.title }}</span>
             <span class="suggestion-badge" :class="s.status">{{ statusLabel(s.status) }}</span>
+            <button class="sug-delete-btn" @click.stop="deleteSuggestion(s.id)" title="Löschen">
+              <MdiIcon icon="mdi:close" :size="13" />
+            </button>
           </div>
           <div v-if="s.entities_in_automations?.length > 0" class="sug-warning">
             <MdiIcon icon="mdi:alert-circle-outline" :size="13" color="#f59e0b" />
@@ -629,6 +632,11 @@ async function updateSuggestion(id, status) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   })
+  await loadSuggestions()
+}
+
+async function deleteSuggestion(id) {
+  await fetch(`api/suggestions/${id}`, { method: 'DELETE' })
   await loadSuggestions()
 }
 
@@ -1143,6 +1151,12 @@ function formatSummary(text) {
 .suggestion-edit { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }
 .sug-input { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; }
 .sug-textarea { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; resize: vertical; }
+.sug-delete-btn {
+  margin-left: auto; padding: 2px 5px; border-radius: 5px; border: none;
+  background: transparent; color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .15s;
+}
+.suggestion-card:hover .sug-delete-btn { opacity: 1; }
+.sug-delete-btn:hover { color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
 .sug-edit-actions { display: flex; gap: 8px; }
 .ha-link { color: var(--green); font-size: 10px; margin-left: 8px; }
 .auto-preview-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
