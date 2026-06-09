@@ -141,6 +141,7 @@ class AddonConfig:
             "jarvis_ha_control":    self._settings.get("jarvis_ha_control", False),
             "jarvis_provider":      self._settings.get("jarvis_provider", "ollama"),
             "anthropic_api_key_set": bool(self._settings.get("anthropic_api_key", "")),
+            "use_anthropic_fallback": self._settings.get("use_anthropic_fallback", False),
             "tab_order":            self._settings.get("tab_order", ["geraete", "personen", "zonen", "jarvis"]),
             "filter_labels":        self._settings.get("filter_labels", []),
             "briefing_targets":     self._settings.get("briefing_targets", ["mobile_app_svens_iphone"]),
