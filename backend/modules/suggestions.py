@@ -114,6 +114,7 @@ class Module(BaseModule):
 
         # Vorhandene Automationen mit Details laden
         existing_automations = []
+        automation_entities = set()  # Alle Entitäten die bereits in Automationen verwendet werden
         try:
             auto_r = requests.get(ha + "/api/states", headers=hdrs, timeout=15)
             auto_states = auto_r.json() if auto_r.status_code == 200 else []
@@ -121,8 +122,23 @@ class Module(BaseModule):
                 if s["entity_id"].startswith("automation."):
                     name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
                     existing_automations.append(name)
+                    # Entitäten aus Automation-Attributen extrahieren
+                    attrs = s.get("attributes", {})
+                    for key in ["entity_id", "last_triggered"]:
+                        if isinstance(attrs.get(key), str):
+                            automation_entities.add(attrs[key])
+                        elif isinstance(attrs.get(key), list):
+                            automation_entities.update(attrs[key])
         except Exception:
             pass
+
+        # Entitäten aus History mit Automation-Entitäten vergleichen
+        for item in pattern_summary:
+            # Entität ID aus dem Pattern extrahieren
+            for eid in list(automation_entities):
+                if eid in item:
+                    item = item + " ⚠️ (Entität bereits in Automation verwendet)"
+                    break
 
         # KI-Analyse
         auto_list = "\n".join(f"- {a}" for a in existing_automations[:50]) if existing_automations else "Keine"
@@ -156,13 +172,20 @@ class Module(BaseModule):
                 try:
                     title = line.split("VORSCHLAG:")[1].split("|")[0].strip()
                     desc  = line.split("BESCHREIBUNG:")[1].strip()
+                    # Prüfen ob Entitäten aus dem Vorschlag bereits in Automationen
+                    entities_used = []
+                    for eid in automation_entities:
+                        eid_short = eid.split(".")[-1] if "." in eid else eid
+                        if eid_short.lower() in (title + desc).lower():
+                            entities_used.append(eid)
                     suggestions.append({
-                        "id":          f"sug_{int(datetime.now().timestamp())}_{len(suggestions)}",
-                        "title":       title,
-                        "description": desc,
-                        "created_at":  datetime.now().isoformat(),
-                        "status":      "new",  # new | accepted | rejected
-                        "patterns":    pattern_summary[:10],
+                        "id":                   f"sug_{int(datetime.now().timestamp())}_{len(suggestions)}",
+                        "title":                title,
+                        "description":          desc,
+                        "created_at":           datetime.now().isoformat(),
+                        "status":               "new",
+                        "patterns":             pattern_summary[:10],
+                        "entities_in_automations": entities_used,
                     })
                 except Exception:
                     pass
@@ -237,11 +260,15 @@ class Module(BaseModule):
         @self.app.route("/api/suggestions/<suggestion_id>", methods=["PATCH"])
         def update_suggestion(suggestion_id):
             data   = request.get_json() or {}
-            status = data.get("status")
             suggestions = self._load_suggestions()
             for s in suggestions:
                 if s["id"] == suggestion_id:
-                    s["status"] = status
+                    if "status" in data:
+                        s["status"] = data["status"]
+                    if "title" in data:
+                        s["title"] = data["title"]
+                    if "description" in data:
+                        s["description"] = data["description"]
                     break
             self._save_suggestions(suggestions)
             return jsonify({"ok": True})

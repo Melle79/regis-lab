@@ -317,11 +317,30 @@
             <span class="suggestion-title">{{ s.title }}</span>
             <span class="suggestion-badge" :class="s.status">{{ statusLabel(s.status) }}</span>
           </div>
-          <div class="suggestion-desc">{{ s.description }}</div>
+          <div v-if="s.entities_in_automations?.length > 0" class="sug-warning">
+            <MdiIcon icon="mdi:alert-circle-outline" :size="13" color="#f59e0b" />
+            Entitäten bereits in Automationen: {{ s.entities_in_automations.join(', ') }}
+          </div>
+          <div v-if="editingSuggestion === s.id" class="suggestion-edit">
+            <input v-model="editTitle" class="sug-input" placeholder="Titel" />
+            <textarea v-model="editDesc" class="sug-textarea" rows="3" placeholder="Beschreibung" />
+            <div class="sug-edit-actions">
+              <button class="sug-btn accept" @click="saveEdit(s.id)">
+                <MdiIcon icon="mdi:content-save" :size="13" /> Speichern
+              </button>
+              <button class="sug-btn" @click="editingSuggestion = null">
+                <MdiIcon icon="mdi:close" :size="13" /> Abbrechen
+              </button>
+            </div>
+          </div>
+          <div v-else class="suggestion-desc">{{ s.description }}</div>
           <div class="suggestion-date">{{ formatDate(s.created_at) }}</div>
           <div v-if="s.status === 'new'" class="suggestion-actions">
             <button class="sug-btn accept" @click="updateSuggestion(s.id, 'accepted')">
               <MdiIcon icon="mdi:check" :size="13" /> Annehmen
+            </button>
+            <button class="sug-btn" @click="startEdit(s)">
+              <MdiIcon icon="mdi:pencil" :size="13" /> Bearbeiten
             </button>
             <button class="sug-btn reject" @click="updateSuggestion(s.id, 'rejected')">
               <MdiIcon icon="mdi:close" :size="13" /> Ablehnen
@@ -342,7 +361,10 @@ const loading     = ref(false)
 const diagPopup         = ref(null)
 const suggestions       = ref([])
 const suggestionsLoading = ref(false)
-const analysisRunning   = ref(false)
+const analysisRunning    = ref(false)
+const editingSuggestion  = ref(null)
+const editTitle          = ref('')
+const editDesc           = ref('')
 const newSuggestionsCount = computed(() => suggestions.value.filter(s => s.status === 'new').length)
 const loadingStep = ref('Diagnostiziere…')
 const report      = ref(null)
@@ -428,6 +450,28 @@ async function runSuggestionsAnalysis() {
     await loadSuggestions()
     analysisRunning.value = false
   }, 30000)
+}
+
+function startEdit(s) {
+  editingSuggestion.value = s.id
+  editTitle.value = s.title
+  editDesc.value = s.description
+}
+
+async function saveEdit(id) {
+  const suggestions_list = suggestions.value
+  const s = suggestions_list.find(x => x.id === id)
+  if (s) {
+    s.title = editTitle.value
+    s.description = editDesc.value
+  }
+  await fetch(`api/suggestions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: editTitle.value, description: editDesc.value }),
+  })
+  editingSuggestion.value = null
+  await loadSuggestions()
 }
 
 async function updateSuggestion(id, status) {
@@ -946,6 +990,11 @@ function formatSummary(text) {
 .sug-btn.accept:hover { background: color-mix(in srgb, var(--green) 10%, transparent); }
 .sug-btn.reject { color: var(--muted); }
 .sug-btn.reject:hover { color: var(--red); border-color: var(--red); }
+.sug-warning { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 11px; color: #f59e0b; background: color-mix(in srgb, #f59e0b 8%, transparent); border-bottom: 1px solid color-mix(in srgb, #f59e0b 20%, transparent); }
+.suggestion-edit { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); }
+.sug-input { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; }
+.sug-textarea { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; resize: vertical; }
+.sug-edit-actions { display: flex; gap: 8px; }
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
 .status-card.clickable:hover { transform: translateY(-2px); }
 .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
