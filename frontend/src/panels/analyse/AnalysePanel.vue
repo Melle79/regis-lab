@@ -926,4 +926,5 @@ function formatSummary(text) {
 .popup-item-state { font-size: 11px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); white-space: nowrap; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* v2-suggestions-tab */
 </style>
