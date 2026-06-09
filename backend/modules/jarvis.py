@@ -90,11 +90,14 @@ class Module(BaseModule):
             body    = request.get_json() or {}
             message = body.get("message", "")
             display  = body.get("display", message)  # Anzeige-Version (ohne Dateiinhalt)
-            model   = body.get("model") or self._get_setting("jarvis_model", "")
+            model      = body.get("model") or self._get_setting("jarvis_model", "")
+            provider   = self._get_provider()
             ollama_url = self._get_ollama_url()
 
-            if not ollama_url:
+            if provider == "ollama" and not ollama_url:
                 return jsonify({"error": "Ollama URL nicht konfiguriert"}), 400
+            if provider == "anthropic" and not self.config._settings.get("anthropic_api_key"):
+                return jsonify({"error": "Anthropic API-Key nicht konfiguriert"}), 400
             if not model:
                 return jsonify({"error": "Kein Modell ausgewählt"}), 400
             if not message:
@@ -119,26 +122,46 @@ class Module(BaseModule):
             def generate():
                 full_text = ""
                 try:
-                    r = requests.post(
-                        f"{ollama_url}/api/chat",
-                        json={
-                            "model":    model,
-                            "messages": full_messages,
-                            "stream":   True,
-                        },
-                        stream=True,
-                        timeout=120,
-                    )
-                    for line in r.iter_lines():
-                        if line:
-                            decoded = line.decode()
+                    if provider == "anthropic":
+                        for line in self._chat_anthropic(full_messages, model):
                             try:
-                                data = json.loads(decoded)
-                                chunk = data.get("message", {}).get("content", "")
+                                chunk = json.loads(line).get("message", {}).get("content", "")
                                 full_text += chunk
                             except Exception:
                                 pass
-                            yield decoded + "\n"
+                            yield line
+                    else:
+                        # Ollama (Standard) mit Fallback auf Anthropic
+                        try:
+                            r = requests.post(
+                                f"{ollama_url}/api/chat",
+                                json={"model": model, "messages": full_messages, "stream": True},
+                                stream=True, timeout=120,
+                            )
+                            for line in r.iter_lines():
+                                if line:
+                                    decoded = line.decode()
+                                    try:
+                                        data = json.loads(decoded)
+                                        chunk = data.get("message", {}).get("content", "")
+                                        full_text += chunk
+                                    except Exception:
+                                        pass
+                                    yield decoded + "\n"
+                        except Exception as ollama_err:
+                            # Fallback auf Anthropic
+                            ant_key = self.config._settings.get("anthropic_api_key", "")
+                            if ant_key and provider == "ollama_with_fallback":
+                                self.log.warning(f"Ollama nicht erreichbar, Fallback auf Anthropic: {ollama_err}")
+                                for line in self._chat_anthropic(full_messages, "claude-haiku-4-5-20251001"):
+                                    try:
+                                        chunk = json.loads(line).get("message", {}).get("content", "")
+                                        full_text += chunk
+                                    except Exception:
+                                        pass
+                                    yield line
+                            else:
+                                raise ollama_err
                 except Exception as e:
                     yield json.dumps({"error": str(e)}) + "\n"
                     return
@@ -249,6 +272,51 @@ class Module(BaseModule):
 
     def _get_ollama_url(self) -> str:
         return self.config.jarvis_ollama_url.rstrip("/")
+
+    def _get_provider(self) -> str:
+        """Aktuell konfigurierten KI-Anbieter zurückgeben."""
+        return self.config._settings.get("jarvis_provider", "ollama")
+
+    def _chat_anthropic(self, messages: list, model: str) -> str:
+        """Streaming-Chat via Anthropic API."""
+        import anthropic
+        api_key = self.config._settings.get("anthropic_api_key", "")
+        if not api_key:
+            raise ValueError("Anthropic API-Key nicht konfiguriert")
+        client = anthropic.Anthropic(api_key=api_key)
+        # System-Prompt aus erstem Message extrahieren
+        system = ""
+        chat_msgs = []
+        for m in messages:
+            if m["role"] == "system":
+                system = m["content"]
+            else:
+                chat_msgs.append({"role": m["role"], "content": m["content"]})
+        ant_model = model or "claude-sonnet-4-6"
+        with client.messages.stream(
+            model=ant_model,
+            max_tokens=4096,
+            system=system,
+            messages=chat_msgs,
+        ) as stream:
+            for text in stream.text_stream:
+                yield json.dumps({"message": {"content": text}, "done": False}) + "\n"
+        yield json.dumps({"done": True}) + "\n"
+
+    def _generate_anthropic(self, prompt: str, model: str) -> str:
+        """Einfache Completion via Anthropic API."""
+        import anthropic
+        api_key = self.config._settings.get("anthropic_api_key", "")
+        if not api_key:
+            return ""
+        client = anthropic.Anthropic(api_key=api_key)
+        ant_model = model or "claude-haiku-4-5-20251001"
+        msg = client.messages.create(
+            model=ant_model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return msg.content[0].text if msg.content else ""
 
     def _get_setting(self, key: str, default=""):
         return self.config._settings.get(key, default)

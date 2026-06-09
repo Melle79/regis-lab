@@ -265,6 +265,9 @@ const form = ref({
   theme: 'dark',
   ha_token: '',
   ha_token_set: false,
+  jarvis_provider: 'ollama',
+  anthropic_api_key: '',
+  anthropic_api_key_set: false,
   show_clock: true,
   show_weather: false,
   weather_entity: '',
@@ -291,7 +294,8 @@ const saved           = ref(false)
 const tokenError      = ref('')
 const tokenSaved      = ref(false)
 const allLabels       = ref([])
-const iconRegistered  = ref(null)
+const iconRegistered      = ref(null)
+const showAnthropicKey    = ref(false)
 const notifyServices  = ref([])
 
 async function loadOllamaModels() {
@@ -429,6 +433,8 @@ async function save() {
         briefing_targets:     form.value.briefing_targets,
         briefing_time:        form.value.briefing_time,
         ha_external_url:      form.value.ha_external_url,
+        jarvis_provider:      form.value.jarvis_provider,
+        anthropic_api_key:    form.value.anthropic_api_key,
       }),
     })
     const d = await r.json()
