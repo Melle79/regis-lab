@@ -334,10 +334,14 @@
             </div>
           </div>
           <div v-else class="suggestion-desc">{{ s.description }}</div>
-          <div class="suggestion-date">{{ formatDate(s.created_at) }}</div>
+          <div class="suggestion-date">
+            {{ formatDate(s.created_at) }}
+            <span v-if="s.ha_automation_id" class="ha-link">✅ Automation in HA erstellt</span>
+          </div>
           <div v-if="s.status === 'new'" class="suggestion-actions">
-            <button class="sug-btn accept" @click="updateSuggestion(s.id, 'accepted')">
-              <MdiIcon icon="mdi:check" :size="13" /> Annehmen
+            <button class="sug-btn accept" @click="acceptAndCreate(s)" :disabled="s.creating">
+              <MdiIcon :icon="s.creating ? 'mdi:loading' : 'mdi:check'" :size="13" :class="{ spin: s.creating }" />
+              {{ s.creating ? 'Erstelle…' : 'Annehmen & in HA erstellen' }}
             </button>
             <button class="sug-btn" @click="startEdit(s)">
               <MdiIcon icon="mdi:pencil" :size="13" /> Bearbeiten
@@ -471,6 +475,25 @@ async function saveEdit(id) {
     body: JSON.stringify({ title: editTitle.value, description: editDesc.value }),
   })
   editingSuggestion.value = null
+  await loadSuggestions()
+}
+
+async function acceptAndCreate(s) {
+  s.creating = true
+  try {
+    const r = await fetch(`api/suggestions/${s.id}/create-automation`, { method: 'POST' })
+    const d = await r.json()
+    if (d.ok) {
+      s.status = 'accepted'
+      s.ha_automation_id = d.automation_id
+    } else {
+      alert('Fehler: ' + (d.error || 'Unbekannt'))
+      s.creating = false
+    }
+  } catch(e) {
+    alert('Fehler: ' + e.message)
+    s.creating = false
+  }
   await loadSuggestions()
 }
 
@@ -995,6 +1018,7 @@ function formatSummary(text) {
 .sug-input { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; }
 .sug-textarea { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; resize: vertical; }
 .sug-edit-actions { display: flex; gap: 8px; }
+.ha-link { color: var(--green); font-size: 10px; margin-left: 8px; }
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
 .status-card.clickable:hover { transform: translateY(-2px); }
 .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }

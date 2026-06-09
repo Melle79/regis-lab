@@ -283,6 +283,73 @@ class Module(BaseModule):
             threading.Thread(target=_run, daemon=True).start()
             return jsonify({"ok": True, "message": "Analyse gestartet..."})
 
+        @self.app.route("/api/suggestions/<suggestion_id>/create-automation", methods=["POST"])
+        def create_automation(suggestion_id):
+            """Aus einem Vorschlag eine echte HA-Automation erstellen."""
+            ha    = "http://homeassistant.local.hass.io:8123"
+            hdrs  = {"Authorization": "Bearer " + self.config.ha_long_token,
+                     "Content-Type": "application/json"}
+            model  = self.config._settings.get("jarvis_model", "")
+            ollama = self.config.jarvis_ollama_url.rstrip("/")
+
+            suggestions = self._load_suggestions()
+            s = next((x for x in suggestions if x["id"] == suggestion_id), None)
+            if not s:
+                return jsonify({"error": "Vorschlag nicht gefunden"}), 404
+
+            if not model or not ollama:
+                return jsonify({"error": "Ollama nicht konfiguriert"}), 400
+
+            # KI: Automation-YAML generieren
+            prompt = (
+                "Erstelle eine Home Assistant Automation als valides JSON für die folgende Beschreibung.\n"
+                "Titel: " + s["title"] + "\n"
+                "Beschreibung: " + s["description"] + "\n\n"
+                "Antworte NUR mit einem JSON-Objekt im folgenden Format (kein Markdown, kein Text davor/danach):\n"
+                '{"alias": "...", "description": "...", "trigger": [...], "condition": [], "action": [...], "mode": "single"}\n\n'
+                "Verwende echte HA-Trigger und Actions. Beispiel-Trigger: platform: time, at: \"07:00:00\"\n"
+                "Beispiel-Action: service: light.turn_on, target: {entity_id: light.wohnzimmer}"
+            )
+
+            try:
+                r = requests.post(
+                    ollama + "/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False},
+                    timeout=60,
+                )
+                response = r.json().get("response", "").strip() if r.status_code == 200 else ""
+                # JSON extrahieren
+                import re
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if not json_match:
+                    return jsonify({"error": "KI konnte keine valide Automation generieren", "raw": response}), 400
+                auto_json = json.loads(json_match.group(0))
+            except Exception as e:
+                return jsonify({"error": f"KI-Fehler: {str(e)}"}), 500
+
+            # Automation in HA speichern
+            try:
+                import uuid
+                auto_id = str(uuid.uuid4()).replace("-", "")[:16]
+                r2 = requests.post(
+                    ha + f"/api/config/automation/config/{auto_id}",
+                    headers=hdrs,
+                    data=json.dumps(auto_json),
+                    timeout=15,
+                )
+                if r2.status_code in (200, 201):
+                    # Vorschlag als umgesetzt markieren
+                    s["status"] = "accepted"
+                    s["ha_automation_id"] = auto_id
+                    self._save_suggestions(suggestions)
+                    # HA Automationen neu laden
+                    requests.post(ha + "/api/services/automation/reload", headers=hdrs, timeout=10)
+                    return jsonify({"ok": True, "automation_id": auto_id, "automation": auto_json})
+                else:
+                    return jsonify({"error": f"HA Fehler: {r2.status_code} {r2.text}"}), 500
+            except Exception as e:
+                return jsonify({"error": f"HA-Fehler: {str(e)}"}), 500
+
         # Tägliche Analyse im Hintergrund
         threading.Thread(target=self._daily_analysis, daemon=True).start()
         self.log.info("Suggestions-Modul registriert")
