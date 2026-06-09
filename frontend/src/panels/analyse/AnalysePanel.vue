@@ -7,7 +7,7 @@
         <MdiIcon icon="mdi:stethoscope" :size="20" color="var(--accent)" />
         Smart Home Diagnose
       </div>
-      <button class="refresh-btn" @click="runSuggestionsAnalysis" :disabled="loading">
+      <button class="refresh-btn" @click="runAnalysis" :disabled="loading">
         <MdiIcon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :size="16" :class="{ spin: loading }" />
         {{ loading ? 'Diagnostiziere…' : 'Diagnose starten' }}
       </button>
