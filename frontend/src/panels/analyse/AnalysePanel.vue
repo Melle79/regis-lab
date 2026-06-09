@@ -354,6 +354,26 @@
       </div>
     </template>
 
+    <!-- Erfolgs-Banner nach Automation-Erstellung -->
+    <Teleport to="body">
+      <div v-if="createdAutoId" class="auto-success-banner" @click.self="createdAutoId = null">
+        <div class="auto-success-card">
+          <MdiIcon icon="mdi:check-circle" :size="24" color="var(--green)" />
+          <div>
+            <div style="font-weight:700;font-size:14px">Automation erstellt!</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Jetzt in HA öffnen und anpassen:</div>
+          </div>
+          <a :href="haBaseUrl + '/config/automation/edit/' + createdAutoId"
+             target="_blank" class="sug-btn accept" style="text-decoration:none">
+            <MdiIcon icon="mdi:open-in-new" :size="13" /> In HA öffnen
+          </a>
+          <button class="popup-close" @click="createdAutoId = null">
+            <MdiIcon icon="mdi:close" :size="16" />
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Automation-Vorschau Popup -->
     <Teleport to="body">
       <div v-if="autoPreview" class="popup-overlay" @click.self="autoPreview = null">
@@ -424,6 +444,8 @@ const analysisRunning    = ref(false)
 const editingSuggestion  = ref(null)
 const autoPreview        = ref(null)
 const showYaml           = ref(false)
+const createdAutoId      = ref(null)
+const haBaseUrl          = computed(() => window.location.origin.replace(/:\d+$/, ':8123'))
 const editTitle          = ref('')
 const editDesc           = ref('')
 const newSuggestionsCount = computed(() => suggestions.value.filter(s => s.status === 'new').length)
@@ -569,11 +591,9 @@ async function confirmCreate(s) {
     const r = await fetch(`api/suggestions/${s.id}/create-automation`, { method: 'POST' })
     const d = await r.json()
     if (d.ok) {
+      createdAutoId.value = d.automation_id
       autoPreview.value = null
       await loadSuggestions()
-      // HA-Automationsseite öffnen
-      const haUrl = window.location.origin.replace(':8099', ':8123')
-      window.open(haUrl + '/config/automation/edit/' + d.automation_id, '_blank')
     } else {
       alert('Fehler: ' + (d.error || 'Unbekannt'))
       autoPreview.value.creating = false
@@ -1134,6 +1154,8 @@ function formatSummary(text) {
 .auto-item-detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .yaml-toggle { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; margin-top: 8px; }
 .yaml-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.auto-success-banner { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
+.auto-success-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--green); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
 .auto-preview-json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 11px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; color: var(--text); }
 /* v3-preview-popup */
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
