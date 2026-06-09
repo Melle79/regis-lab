@@ -119,7 +119,7 @@ class AddonConfig:
 
     @property
     def enabled_modules(self) -> list:
-        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose", "analyse", "briefing"]
+        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose", "analyse", "briefing", "suggestions"]
 
     def frontend_config(self) -> dict:
         return {

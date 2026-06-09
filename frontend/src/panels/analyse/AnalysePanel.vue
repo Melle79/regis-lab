@@ -25,6 +25,10 @@
         <MdiIcon icon="mdi:history" :size="14" /> Aktivitäten
         <span v-if="unreadLogCount > 0" class="log-count">{{ unreadLogCount }}</span>
       </button>
+      <button :class="['sub-tab', { active: activeTab === 'suggestions' }]" @click="activeTab = 'suggestions'; loadSuggestions()">
+        <MdiIcon icon="mdi:lightbulb-on" :size="14" /> Vorschläge
+        <span v-if="newSuggestionsCount > 0" class="log-count">{{ newSuggestionsCount }}</span>
+      </button>
     </div>
 
     <template v-if="activeTab === 'status'">
@@ -296,7 +300,11 @@ import { ref, onMounted, computed } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const loading     = ref(false)
-const diagPopup   = ref(null)
+const diagPopup         = ref(null)
+const suggestions       = ref([])
+const suggestionsLoading = ref(false)
+const analysisRunning   = ref(false)
+const newSuggestionsCount = computed(() => suggestions.value.filter(s => s.status === 'new').length)
 const loadingStep = ref('Diagnostiziere…')
 const report      = ref(null)
 const trendData      = ref([])
@@ -363,6 +371,38 @@ const unreadLogCount = computed(() => {
   const ids = Array.isArray(readIds.value) ? readIds.value : []
   return logEntries.value.filter(e => !e.undone && !ids.includes(e.id)).length
 })
+
+async function loadSuggestions() {
+  suggestionsLoading.value = true
+  try {
+    const r = await fetch('api/suggestions')
+    const d = await r.json()
+    suggestions.value = d.suggestions || []
+  } catch(e) {}
+  suggestionsLoading.value = false
+}
+
+async function runAnalysis() {
+  analysisRunning.value = true
+  await fetch('api/suggestions/analyze', { method: 'POST' })
+  setTimeout(async () => {
+    await loadSuggestions()
+    analysisRunning.value = false
+  }, 30000)
+}
+
+async function updateSuggestion(id, status) {
+  await fetch(`api/suggestions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  await loadSuggestions()
+}
+
+function statusLabel(status) {
+  return { new: 'Neu', accepted: 'Angenommen', rejected: 'Abgelehnt' }[status] || status
+}
 
 function showDiagPopup(title, items, icon) {
   diagPopup.value = { title, items, icon }
@@ -847,6 +887,26 @@ function formatSummary(text) {
 }
 .cleanup-entity:last-child { border-bottom: none; }
 .cleanup-more { padding: 6px 14px; font-size: 11px; color: var(--muted); }
+.suggestions-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 8px; flex-shrink: 0; }
+.suggestions-info { font-size: 12px; color: var(--muted); }
+.suggestions-list { display: flex; flex-direction: column; gap: 10px; }
+.suggestion-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.suggestion-card.accepted { border-color: color-mix(in srgb, var(--green) 30%, var(--border)); }
+.suggestion-card.rejected { opacity: .5; }
+.suggestion-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.suggestion-title { flex: 1; font-size: 13px; font-weight: 600; }
+.suggestion-badge { font-size: 10px; padding: 2px 7px; border-radius: 5px; }
+.suggestion-badge.new      { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.suggestion-badge.accepted { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.suggestion-badge.rejected { background: var(--border); color: var(--muted); }
+.suggestion-desc  { padding: 10px 14px; font-size: 12px; line-height: 1.6; color: var(--text); }
+.suggestion-date  { padding: 0 14px 8px; font-size: 10px; color: var(--muted); }
+.suggestion-actions { display: flex; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--border); }
+.sug-btn { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 11px; }
+.sug-btn.accept { color: var(--green); border-color: var(--green); }
+.sug-btn.accept:hover { background: color-mix(in srgb, var(--green) 10%, transparent); }
+.sug-btn.reject { color: var(--muted); }
+.sug-btn.reject:hover { color: var(--red); border-color: var(--red); }
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
 .status-card.clickable:hover { transform: translateY(-2px); }
 .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
