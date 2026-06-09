@@ -366,8 +366,37 @@
             </button>
           </div>
           <div style="padding:14px;overflow-y:auto;flex:1">
-            <div class="auto-preview-title">{{ autoPreview.suggestion.title }}</div>
-            <pre class="auto-preview-json">{{ JSON.stringify(autoPreview.automation, null, 2) }}</pre>
+            <div class="auto-preview-title">{{ autoPreview.automation.alias || autoPreview.suggestion.title }}</div>
+            <div v-if="autoPreview.automation.description" class="auto-preview-desc">{{ autoPreview.automation.description }}</div>
+
+            <div class="auto-section">
+              <div class="auto-section-title"><MdiIcon icon="mdi:clock-outline" :size="14" /> Auslöser (Trigger)</div>
+              <div v-for="(t, i) in autoPreview.automation.trigger" :key="i" class="auto-item">
+                <span class="auto-item-platform">{{ t.platform || t.trigger }}</span>
+                <span class="auto-item-detail">{{ formatTrigger(t) }}</span>
+              </div>
+            </div>
+
+            <div class="auto-section" v-if="autoPreview.automation.condition?.length">
+              <div class="auto-section-title"><MdiIcon icon="mdi:filter-outline" :size="14" /> Bedingungen</div>
+              <div v-for="(cond, i) in autoPreview.automation.condition" :key="i" class="auto-item">
+                <span class="auto-item-detail">{{ JSON.stringify(cond) }}</span>
+              </div>
+            </div>
+
+            <div class="auto-section">
+              <div class="auto-section-title"><MdiIcon icon="mdi:play-circle-outline" :size="14" /> Aktionen</div>
+              <div v-for="(a, i) in autoPreview.automation.action" :key="i" class="auto-item">
+                <span class="auto-item-platform">{{ a.service || a.action || a.type }}</span>
+                <span class="auto-item-detail">{{ formatAction(a) }}</span>
+              </div>
+            </div>
+
+            <button class="yaml-toggle" @click="showYaml = !showYaml">
+              <MdiIcon :icon="showYaml ? 'mdi:eye-off' : 'mdi:code-braces'" :size="13" />
+              {{ showYaml ? 'YAML ausblenden' : 'YAML anzeigen' }}
+            </button>
+            <pre v-if="showYaml" class="auto-preview-json">{{ JSON.stringify(autoPreview.automation, null, 2) }}</pre>
           </div>
           <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px">
             <button class="sug-btn accept" @click="confirmCreate(autoPreview.suggestion)" :disabled="autoPreview.creating">
@@ -394,6 +423,7 @@ const suggestionsLoading = ref(false)
 const analysisRunning    = ref(false)
 const editingSuggestion  = ref(null)
 const autoPreview        = ref(null)
+const showYaml           = ref(false)
 const editTitle          = ref('')
 const editDesc           = ref('')
 const newSuggestionsCount = computed(() => suggestions.value.filter(s => s.status === 'new').length)
@@ -503,6 +533,20 @@ async function saveEdit(id) {
   })
   editingSuggestion.value = null
   await loadSuggestions()
+}
+
+function formatTrigger(t) {
+  if (t.platform === 'time') return `Um ${t.at}`
+  if (t.platform === 'state') return `${t.entity_id} → ${t.to || 'any'}`
+  if (t.platform === 'sun') return `${t.event} (${t.offset || ''})`
+  return JSON.stringify(t).slice(0, 60)
+}
+
+function formatAction(a) {
+  if (a.target?.entity_id) return `→ ${Array.isArray(a.target.entity_id) ? a.target.entity_id.join(', ') : a.target.entity_id}`
+  if (a.entity_id) return `→ ${a.entity_id}`
+  if (a.data) return JSON.stringify(a.data).slice(0, 60)
+  return ''
 }
 
 async function previewAutomation(s) {
@@ -1078,7 +1122,15 @@ function formatSummary(text) {
 .sug-textarea { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; resize: vertical; }
 .sug-edit-actions { display: flex; gap: 8px; }
 .ha-link { color: var(--green); font-size: 10px; margin-left: 8px; }
-.auto-preview-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.auto-preview-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.auto-preview-desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.auto-section { margin-bottom: 14px; }
+.auto-section-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+.auto-item { display: flex; align-items: baseline; gap: 8px; padding: 5px 10px; border-radius: 6px; background: var(--bg); margin-bottom: 4px; font-size: 11px; }
+.auto-item-platform { font-weight: 600; color: var(--text); white-space: nowrap; }
+.auto-item-detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.yaml-toggle { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; margin-top: 8px; }
+.yaml-toggle:hover { color: var(--accent); border-color: var(--accent); }
 .auto-preview-json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 11px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; color: var(--text); }
 /* v3-preview-popup */
 .status-card.clickable { cursor: pointer; transition: transform .15s; }
