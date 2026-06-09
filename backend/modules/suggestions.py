@@ -112,12 +112,28 @@ class Module(BaseModule):
         if not pattern_summary or not model or not ollama:
             return []
 
+        # Vorhandene Automationen laden
+        existing_automations = []
+        try:
+            auto_r = requests.get(ha + "/api/states", headers=hdrs, timeout=15)
+            auto_states = auto_r.json() if auto_r.status_code == 200 else []
+            existing_automations = [
+                s.get("attributes", {}).get("friendly_name", s["entity_id"])
+                for s in auto_states
+                if s["entity_id"].startswith("automation.")
+            ]
+        except Exception:
+            pass
+
         # KI-Analyse
+        auto_list = "\n".join(f"- {a}" for a in existing_automations[:30]) if existing_automations else "Keine"
         prompt = (
-            "Du bist ein Home Assistant Experte. Analysiere diese Muster aus den letzten 7 Tagen "
-            "und schlage 2-3 konkrete Automationen vor (auf Deutsch, ohne Emojis):\n\n"
+            "Du bist ein Home Assistant Experte. Analysiere diese Nutzungsmuster aus den letzten 7 Tagen:\n\n"
             + "\n".join(pattern_summary[:10])
-            + "\n\nFür jeden Vorschlag gib an:\n"
+            + "\n\nBereits vorhandene Automationen (diese NICHT vorschlagen):\n"
+            + auto_list
+            + "\n\nSchlage NUR 2-3 neue Automationen vor die noch NICHT existieren (auf Deutsch, ohne Emojis).\n"
+            "Für jeden Vorschlag gib an:\n"
             "- Was soll automatisiert werden\n"
             "- Wann soll es ausgeführt werden\n"
             "- Welche Entität ist betroffen\n"
