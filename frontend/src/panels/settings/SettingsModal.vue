@@ -534,6 +534,7 @@ onMounted(load)
 }
 .btn-test:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .btn-test:disabled { opacity: .5; cursor: default; }
+/* v4-provider-select */
 
 .token-row { display: flex; gap: 8px; align-items: center; }
 .icon-btn {
