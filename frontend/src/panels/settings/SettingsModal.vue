@@ -59,6 +59,29 @@
             </div>
           </div>
 
+          <!-- Automations-Vorschläge -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:lightbulb-on" :size="20" color="var(--accent)" />
+              Automations-Vorschläge
+            </div>
+            <p class="card-desc">Jarvis analysiert deine Nutzungsmuster und schlägt neue Automationen vor.</p>
+            <div class="field">
+              <label>Aktiviert</label>
+              <label class="toggle-label">
+                <input type="checkbox" v-model="form.suggestions_enabled" class="toggle-input" />
+                <span class="toggle-track"><span class="toggle-thumb" /></span>
+                <span>{{ form.suggestions_enabled ? 'Ein' : 'Aus' }}</span>
+              </label>
+            </div>
+            <template v-if="form.suggestions_enabled">
+            <div class="field">
+              <label>Analyse-Uhrzeit</label>
+              <input type="time" v-model="form.suggestions_time" class="input" style="width:120px" />
+            </div>
+            </template>
+          </div>
+
           <!-- Label-Filter -->
           <div class="settings-card">
             <div class="card-title">
@@ -310,6 +333,8 @@ const form = ref({
   jarvis_ha_control: false,
   filter_labels: ['no-dboard'],
   briefing_enabled: true,
+  suggestions_enabled: true,
+  suggestions_time: '08:00',
   ha_external_url: '',
   briefing_targets: [],
   briefing_time: '07:00',
@@ -464,6 +489,8 @@ async function save() {
         briefing_enabled:     !!form.value.briefing_enabled,
         briefing_targets:     form.value.briefing_targets,
         briefing_time:        form.value.briefing_time,
+        suggestions_enabled:  !!form.value.suggestions_enabled,
+        suggestions_time:     form.value.suggestions_time,
         ha_external_url:      form.value.ha_external_url,
         jarvis_provider:      form.value.jarvis_provider,
         anthropic_api_key:    form.value.anthropic_api_key,

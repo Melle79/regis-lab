@@ -29,6 +29,8 @@ SETTINGS_DEFAULTS = {
     "filter_labels":       [],
     "briefing_targets":    ["mobile_app_svens_iphone"],
     "briefing_enabled":    True,
+    "suggestions_enabled": True,
+    "suggestions_time":    "08:00",
     "ha_external_url":     "",
     "briefing_time":       "07:00",
 }
@@ -146,6 +148,8 @@ class AddonConfig:
             "filter_labels":        self._settings.get("filter_labels", []),
             "briefing_targets":     self._settings.get("briefing_targets", ["mobile_app_svens_iphone"]),
             "briefing_enabled":     self._settings.get("briefing_enabled", True),
+            "suggestions_enabled":  self._settings.get("suggestions_enabled", True),
+            "suggestions_time":     self._settings.get("suggestions_time", "08:00"),
             "ha_external_url":      self._settings.get("ha_external_url", ""),
             "briefing_time":        self._settings.get("briefing_time", "07:00"),
             "ha_token_set":         bool(self.ha_long_token),

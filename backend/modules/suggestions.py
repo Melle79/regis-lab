@@ -280,15 +280,25 @@ class Module(BaseModule):
             return None
 
     def _daily_analysis(self):
-        """Tägliche Analyse um 08:00 Uhr."""
+        """Tägliche Analyse zur konfigurierten Uhrzeit."""
         while True:
-            now    = datetime.now()
-            target = now.replace(hour=8, minute=0, second=0, microsecond=0)
+            if not self.config._settings.get("suggestions_enabled", True):
+                _time.sleep(300)
+                continue
+            now  = datetime.now()
+            t    = self.config._settings.get("suggestions_time", "08:00")
+            try:
+                hour, minute = int(t.split(":")[0]), int(t.split(":")[1])
+            except Exception:
+                hour, minute = 8, 0
+            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
             if now >= target:
                 target += timedelta(days=1)
             wait = (target - now).total_seconds()
             self.log.info(f"Nächste Automations-Analyse in {wait/3600:.1f}h")
             _time.sleep(wait)
+            if not self.config._settings.get("suggestions_enabled", True):
+                continue
             try:
                 self.log.info("Starte tägliche Automations-Analyse...")
                 new_suggestions = self._generate_suggestions()
