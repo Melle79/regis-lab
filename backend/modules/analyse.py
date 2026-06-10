@@ -16,6 +16,29 @@ MAX_REPORTS   = 96   # 96 x 15 Min = 24 Stunden
 
 
 class Module(BaseModule):
+    def _call_ki(self, prompt: str) -> str:
+        """KI-Aufruf über konfigurierten Provider."""
+        try:
+            from modules.jarvis import Module as JarvisModule
+            jarvis = next((m for m in getattr(self, '_siblings', []) if isinstance(m, JarvisModule)), None)
+            if jarvis:
+                return jarvis.call_ki(prompt)
+        except Exception:
+            pass
+        model  = self.config._settings.get("jarvis_model", "")
+        ollama = self.config.jarvis_ollama_url.rstrip("/")
+        if not model or not ollama:
+            return ""
+        try:
+            r = requests.post(
+                ollama + "/api/generate",
+                json={"model": model, "prompt": prompt, "stream": False},
+                timeout=60,
+            )
+            return r.json().get("response", "").strip() if r.status_code == 200 else ""
+        except Exception:
+            return ""
+
     name    = "analyse"
     version = "1.0.0"
 

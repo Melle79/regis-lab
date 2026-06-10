@@ -63,10 +63,10 @@
 |---|---|---|
 | Home Assistant | ✅ | Core 2024.1 oder neuer |
 | HA Long-Lived Access Token | ✅ | Für API-Zugriff |
-| Ollama | ⚡ Optional | Lokale KI (empfohlen: `qwen2.5:14b-instruct`) |
-| Anthropic API-Key | ⚡ Optional | Cloud-KI als Alternative oder Fallback |
+| Ollama | ⚡ Optional | Lokale KI — empfohlen: `qwen2.5:14b-instruct` |
+| Anthropic API-Key | ⚡ Optional | Cloud-KI — Claude Haiku oder Sonnet |
 
-> **Ollama oder Anthropic** — mindestens einer wird für KI-Funktionen (Briefing, Vorschläge, Jarvis) benötigt. Ohne KI sind Geräte-Ansicht und Diagnose-Kacheln weiterhin verfügbar.
+> **Hinweis zu KI:** Für KI-Funktionen (Chat, Briefing, Vorschläge, Diagnose-Zusammenfassung) wird entweder **Ollama** (lokal) oder ein **Anthropic API-Key** (Cloud) benötigt. Beide Optionen sind vollwertig — du kannst auch beide konfigurieren und Ollama als primäre KI mit Anthropic als Fallback nutzen. Ohne KI sind Geräte-Ansicht und Diagnose-Kacheln weiterhin voll funktionsfähig.
 
 ---
 

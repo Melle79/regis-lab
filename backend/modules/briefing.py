@@ -22,6 +22,31 @@ WEATHER_DE = {
 
 
 class Module(BaseModule):
+    def _call_ki(self, prompt: str) -> str:
+        """KI-Aufruf über konfigurierten Provider."""
+        try:
+            from modules.jarvis import Module as JarvisModule
+            jarvis = next((m for m in getattr(self, '_siblings', []) if isinstance(m, JarvisModule)), None)
+            if jarvis:
+                return jarvis.call_ki(prompt)
+        except Exception:
+            pass
+        # Fallback auf Ollama direkt
+        model  = self.config._settings.get("jarvis_model", "")
+        ollama = self.config.jarvis_ollama_url.rstrip("/")
+        if not model or not ollama:
+            return ""
+        try:
+            import requests
+            r = requests.post(
+                ollama + "/api/generate",
+                json={"model": model, "prompt": prompt, "stream": False},
+                timeout=60,
+            )
+            return r.json().get("response", "").strip() if r.status_code == 200 else ""
+        except Exception:
+            return ""
+
     name    = "briefing"
     version = "1.0.0"
 
@@ -82,21 +107,15 @@ class Module(BaseModule):
         if offline_count:  context += f"Offline-Geräte: {offline_count}\n"
         if lights_on:      context += f"Lichter noch an: {', '.join(lights_on[:5])}\n"
 
-        # KI-Zusammenfassung
-        model  = self.config._settings.get("jarvis_model", "")
-        ollama = self.config.jarvis_ollama_url.rstrip("/")
+        # KI-Zusammenfassung über konfigurierten Provider
         summary = context
-        if model and ollama:
-            try:
-                prompt = (
-                    "Du bist Jarvis. Erstelle eine kurze freundliche Morgen-Zusammenfassung "
-                    "(2-3 Sätze) auf Deutsch ohne Emojis:\n\n" + context
-                )
-                r = requests.post(ollama + "/api/generate",
-                    json={"model": model, "prompt": prompt, "stream": False}, timeout=30)
-                summary = r.json().get("response", "").strip() if r.status_code == 200 else context
-            except Exception:
-                pass
+        prompt = (
+            "Du bist ein Smart Home Assistent. Erstelle eine kurze freundliche Morgen-Zusammenfassung "
+            "(2-3 Sätze) auf Deutsch ohne Emojis:\n\n" + context
+        )
+        result = self._call_ki(prompt)
+        if result:
+            summary = result
 
         return {
             "date": date_str, "weather": weather_text,

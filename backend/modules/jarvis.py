@@ -273,6 +273,47 @@ class Module(BaseModule):
     def _get_ollama_url(self) -> str:
         return self.config.jarvis_ollama_url.rstrip("/")
 
+    def call_ki(self, prompt: str, system: str = "", max_tokens: int = 1024) -> str:
+        """Zentrale Methode für einfache KI-Completions — nutzt konfigurierten Provider."""
+        provider   = self._get_provider()
+        ollama_url = self._get_ollama_url()
+        ant_key    = self.config._settings.get("anthropic_api_key", "")
+        model      = self.config._settings.get("jarvis_model", "")
+
+        # Anthropic
+        if provider == "anthropic" and ant_key:
+            try:
+                return self._generate_anthropic(prompt if not system else f"{system}\n\n{prompt}", model)
+            except Exception as e:
+                self.log.error(f"Anthropic-Fehler: {e}")
+                return ""
+
+        # Ollama mit Fallback
+        if ollama_url and model:
+            try:
+                import requests
+                full_prompt = f"{system}\n\n{prompt}" if system else prompt
+                r = requests.post(
+                    ollama_url + "/api/generate",
+                    json={"model": model, "prompt": full_prompt, "stream": False},
+                    timeout=60,
+                )
+                result = r.json().get("response", "").strip() if r.status_code == 200 else ""
+                if result:
+                    return result
+            except Exception as e:
+                self.log.warning(f"Ollama-Fehler: {e}")
+                if provider != "ollama_with_fallback" or not ant_key:
+                    return ""
+
+        # Fallback auf Anthropic
+        if ant_key:
+            try:
+                return self._generate_anthropic(prompt if not system else f"{system}\n\n{prompt}", model)
+            except Exception as e:
+                self.log.error(f"Anthropic-Fallback-Fehler: {e}")
+        return ""
+
     def _get_provider(self) -> str:
         """Aktuell konfigurierten KI-Anbieter zurückgeben."""
         return self.config._settings.get("jarvis_provider", "ollama")

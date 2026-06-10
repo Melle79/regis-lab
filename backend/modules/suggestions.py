@@ -140,7 +140,7 @@ class Module(BaseModule):
                     item = item + " ⚠️ (Entität bereits in Automation verwendet)"
                     break
 
-        # KI-Analyse
+        # KI-Analyse über zentralen Provider
         auto_list = "\n".join(f"- {a}" for a in existing_automations[:50]) if existing_automations else "Keine"
         prompt = (
             "Du bist ein Home Assistant Experte. Analysiere diese Nutzungsmuster aus den letzten 7 Tagen:\n\n"
@@ -155,13 +155,19 @@ class Module(BaseModule):
             "Format: VORSCHLAG: [Kurztitel] | BESCHREIBUNG: [Details inkl. warum diese noch nicht existiert]"
         )
 
+        # Jarvis call_ki nutzen
         try:
-            r = requests.post(
-                ollama + "/api/generate",
-                json={"model": model, "prompt": prompt, "stream": False},
-                timeout=60,
-            )
-            response = r.json().get("response", "").strip() if r.status_code == 200 else ""
+            from modules.jarvis import Module as JarvisModule
+            jarvis = next((m for m in getattr(self, '_siblings', []) if isinstance(m, JarvisModule)), None)
+            if jarvis:
+                response = jarvis.call_ki(prompt)
+            else:
+                r = requests.post(
+                    ollama + "/api/generate",
+                    json={"model": model, "prompt": prompt, "stream": False},
+                    timeout=60,
+                )
+                response = r.json().get("response", "").strip() if r.status_code == 200 else ""
         except Exception:
             return []
 
