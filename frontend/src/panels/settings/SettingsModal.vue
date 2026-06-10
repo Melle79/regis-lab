@@ -59,6 +59,44 @@
             </div>
           </div>
 
+          <!-- HA Token -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:key" :size="20" color="var(--accent)" />
+              Home Assistant Token
+            </div>
+            <p class="card-desc">
+              Ein <strong>Long-Lived Access Token</strong> erlaubt erweiterte HA-Funktionen (z.B. Custom Icons in der Seitenleiste).<br>
+              Erstellen unter: <em>HA → Profil → Sicherheit → Langlebige Zugriffstoken</em>
+            </p>
+
+            <div class="field">
+              <label>Token {{ form.ha_token_set ? '(gesetzt ✓)' : '(nicht gesetzt)' }}</label>
+              <div class="token-row">
+                <input
+                  v-model="form.ha_token"
+                  :type="showToken ? 'text' : 'password'"
+                  class="input"
+                  :placeholder="form.ha_token_set ? '********************' : 'Token einfügen…'"
+                />
+                <button class="icon-btn" @click="showToken = !showToken">
+                  <MdiIcon :icon="showToken ? 'mdi:eye-off' : 'mdi:eye'" :size="18" />
+                </button>
+                <button v-if="form.ha_token_set" class="icon-btn danger" @click="clearToken">
+                  <MdiIcon icon="mdi:delete" :size="18" />
+                </button>
+              </div>
+              <div v-if="tokenError" class="token-status err">
+                <MdiIcon icon="mdi:alert-circle" :size="14" />
+                {{ tokenError }}
+              </div>
+              <div v-else-if="tokenSaved" class="token-status ok">
+                <MdiIcon icon="mdi:check-circle" :size="14" />
+                Token erfolgreich gespeichert
+              </div>
+            </div>
+          </div>
+
           <!-- Label-Filter -->
           <div class="settings-card">
             <div class="card-title">
@@ -131,44 +169,6 @@
               </button>
             </div>
             </template>
-          </div>
-
-          <!-- HA Token -->
-          <div class="settings-card">
-            <div class="card-title">
-              <MdiIcon icon="mdi:key" :size="20" color="var(--accent)" />
-              Home Assistant Token
-            </div>
-            <p class="card-desc">
-              Ein <strong>Long-Lived Access Token</strong> erlaubt erweiterte HA-Funktionen (z.B. Custom Icons in der Seitenleiste).<br>
-              Erstellen unter: <em>HA → Profil → Sicherheit → Langlebige Zugriffstoken</em>
-            </p>
-
-            <div class="field">
-              <label>Token {{ form.ha_token_set ? '(gesetzt ✓)' : '(nicht gesetzt)' }}</label>
-              <div class="token-row">
-                <input
-                  v-model="form.ha_token"
-                  :type="showToken ? 'text' : 'password'"
-                  class="input"
-                  :placeholder="form.ha_token_set ? '********************' : 'Token einfügen…'"
-                />
-                <button class="icon-btn" @click="showToken = !showToken">
-                  <MdiIcon :icon="showToken ? 'mdi:eye-off' : 'mdi:eye'" :size="18" />
-                </button>
-                <button v-if="form.ha_token_set" class="icon-btn danger" @click="clearToken">
-                  <MdiIcon icon="mdi:delete" :size="18" />
-                </button>
-              </div>
-              <div v-if="tokenError" class="token-status err">
-                <MdiIcon icon="mdi:alert-circle" :size="14" />
-                {{ tokenError }}
-              </div>
-              <div v-else-if="tokenSaved" class="token-status ok">
-                <MdiIcon icon="mdi:check-circle" :size="14" />
-                Token erfolgreich gespeichert
-              </div>
-            </div>
           </div>
 
           <!-- Automations-Vorschläge -->
