@@ -4,6 +4,28 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.2.0] - 2026-06-10
+
+### Neu
+- **Multi-Provider KI** — Unterstützung für 5 KI-Anbieter
+  - Ollama (lokal)
+  - Anthropic (Claude Haiku, Claude Sonnet)
+  - OpenAI (GPT-4o mini, GPT-4o, GPT-4 Turbo)
+  - Google (Gemini 1.5 Flash, Gemini 1.5 Pro, Gemini 2.0 Flash)
+  - Mistral (Small, Medium, Large)
+  - Groq (Llama 3.1, Llama 3.3, Mixtral)
+- **Cloud KI Einstellungen** — Dropdown zur Anbieter-Auswahl, API-Key pro Anbieter
+  - Primäre KI: Cloud-Anbieter statt Ollama
+  - Fallback: Bei Ollama-Ausfall automatisch Cloud-KI nutzen
+- **Provider-Badge** im Jarvis-Chat — zeigt ☁️ Cloud oder 🏠 Lokal
+- **Zentrale KI-Abstraktion** (`ki_providers.py`) — alle Module nutzen einheitlich den konfigurierten Provider
+
+### Geändert
+- Morgen-Briefing, Automations-Vorschläge und Diagnose-Zusammenfassung nutzen jetzt ebenfalls den konfigurierten Provider
+- "Als primäre KI nutzen" deaktiviert automatisch den Fallback-Toggle
+
+---
+
 ## [1.1.2] - 2026-06-10
 
 ### Geändert

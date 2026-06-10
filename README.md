@@ -8,11 +8,13 @@
 
 ---
 
-## Version 1.1.0 — Änderungen
+## Version 1.2.0 — Änderungen
 
+- **Multi-Provider KI** — Anthropic, OpenAI, Google (Gemini), Mistral, Groq
+- Provider-Badge im Chat (☁️ Cloud / 🏠 Lokal)
+- Alle KI-Funktionen nutzen einheitlich den konfigurierten Provider
 - Morgen-Briefing mit KI-Zusammenfassung und Push-Benachrichtigung
 - Automations-Vorschläge mit Muster-Erkennung und direkter HA-Erstellung
-- Anthropic Cloud KI als optionaler Fallback
 - Diagnose-Panel mit Auto-Analyse, Aufräumen, Aktivitäten-Log
 
 ---
@@ -38,10 +40,11 @@
 - KI-Vorschläge direkt aus dem Zimmer-Header
 
 ### 🤖 KI-Assistent
-- Chat mit lokalem Ollama-Modell (empfohlen: `qwen2.5:14b-instruct`)
+- Chat mit konfigurierbarem KI-Anbieter
+- Unterstützte Anbieter: Ollama (lokal), Anthropic, OpenAI, Google, Mistral, Groq
 - Mehrere persistente Chats mit automatisch generiertem Titel
-- Optional: Anthropic Claude API als Cloud-KI oder Fallback
-- HA-Steuerung: Jarvis kann Geräte direkt steuern
+- Provider-Badge zeigt aktiven Anbieter (☁️ Cloud / 🏠 Lokal)
+- HA-Steuerung: KI kann Geräte direkt steuern
 
 ### 🩺 Diagnose
 - **Status**: 4 klickbare Kacheln, KI-Zusammenfassung, Trend-Chart
@@ -64,9 +67,9 @@
 | Home Assistant | ✅ | Core 2024.1 oder neuer |
 | HA Long-Lived Access Token | ✅ | Für API-Zugriff |
 | Ollama | ⚡ Optional | Lokale KI — empfohlen: `qwen2.5:14b-instruct` |
-| Anthropic API-Key | ⚡ Optional | Cloud-KI — Claude Haiku oder Sonnet |
+| Cloud API-Key | ⚡ Optional | Anthropic, OpenAI, Google, Mistral oder Groq |
 
-> **Hinweis zu KI:** Für KI-Funktionen (Chat, Briefing, Vorschläge, Diagnose-Zusammenfassung) wird entweder **Ollama** (lokal) oder ein **Anthropic API-Key** (Cloud) benötigt. Beide Optionen sind vollwertig — du kannst auch beide konfigurieren und Ollama als primäre KI mit Anthropic als Fallback nutzen. Ohne KI sind Geräte-Ansicht und Diagnose-Kacheln weiterhin voll funktionsfähig.
+> **Hinweis zu KI:** Für KI-Funktionen (Chat, Briefing, Vorschläge, Diagnose-Zusammenfassung) wird entweder **Ollama** (lokal) oder ein **Cloud API-Key** benötigt. Alle Anbieter sind vollwertig und können als primäre KI oder als Fallback für Ollama konfiguriert werden. Ohne KI sind Geräte-Ansicht und Diagnose-Kacheln weiterhin voll funktionsfähig.
 
 ---
 
@@ -110,9 +113,11 @@
 - **Ollama URL** — z.B. `http://192.168.0.220:11434`
 - **Modell** — Empfohlen: `qwen2.5:14b-instruct`
 
-### Cloud KI (Anthropic)
-- **API-Key** — Anthropic API-Key (`sk-ant-...`)
-- **Als Fallback nutzen** — Bei Ollama-Ausfall automatisch Claude API verwenden
+### Cloud KI
+- **Anbieter** — Anthropic, OpenAI, Google, Mistral oder Groq
+- **API-Key** — Key des gewählten Anbieters
+- **Als primäre KI nutzen** — Cloud-KI statt Ollama als Standard
+- **Als Fallback nutzen** — Bei Ollama-Ausfall automatisch Cloud-KI nutzen
 
 ---
 
