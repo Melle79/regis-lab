@@ -505,7 +505,8 @@ async function save() {
         tokenSaved.value = true
         setTimeout(() => tokenSaved.value = false, 4000)
       }
-      await load()
+      // Kurz warten damit Backend Label-Cache neu aufbauen kann
+      setTimeout(async () => await load(), 1000)
     }
   } finally {
     saving.value = false
