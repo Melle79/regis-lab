@@ -4,6 +4,14 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.1.2] - 2026-06-10
+
+### Geändert
+- GitHub URL in config.yaml eingetragen (Infoseite verlinkt jetzt korrekt auf GitHub)
+- README und CHANGELOG hinzugefügt
+
+---
+
 ## [1.1.1] - 2026-06-10
 
 ### Behoben
