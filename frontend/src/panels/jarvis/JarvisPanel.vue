@@ -74,8 +74,10 @@
         <div class="chat-header-right">
           <select v-model="currentModel" class="model-select" @change="saveModel">
             <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
-            <option v-if="!models.length" value="">Kein Modell</option>
+            <option v-if="!models.length" value="">Kein Modell verfügbar</option>
           </select>
+          <span v-if="currentProvider === 'anthropic'" class="provider-badge">☁️ Cloud</span>
+          <span v-else-if="currentProvider === 'ollama'" class="provider-badge">🏠 Lokal</span>
           <span class="ha-control-badge" :class="haControl ? 'active' : 'inactive'">
             <MdiIcon :icon="haControl ? 'mdi:home' : 'mdi:home-off'" :size="13" />
             {{ haControl ? 'HA aktiv' : 'HA aus' }}
@@ -206,6 +208,7 @@ const chats          = ref([])
 const activeChatId   = ref(null)
 const activeChat     = ref(null)
 const models         = ref([])
+const currentProvider = ref('')
 const currentModel   = ref('')
 const kiName         = ref('Assistent')
 const haControl      = ref(false)
@@ -538,6 +541,7 @@ async function loadModels() {
     const d = await r.json()
     if (d.models) {
       models.value = d.models
+      currentProvider.value = d.provider || ''
       const saved = localStorage?.getItem?.('jarvis_model')
       currentModel.value = saved && d.models.includes(saved)
         ? saved
@@ -659,6 +663,7 @@ onMounted(async () => {
 }
 .chat-title.muted { color: var(--muted); font-weight: 400; }
 .chat-header-right { display: flex; align-items: center; gap: 8px; }
+.provider-badge { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .model-select {
   font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
   background: var(--bg); color: var(--text); max-width: 160px;

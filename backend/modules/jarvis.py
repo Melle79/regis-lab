@@ -216,16 +216,39 @@ class Module(BaseModule):
 
         @self.app.route("/api/jarvis/models")
         def get_models():
+            provider = self._get_provider()
+            # Anthropic: feste Modell-Liste
+            if provider == "anthropic":
+                return jsonify({"models": [
+                    "claude-haiku-4-5-20251001",
+                    "claude-sonnet-4-6",
+                ], "provider": "anthropic"})
+            # Ollama
             ollama_url = self._get_ollama_url()
             if not ollama_url:
-                return jsonify({"error": "Ollama URL nicht konfiguriert"}), 400
+                # Fallback: Anthropic-Modelle anbieten wenn Key vorhanden
+                if self.config._settings.get("anthropic_api_key"):
+                    return jsonify({"models": [
+                        "claude-haiku-4-5-20251001",
+                        "claude-sonnet-4-6",
+                    ], "provider": "anthropic"})
+                return jsonify({"error": "Kein KI-Provider konfiguriert"}), 400
             try:
                 r = requests.get(f"{ollama_url}/api/tags", timeout=5)
                 if r.status_code == 200:
                     models = [m["name"] for m in r.json().get("models", [])]
-                    return jsonify({"models": models})
+                    # Bei ollama_with_fallback auch Anthropic-Modelle anbieten
+                    if provider == "ollama_with_fallback" and self.config._settings.get("anthropic_api_key"):
+                        models += ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+                    return jsonify({"models": models, "provider": "ollama"})
                 return jsonify({"error": f"Ollama Fehler: {r.status_code}"}), 500
             except Exception as e:
+                # Fallback auf Anthropic
+                if self.config._settings.get("anthropic_api_key"):
+                    return jsonify({"models": [
+                        "claude-haiku-4-5-20251001",
+                        "claude-sonnet-4-6",
+                    ], "provider": "anthropic"})
                 return jsonify({"error": f"Ollama nicht erreichbar: {e}"}), 503
 
         @self.app.route("/api/jarvis/chats/<chat_id>/system-message", methods=["POST"])
