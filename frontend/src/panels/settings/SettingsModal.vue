@@ -59,29 +59,6 @@
             </div>
           </div>
 
-          <!-- Automations-Vorschläge -->
-          <div class="settings-card">
-            <div class="card-title">
-              <MdiIcon icon="mdi:lightbulb-on" :size="20" color="var(--accent)" />
-              Automations-Vorschläge
-            </div>
-            <p class="card-desc">Jarvis analysiert deine Nutzungsmuster und schlägt neue Automationen vor.</p>
-            <div class="field">
-              <label>Aktiviert</label>
-              <label class="toggle-label">
-                <input type="checkbox" v-model="form.suggestions_enabled" class="toggle-input" />
-                <span class="toggle-track"><span class="toggle-thumb" /></span>
-                <span>{{ form.suggestions_enabled ? 'Ein' : 'Aus' }}</span>
-              </label>
-            </div>
-            <template v-if="form.suggestions_enabled">
-            <div class="field">
-              <label>Analyse-Uhrzeit</label>
-              <input type="time" v-model="form.suggestions_time" class="input" style="width:120px" />
-            </div>
-            </template>
-          </div>
-
           <!-- Label-Filter -->
           <div class="settings-card">
             <div class="card-title">
@@ -192,6 +169,29 @@
                 Token erfolgreich gespeichert
               </div>
             </div>
+          </div>
+
+          <!-- Automations-Vorschläge -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:lightbulb-on" :size="20" color="var(--accent)" />
+              Automations-Vorschläge
+            </div>
+            <p class="card-desc">Jarvis analysiert deine Nutzungsmuster und schlägt neue Automationen vor.</p>
+            <div class="field">
+              <label>Aktiviert</label>
+              <label class="toggle-label">
+                <input type="checkbox" v-model="form.suggestions_enabled" class="toggle-input" />
+                <span class="toggle-track"><span class="toggle-thumb" /></span>
+                <span>{{ form.suggestions_enabled ? 'Ein' : 'Aus' }}</span>
+              </label>
+            </div>
+            <template v-if="form.suggestions_enabled">
+            <div class="field">
+              <label>Analyse-Uhrzeit</label>
+              <input type="time" v-model="form.suggestions_time" class="input" style="width:120px" />
+            </div>
+            </template>
           </div>
 
           <!-- Lokaler KI-Assistent -->
