@@ -94,6 +94,11 @@ class Module(BaseModule):
             provider   = self._get_provider()
             ollama_url = self._get_ollama_url()
 
+            # Bei Anthropic-Provider: Claude-Modell verwenden
+            if provider == "anthropic":
+                if not model or not model.startswith("claude"):
+                    model = "claude-haiku-4-5-20251001"
+
             if provider == "ollama" and not ollama_url:
                 return jsonify({"error": "Ollama URL nicht konfiguriert"}), 400
             if provider == "anthropic" and not self.config._settings.get("anthropic_api_key"):
