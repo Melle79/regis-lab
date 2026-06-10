@@ -8,103 +8,131 @@
 
 ---
 
+## Version 1.1.0 — Änderungen
+
+- Morgen-Briefing mit KI-Zusammenfassung und Push-Benachrichtigung
+- Automations-Vorschläge mit Muster-Erkennung und direkter HA-Erstellung
+- Anthropic Cloud KI als optionaler Fallback
+- Diagnose-Panel mit Auto-Analyse, Aufräumen, Aktivitäten-Log
+
+---
+
 ## Funktionen
 
-### 🏠 Geräte
+### 🏠 Übersicht-Dashboard
+- Begrüßung mit Personenname aus HA
+- Klickbare Status-Kacheln: Personen zuhause, Offline-Geräte, Lichter an, Automationen aktiv
+- Schnellzugriff auf Lichter und Schalter
+- Letzte Diagnose-Zusammenfassung
+- Jarvis Schnellchat
+
+### 🔍 Geräte
 - Hierarchische Ansicht: Stockwerke → Bereiche → Geräte → Entitäten
 - Brand-Icons und Integrations-Badges
 - Alle Entitäten direkt ein- und ausklappbar
 - Geräte manuell Bereichen zuordnen
 
 ### 🎙️ Sprachassistent-Verwaltung
-- **Mikrofon-Symbol** bei jeder Entität — ein Klick macht sie für den HA-Sprachassistenten verfügbar
-- **Verfügbarkeits-Zähler** im Zimmer-Header zeigt, wie viele Entitäten aktiviert sind
-- **KI-Vorschläge** direkt aus dem Zimmer-Header: Der KI-Assistent analysiert die Geräte und empfiehlt geeignete Entitäten
-  - Vorschläge können angepasst, erweitert oder abgewählt werden
-  - Nur steuerbare Geräte werden berücksichtigt (Lichter, Schalter, Rollläden, Heizung usw.)
+- Mikrofon-Symbol bei jeder Entität — ein Klick macht sie für den HA-Sprachassistenten verfügbar
+- Verfügbarkeits-Zähler im Zimmer-Header
+- KI-Vorschläge direkt aus dem Zimmer-Header
 
 ### 🤖 Jarvis KI-Assistent
 - Chat mit lokalem Ollama-Modell (empfohlen: `qwen2.5:14b-instruct`)
 - Mehrere persistente Chats mit automatisch generiertem Titel
-- Chat-Titel per Doppelklick umbenennen
-- Chats werden nach letzter Nutzung sortiert
-- Code-Blöcke mit Syntax-Hervorhebung, Kopieren und Herunterladen
-- Datei-Upload (Textdateien) — der Inhalt wird der KI übergeben
-- **HA-Steuerung** — optional: Die KI kann Geräte steuern (Licht, Rollläden, Schalter usw.)
-- Modellauswahl aus den verfügbaren Ollama-Modellen
-- Zeitstempel und Modellname unter jeder Nachricht
-
-### ⚙️ Automationen, Helfer & Zonen
-- Automationen, Skripte und Szenen verwalten
-- Eingabe-Helfer, Timer und Zähler
-- Personen-Tracker und Zonen-Übersicht
+- Optional: Anthropic Claude API als Cloud-KI oder Fallback
+- HA-Steuerung: Jarvis kann Geräte direkt steuern
 
 ### 🩺 Diagnose
-- **Statusbericht** mit automatischer Analyse alle 15 Minuten:
-  - Offline- und nicht verfügbare Geräte
-  - Geräte mit niedrigem Akkustand
-  - Deaktivierte Automationen
-  - Log-Fehler
-  - KI-gestützte Einschätzung des Systemzustands
-- **Verlaufsdiagramm** der letzten 24 Stunden
-- **Aufräumen** — problematische Integrationen gruppiert mit:
-  - KI-gestützter Einschätzung pro Integration
-  - Möglichkeit, Integrationen neu zu laden
-  - Entitäten einzeln oder als Gruppe ignorieren
-- **Aktivitätenprotokoll** mit Undo-Funktion:
-  - Alle Änderungen werden aufgezeichnet
-  - Aktionen können rückgängig gemacht werden
-  - Neue Einträge werden hervorgehoben
-  - Einzeln oder alle als gelesen markieren
+- **Status**: 4 klickbare Kacheln, KI-Zusammenfassung, Trend-Chart
+- **Aufräumen**: Problematische Integrationen mit KI-Einschätzung
+- **Aktivitäten**: Log mit Undo und Gelesen-Markierung
+- **Vorschläge**: Muster-Erkennung aus HA-Verlauf, Automations-Vorschau, direkte HA-Erstellung
 
-### 🎨 Dashboard
-- Dunkles und helles Design
-- Uhr und Wetter im Header (konfigurierbar)
-- Tab-Reihenfolge per Drag & Drop anpassen (wird gespeichert)
-- Alle Einstellungen direkt im Dashboard — kein Zugriff auf HA-Konfigurationsdateien erforderlich
+### ☀️ Morgen-Briefing
+- Täglich automatische KI-Zusammenfassung per Push-Benachrichtigung
+- Persistente Benachrichtigung in HA
+- Konfigurierbare Uhrzeit und Empfänger
+- Test-Button in den Einstellungen
+
+---
+
+## Voraussetzungen
+
+| Voraussetzung | Pflicht | Beschreibung |
+|---|---|---|
+| Home Assistant | ✅ | Core 2024.1 oder neuer |
+| HA Long-Lived Access Token | ✅ | Für API-Zugriff |
+| Ollama | ⚡ Optional | Lokale KI (empfohlen: `qwen2.5:14b-instruct`) |
+| Anthropic API-Key | ⚡ Optional | Cloud-KI als Alternative oder Fallback |
+
+> **Ollama oder Anthropic** — mindestens einer wird für KI-Funktionen (Briefing, Vorschläge, Jarvis) benötigt. Ohne KI sind Geräte-Ansicht und Diagnose-Kacheln weiterhin verfügbar.
 
 ---
 
 ## Installation
 
-1. Repository in Home Assistant hinzufügen:  
-   **Einstellungen → Add-ons → Add-on Store → ⋮ → Repositories**  
-   URL: `https://github.com/Melle79/regis-lab`
-
-2. **Regis-Lab** installieren und starten
-
-3. Addon über die Seitenleiste öffnen
-
-4. Einstellungen über das ⚙-Symbol im Dashboard vornehmen
+1. Füge dieses Repository in Home Assistant hinzu:  
+   `https://github.com/Melle79/regis-lab`
+2. Installiere das Addon **Regis-Lab**
+3. Starte das Addon
+4. Öffne die Web-UI über **Ingress**
+5. Gehe zu **Einstellungen** und trage deinen HA Long-Lived Access Token ein
 
 ---
 
-## Konfiguration
+## Einstellungen
 
-### Home Assistant Token
-Ein langlebiger Zugriffstoken ermöglicht erweiterte Funktionen wie die Sprachassistent-Verwaltung und die HA-Steuerung durch die KI.  
-Erstellen unter: **HA → Profil → Sicherheit → Langlebige Zugriffstoken**
+### Allgemein
+- **Dashboard-Titel** — Name der App
+- **Wetter-Entity** — Entity-ID für das Wetter-Widget (z.B. `weather.forecast_home`)
+- **Wetter anzeigen** — Wetter im Header ein/aus
+
+### HA Token
+- **Long-Lived Access Token** — unter HA → Profil → Sicherheit erstellen
+
+### Label-Filter
+- Entitäten mit bestimmten Labels im Dashboard ausblenden
+- Empfehlung: Label `no_dboard` für Helfer und interne Entitäten verwenden
+
+### Morgen-Briefing
+- **Aktiviert** — Briefing ein/aus
+- **Uhrzeit** — Wann das Briefing gesendet wird
+- **Empfänger** — Welche Geräte die Push-Benachrichtigung erhalten
+
+### Automations-Vorschläge
+- **Aktiviert** — Tägliche Muster-Analyse ein/aus
+- **Analyse-Uhrzeit** — Wann die Analyse läuft (Standard: 08:00)
 
 ### Lokaler KI-Assistent (Ollama)
-- Ollama-URL eingeben (z. B. `http://192.168.0.220:11434`)
-- Modell auswählen (empfohlen: `qwen2.5:14b-instruct`)
-- Name des Assistenten frei wählbar
-- **HA-Steuerung**: standardmäßig deaktiviert — nur bewusst aktivieren
+- **Ollama URL** — z.B. `http://192.168.0.220:11434`
+- **Modell** — Empfohlen: `qwen2.5:14b-instruct`
 
-### Wetter
-Wetter-Entität in den Einstellungen eintragen (z. B. `weather.forecast_home`)
+### Cloud KI (Anthropic)
+- **API-Key** — Anthropic API-Key (`sk-ant-...`)
+- **Als Fallback nutzen** — Bei Ollama-Ausfall automatisch Claude API verwenden
 
 ---
 
-## Sicherheitshinweise
+## Technischer Hintergrund
 
-- Die KI-Steuerung von HA-Geräten ist experimentell
-- Fehlerhafte KI-Antworten können unbeabsichtigte Schaltaktionen auslösen
-- Der HA-Token wird lokal im Addon gespeichert
-- Nutzung ausschließlich auf eigene Gefahr
+| Komponente | Technologie |
+|---|---|
+| Frontend | Vue 3 + Vite |
+| Backend | Python Flask + flask-sock |
+| Kommunikation | HA WebSocket + REST API |
+| KI | Ollama (lokal) und/oder Anthropic API |
+
+---
+
+## Bekannte Einschränkungen
+
+- InfluxDB-Integration derzeit nicht unterstützt (HA 2026.6 Bug)
+- Supervisor-Auto-Update nicht verfügbar (manueller Image-Build nötig)
+- Sehr große HA-Instanzen (>5000 Entitäten) können die Performance beeinflussen
 
 ---
 
 ## Lizenz
 
-Privates Projekt — keine Gewährleistung, keine Haftung, kein offizieller Support.
+MIT License — Nutzung auf eigene Gefahr.
