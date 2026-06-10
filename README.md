@@ -37,7 +37,7 @@
 - Verfügbarkeits-Zähler im Zimmer-Header
 - KI-Vorschläge direkt aus dem Zimmer-Header
 
-### 🤖 Jarvis KI-Assistent
+### 🤖 KI-Assistent
 - Chat mit lokalem Ollama-Modell (empfohlen: `qwen2.5:14b-instruct`)
 - Mehrere persistente Chats mit automatisch generiertem Titel
 - Optional: Anthropic Claude API als Cloud-KI oder Fallback
