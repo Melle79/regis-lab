@@ -279,10 +279,20 @@
               <span class="field-hint" v-if="form.anthropic_api_key_set && !form.anthropic_api_key">✓ API-Key gespeichert</span>
             </div>
             <div class="field">
+              <label>Als primäre KI nutzen</label>
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="form.use_anthropic_primary" @change="form.jarvis_provider = form.use_anthropic_primary ? 'anthropic' : (form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama')" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="field-hint">Anthropic statt Ollama als Standard-KI verwenden</span>
+              </div>
+            </div>
+            <div class="field">
               <label>Als Fallback nutzen</label>
               <div class="toggle-row">
                 <label class="toggle">
-                  <input type="checkbox" v-model="form.use_anthropic_fallback" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
+                  <input type="checkbox" v-model="form.use_anthropic_fallback" :disabled="form.use_anthropic_primary" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
                   <span class="toggle-slider"></span>
                 </label>
                 <span class="field-hint">Bei Ollama-Ausfall automatisch Claude API nutzen</span>
@@ -319,6 +329,7 @@ const form = ref({
   ha_token_set: false,
   jarvis_provider: 'ollama',
   use_anthropic_fallback: false,
+  use_anthropic_primary: false,
   anthropic_api_key: '',
   anthropic_api_key_set: false,
   show_clock: true,
@@ -390,8 +401,9 @@ async function load() {
   delete d.ha_token
   form.value = { ...form.value, ...d }
   form.value.ha_token_set = tokenSet
-  // use_anthropic_fallback aus jarvis_provider ableiten
+  // use_anthropic_fallback und use_anthropic_primary aus jarvis_provider ableiten
   form.value.use_anthropic_fallback = d.use_anthropic_fallback || d.jarvis_provider === 'ollama_with_fallback'
+  form.value.use_anthropic_primary  = d.jarvis_provider === 'anthropic'
   iconRegistered.value = null  // Reset beim Laden
   // Modelle laden wenn Ollama URL gesetzt
   if (form.value.jarvis_ollama_url) {
