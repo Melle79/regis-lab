@@ -23,7 +23,7 @@ class Module(BaseModule):
             allowed = [
                 "title", "theme", "show_clock", "show_weather", "weather_entity",
                 "ki_name", "ha_token", "jarvis_ollama_url", "jarvis_model",
-                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time", "briefing_enabled", "ha_external_url", "jarvis_provider", "anthropic_api_key", "use_anthropic_fallback", "suggestions_enabled", "suggestions_time",
+                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time", "briefing_enabled", "ha_external_url", "jarvis_provider", "anthropic_api_key", "use_anthropic_fallback", "use_anthropic_primary", "suggestions_enabled", "suggestions_time", "cloud_provider", "use_cloud_primary", "use_cloud_fallback", "openai_api_key", "google_api_key", "mistral_api_key", "groq_api_key",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             # Token nur speichern wenn nicht leer

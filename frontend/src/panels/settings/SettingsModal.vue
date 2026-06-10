@@ -265,39 +265,51 @@
           <div class="settings-card">
             <div class="card-title">
               <MdiIcon icon="mdi:cloud-outline" :size="20" color="var(--accent)" />
-              Cloud KI (Anthropic)
+              Cloud KI
             </div>
-            <p class="card-desc">Nutze Claude als Cloud-KI — direkt oder als Fallback wenn Ollama nicht erreichbar ist.</p>
+            <p class="card-desc">Nutze einen Cloud-KI-Anbieter — direkt oder als Fallback wenn Ollama nicht erreichbar ist.</p>
             <div class="field">
-              <label>Anthropic API-Key</label>
-              <div class="token-row">
-                <input v-model="form.anthropic_api_key" :type="showAnthropicKey ? 'text' : 'password'" class="input" placeholder="sk-ant-..." />
-                <button class="btn-eye" @click="showAnthropicKey = !showAnthropicKey">
-                  <MdiIcon :icon="showAnthropicKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
-                </button>
-              </div>
-              <span class="field-hint" v-if="form.anthropic_api_key_set && !form.anthropic_api_key">✓ API-Key gespeichert</span>
+              <label>Anbieter</label>
+              <select v-model="form.cloud_provider" class="input" @change="onCloudProviderChange">
+                <option value="">— Keinen Cloud-Anbieter nutzen —</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (GPT)</option>
+                <option value="google">Google (Gemini)</option>
+                <option value="mistral">Mistral</option>
+                <option value="groq">Groq</option>
+              </select>
             </div>
-            <div class="field">
-              <label>Als primäre KI nutzen</label>
-              <div class="toggle-row">
-                <label class="toggle">
-                  <input type="checkbox" v-model="form.use_anthropic_primary" @change="form.jarvis_provider = form.use_anthropic_primary ? 'anthropic' : (form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama')" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="field-hint">Anthropic statt Ollama als Standard-KI verwenden</span>
+            <template v-if="form.cloud_provider">
+              <div class="field">
+                <label>API-Key</label>
+                <div class="token-row">
+                  <input v-model="form[cloudKeyField]" :type="showCloudKey ? 'text' : 'password'" class="input" :placeholder="cloudKeyPlaceholder" />
+                  <button class="btn-eye" @click="showCloudKey = !showCloudKey">
+                    <MdiIcon :icon="showCloudKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="field">
-              <label>Als Fallback nutzen</label>
-              <div class="toggle-row">
-                <label class="toggle">
-                  <input type="checkbox" v-model="form.use_anthropic_fallback" :disabled="form.use_anthropic_primary" @change="form.jarvis_provider = form.use_anthropic_fallback ? 'ollama_with_fallback' : 'ollama'" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="field-hint">Bei Ollama-Ausfall automatisch Claude API nutzen</span>
+              <div class="field">
+                <label>Als primäre KI nutzen</label>
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" v-model="form.use_cloud_primary" @change="updateProvider" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="field-hint">Cloud-KI statt Ollama als Standard verwenden</span>
+                </div>
               </div>
-            </div>
+              <div class="field" v-if="!form.use_cloud_primary">
+                <label>Als Fallback nutzen</label>
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" v-model="form.use_cloud_fallback" @change="updateProvider" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="field-hint">Bei Ollama-Ausfall automatisch Cloud-KI nutzen</span>
+                </div>
+              </div>
+            </template>
           </div>
 
         </div>
@@ -330,6 +342,13 @@ const form = ref({
   jarvis_provider: 'ollama',
   use_anthropic_fallback: false,
   use_anthropic_primary: false,
+  cloud_provider: '',
+  use_cloud_primary: false,
+  use_cloud_fallback: false,
+  openai_api_key: '',
+  google_api_key: '',
+  mistral_api_key: '',
+  groq_api_key: '',
   anthropic_api_key: '',
   anthropic_api_key_set: false,
   show_clock: true,
@@ -361,7 +380,15 @@ const tokenError      = ref('')
 const tokenSaved      = ref(false)
 const allLabels       = ref([])
 const iconRegistered      = ref(null)
-const showAnthropicKey    = ref(false)
+const showCloudKey        = ref(false)
+const cloudKeyField = computed(() => {
+  const map = { anthropic: 'anthropic_api_key', openai: 'openai_api_key', google: 'google_api_key', mistral: 'mistral_api_key', groq: 'groq_api_key' }
+  return map[form.value.cloud_provider] || 'anthropic_api_key'
+})
+const cloudKeyPlaceholder = computed(() => {
+  const map = { anthropic: 'sk-ant-...', openai: 'sk-...', google: 'AIza...', mistral: '...', groq: 'gsk_...' }
+  return map[form.value.cloud_provider] || ''
+})
 const notifyServices  = ref([])
 
 async function loadOllamaModels() {
@@ -404,6 +431,19 @@ async function load() {
   // use_anthropic_fallback und use_anthropic_primary aus jarvis_provider ableiten
   form.value.use_anthropic_fallback = d.use_anthropic_fallback || d.jarvis_provider === 'ollama_with_fallback'
   form.value.use_anthropic_primary  = d.jarvis_provider === 'anthropic'
+  // Cloud-Provider aus jarvis_provider ableiten
+  const cloudProviders = ['anthropic', 'openai', 'google', 'mistral', 'groq']
+  const jp = d.jarvis_provider || 'ollama'
+  const baseProvider = jp.replace('_fallback', '')
+  if (cloudProviders.includes(baseProvider)) {
+    form.value.cloud_provider = baseProvider
+    form.value.use_cloud_primary = !jp.endsWith('_fallback')
+    form.value.use_cloud_fallback = jp.endsWith('_fallback')
+  } else {
+    form.value.cloud_provider = d.cloud_provider || ''
+    form.value.use_cloud_primary = !!d.use_cloud_primary
+    form.value.use_cloud_fallback = !!d.use_cloud_fallback
+  }
   iconRegistered.value = null  // Reset beim Laden
   // Modelle laden wenn Ollama URL gesetzt
   if (form.value.jarvis_ollama_url) {
@@ -436,6 +476,25 @@ async function testBriefing() {
     await fetch('api/briefing/send-now', { method: 'POST' })
   } catch(e) {}
   setTimeout(() => testingBriefing.value = false, 3000)
+}
+
+function onCloudProviderChange() {
+  form.value.use_cloud_primary = false
+  form.value.use_cloud_fallback = false
+  updateProvider()
+}
+
+function updateProvider() {
+  const p = form.value.cloud_provider
+  if (!p) {
+    form.value.jarvis_provider = 'ollama'
+  } else if (form.value.use_cloud_primary) {
+    form.value.jarvis_provider = p
+  } else if (form.value.use_cloud_fallback) {
+    form.value.jarvis_provider = p + '_fallback'
+  } else {
+    form.value.jarvis_provider = 'ollama'
+  }
 }
 
 function toggleTarget(id) {
@@ -507,6 +566,13 @@ async function save() {
         jarvis_provider:      form.value.jarvis_provider,
         anthropic_api_key:    form.value.anthropic_api_key,
         use_anthropic_fallback: !!form.value.use_anthropic_fallback,
+        cloud_provider:       form.value.cloud_provider,
+        use_cloud_primary:    !!form.value.use_cloud_primary,
+        use_cloud_fallback:   !!form.value.use_cloud_fallback,
+        openai_api_key:       form.value.openai_api_key,
+        google_api_key:       form.value.google_api_key,
+        mistral_api_key:      form.value.mistral_api_key,
+        groq_api_key:         form.value.groq_api_key,
       }),
     })
     const d = await r.json()

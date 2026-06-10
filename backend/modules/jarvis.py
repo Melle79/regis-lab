@@ -94,10 +94,12 @@ class Module(BaseModule):
             provider   = self._get_provider()
             ollama_url = self._get_ollama_url()
 
-            # Bei Anthropic-Provider: Claude-Modell verwenden
-            if provider == "anthropic":
-                if not model or not model.startswith("claude"):
-                    model = "claude-haiku-4-5-20251001"
+            # Bei Cloud-Providern: Standard-Modell setzen
+            from modules.ki_providers import PROVIDERS
+            if provider in PROVIDERS and provider not in ("ollama", "ollama_with_fallback"):
+                available_models = PROVIDERS[provider]["models"]
+                if not model or model not in available_models:
+                    model = available_models[0] if available_models else model
 
             if provider == "ollama" and not ollama_url:
                 return jsonify({"error": "Ollama URL nicht konfiguriert"}), 400
@@ -127,46 +129,64 @@ class Module(BaseModule):
             def generate():
                 full_text = ""
                 try:
-                    if provider == "anthropic":
-                        for line in self._chat_anthropic(full_messages, model):
+                    from modules.ki_providers import (
+                        chat_anthropic, chat_openai, chat_google, chat_mistral, chat_groq, PROVIDERS
+                    )
+
+                    def _stream_provider():
+                        # Provider-Basis ohne _fallback Suffix
+                        base_provider = provider.replace("_fallback", "") if provider.endswith("_fallback") else provider
+                        is_fallback = provider.endswith("_fallback")
+                        cloud_providers = ["anthropic", "openai", "google", "mistral", "groq"]
+                        key_setting = f"{base_provider}_api_key" if base_provider != "anthropic" else "anthropic_api_key"
+                        api_key = self.config._settings.get(key_setting, "")
+
+                        if base_provider in cloud_providers and api_key:
+                            if base_provider == "anthropic":
+                                yield from chat_anthropic(full_messages, model, api_key)
+                            elif base_provider == "openai":
+                                yield from chat_openai(full_messages, model, api_key)
+                            elif base_provider == "google":
+                                yield from chat_google(full_messages, model, api_key)
+                            elif base_provider == "mistral":
+                                yield from chat_mistral(full_messages, model, api_key)
+                            elif base_provider == "groq":
+                                yield from chat_groq(full_messages, model, api_key)
+                        else:
+                            # Ollama
                             try:
-                                chunk = json.loads(line).get("message", {}).get("content", "")
-                                full_text += chunk
-                            except Exception:
-                                pass
-                            yield line
-                    else:
-                        # Ollama (Standard) mit Fallback auf Anthropic
+                                r = requests.post(
+                                    f"{ollama_url}/api/chat",
+                                    json={"model": model, "messages": full_messages, "stream": True},
+                                    stream=True, timeout=120,
+                                )
+                                for line in r.iter_lines():
+                                    if line:
+                                        yield line.decode() + "\n"
+                            except Exception as ollama_err:
+                                # Fallback auf Cloud-KI
+                                if is_fallback and api_key:
+                                    self.log.warning(f"Ollama nicht erreichbar, Fallback: {ollama_err}")
+                                    if base_provider == "anthropic":
+                                        yield from chat_anthropic(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                    elif base_provider == "openai":
+                                        yield from chat_openai(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                    elif base_provider == "google":
+                                        yield from chat_google(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                    elif base_provider == "mistral":
+                                        yield from chat_mistral(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                    elif base_provider == "groq":
+                                        yield from chat_groq(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                else:
+                                    raise ollama_err
+
+                    for line in _stream_provider():
                         try:
-                            r = requests.post(
-                                f"{ollama_url}/api/chat",
-                                json={"model": model, "messages": full_messages, "stream": True},
-                                stream=True, timeout=120,
-                            )
-                            for line in r.iter_lines():
-                                if line:
-                                    decoded = line.decode()
-                                    try:
-                                        data = json.loads(decoded)
-                                        chunk = data.get("message", {}).get("content", "")
-                                        full_text += chunk
-                                    except Exception:
-                                        pass
-                                    yield decoded + "\n"
-                        except Exception as ollama_err:
-                            # Fallback auf Anthropic
-                            ant_key = self.config._settings.get("anthropic_api_key", "")
-                            if ant_key and provider == "ollama_with_fallback":
-                                self.log.warning(f"Ollama nicht erreichbar, Fallback auf Anthropic: {ollama_err}")
-                                for line in self._chat_anthropic(full_messages, "claude-haiku-4-5-20251001"):
-                                    try:
-                                        chunk = json.loads(line).get("message", {}).get("content", "")
-                                        full_text += chunk
-                                    except Exception:
-                                        pass
-                                    yield line
-                            else:
-                                raise ollama_err
+                            chunk = json.loads(line).get("message", {}).get("content", "")
+                            full_text += chunk
+                        except Exception:
+                            pass
+                        yield line
                 except Exception as e:
                     yield json.dumps({"error": str(e)}) + "\n"
                     return
@@ -219,41 +239,41 @@ class Module(BaseModule):
 
         # ── Modelle ─────────────────────────────────────────────────
 
+        @self.app.route("/api/jarvis/providers")
+        def get_providers():
+            """Alle verfügbaren Provider und ihre Modelle zurückgeben."""
+            from modules.ki_providers import PROVIDERS
+            result = {}
+            for pid, pinfo in PROVIDERS.items():
+                key_setting = f"{pid}_api_key" if pid != "anthropic" else "anthropic_api_key"
+                has_key = bool(self.config._settings.get(key_setting, ""))
+                result[pid] = {
+                    "name": pinfo["name"],
+                    "models": pinfo["models"],
+                    "key_required": pinfo["key_required"],
+                    "configured": not pinfo["key_required"] or has_key,
+                }
+            return jsonify(result)
+
         @self.app.route("/api/jarvis/models")
         def get_models():
+            from modules.ki_providers import PROVIDERS
             provider = self._get_provider()
-            # Anthropic: feste Modell-Liste
-            if provider == "anthropic":
-                return jsonify({"models": [
-                    "claude-haiku-4-5-20251001",
-                    "claude-sonnet-4-6",
-                ], "provider": "anthropic"})
+            # Cloud-Provider: feste Modell-Liste
+            if provider in PROVIDERS and provider != "ollama" and not provider.startswith("ollama"):
+                models = PROVIDERS[provider]["models"]
+                return jsonify({"models": models, "provider": provider})
             # Ollama
             ollama_url = self._get_ollama_url()
             if not ollama_url:
-                # Fallback: Anthropic-Modelle anbieten wenn Key vorhanden
-                if self.config._settings.get("anthropic_api_key"):
-                    return jsonify({"models": [
-                        "claude-haiku-4-5-20251001",
-                        "claude-sonnet-4-6",
-                    ], "provider": "anthropic"})
                 return jsonify({"error": "Kein KI-Provider konfiguriert"}), 400
             try:
                 r = requests.get(f"{ollama_url}/api/tags", timeout=5)
                 if r.status_code == 200:
                     models = [m["name"] for m in r.json().get("models", [])]
-                    # Bei ollama_with_fallback auch Anthropic-Modelle anbieten
-                    if provider == "ollama_with_fallback" and self.config._settings.get("anthropic_api_key"):
-                        models += ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
                     return jsonify({"models": models, "provider": "ollama"})
                 return jsonify({"error": f"Ollama Fehler: {r.status_code}"}), 500
             except Exception as e:
-                # Fallback auf Anthropic
-                if self.config._settings.get("anthropic_api_key"):
-                    return jsonify({"models": [
-                        "claude-haiku-4-5-20251001",
-                        "claude-sonnet-4-6",
-                    ], "provider": "anthropic"})
                 return jsonify({"error": f"Ollama nicht erreichbar: {e}"}), 503
 
         @self.app.route("/api/jarvis/chats/<chat_id>/system-message", methods=["POST"])
@@ -303,44 +323,29 @@ class Module(BaseModule):
 
     def call_ki(self, prompt: str, system: str = "", max_tokens: int = 1024) -> str:
         """Zentrale Methode für einfache KI-Completions — nutzt konfigurierten Provider."""
+        from modules.ki_providers import generate_text, PROVIDERS
         provider   = self._get_provider()
         ollama_url = self._get_ollama_url()
-        ant_key    = self.config._settings.get("anthropic_api_key", "")
         model      = self.config._settings.get("jarvis_model", "")
 
-        # Anthropic
-        if provider == "anthropic" and ant_key:
-            try:
-                return self._generate_anthropic(prompt if not system else f"{system}\n\n{prompt}", model)
-            except Exception as e:
-                self.log.error(f"Anthropic-Fehler: {e}")
-                return ""
+        # Modell für Cloud-Provider anpassen
+        if provider in PROVIDERS and provider not in ("ollama", "ollama_with_fallback"):
+            available = PROVIDERS[provider]["models"]
+            if not model or model not in available:
+                model = available[0] if available else model
 
-        # Ollama mit Fallback
-        if ollama_url and model:
-            try:
-                import requests
-                full_prompt = f"{system}\n\n{prompt}" if system else prompt
-                r = requests.post(
-                    ollama_url + "/api/generate",
-                    json={"model": model, "prompt": full_prompt, "stream": False},
-                    timeout=60,
-                )
-                result = r.json().get("response", "").strip() if r.status_code == 200 else ""
-                if result:
-                    return result
-            except Exception as e:
-                self.log.warning(f"Ollama-Fehler: {e}")
-                if provider != "ollama_with_fallback" or not ant_key:
-                    return ""
+        key_setting = f"{provider}_api_key" if provider != "anthropic" else "anthropic_api_key"
+        api_key = self.config._settings.get(key_setting, "")
 
-        # Fallback auf Anthropic
-        if ant_key:
-            try:
-                return self._generate_anthropic(prompt if not system else f"{system}\n\n{prompt}", model)
-            except Exception as e:
-                self.log.error(f"Anthropic-Fallback-Fehler: {e}")
-        return ""
+        result = generate_text(prompt, provider, model, api_key, ollama_url, system)
+
+        # Fallback auf Anthropic bei ollama_with_fallback
+        if not result and provider == "ollama_with_fallback":
+            ant_key = self.config._settings.get("anthropic_api_key", "")
+            if ant_key:
+                result = generate_text(prompt, "anthropic", "claude-haiku-4-5-20251001", ant_key, "", system)
+
+        return result
 
     def _get_provider(self) -> str:
         """Aktuell konfigurierten KI-Anbieter zurückgeben."""
