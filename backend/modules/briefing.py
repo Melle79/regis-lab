@@ -147,7 +147,6 @@ class Module(BaseModule):
                     "sound": "default",
                     "interruption-level": "active",
                 },
-                "url": "homeassistant://navigate/config/notification",
             },
         }
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
