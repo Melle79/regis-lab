@@ -140,7 +140,7 @@ class Module(BaseModule):
         ingress_uri = "homeassistant://navigate/hassio/ingress/a291494a_regis_lab"
         payload = {
             "message": data["summary"],
-            "title":   "☀️ Guten Morgen, Sven!",
+            "title":   f"☀️ Guten Morgen{', ' + data['persons_home'][0].split()[0] if data.get('persons_home') else ''}!",
             "data": {
                 "subtitle": subtitle,
                 "push": {
