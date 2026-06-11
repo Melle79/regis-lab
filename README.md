@@ -2,6 +2,8 @@
 
 **Dein Smart Home Kommandozentrum** — ein modulares Home Assistant Dashboard-Addon.
 
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/melle79)
+
 > ⚠️ **Nutzung auf eigene Gefahr**  
 > Dieses Addon befindet sich in aktiver Entwicklung und wird ohne Gewährleistung bereitgestellt.  
 > Wenn der KI-Assistent Zugriff auf Home Assistant erhält, können unbeabsichtigte Aktionen ausgeführt werden. Aktiviere die HA-Steuerung nur, wenn du dir der damit verbundenen Risiken bewusst bist.
