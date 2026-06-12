@@ -10,7 +10,7 @@ log = logging.getLogger("ha_dashboard.ki_providers")
 
 PROVIDERS = {
     "ollama":    {"name": "Ollama (lokal)",    "models": [], "key_required": False},
-    "anthropic": {"name": "Anthropic (Claude)", "models": ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"], "key_required": True},
+    "anthropic": {"name": "Anthropic (Claude)", "models": ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"], "key_required": True},
     "openai":    {"name": "OpenAI (GPT)",       "models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"], "key_required": True},
     "google":    {"name": "Google (Gemini)",    "models": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"], "key_required": True},
     "mistral":   {"name": "Mistral",            "models": ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest"], "key_required": True},

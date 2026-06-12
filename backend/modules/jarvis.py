@@ -343,7 +343,7 @@ class Module(BaseModule):
         if not result and provider == "ollama_with_fallback":
             ant_key = self.config._settings.get("anthropic_api_key", "")
             if ant_key:
-                result = generate_text(prompt, "anthropic", "claude-haiku-4-5-20251001", ant_key, "", system)
+                result = generate_text(prompt, "anthropic", "claude-haiku-4-5", ant_key, "", system)
 
         return result
 
@@ -384,7 +384,7 @@ class Module(BaseModule):
         if not api_key:
             return ""
         client = anthropic.Anthropic(api_key=api_key)
-        ant_model = model or "claude-haiku-4-5-20251001"
+        ant_model = model or "claude-haiku-4-5"
         msg = client.messages.create(
             model=ant_model,
             max_tokens=1024,
