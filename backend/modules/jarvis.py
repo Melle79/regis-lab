@@ -241,16 +241,23 @@ class Module(BaseModule):
 
         @self.app.route("/api/jarvis/ha-log")
         def get_ha_log():
-            """HA Error-Log abrufen."""
-            ha   = "http://homeassistant.local.hass.io:8123"
-            hdrs = {"Authorization": "Bearer " + self.config.ha_long_token}
+            """HA Logs abrufen über Supervisor."""
             try:
-                r = requests.get(ha + "/api/error_log", headers=hdrs, timeout=10)
+                import os
+                supervisor_token = os.environ.get("SUPERVISOR_TOKEN", "")
+                hdrs = {"Authorization": "Bearer " + supervisor_token}
+                r = requests.get("http://supervisor/core/logs", headers=hdrs, timeout=10)
                 if r.status_code == 200:
-                    # Letzte 100 Zeilen
                     lines = r.text.strip().split("\n")[-100:]
                     return jsonify({"log": "\n".join(lines), "lines": len(lines)})
-                return jsonify({"error": f"HA Fehler: {r.status_code}"}), 500
+                # Fallback: HA REST API
+                ha    = "http://homeassistant.local.hass.io:8123"
+                hdrs2 = {"Authorization": "Bearer " + self.config.ha_long_token}
+                r2 = requests.get(ha + "/api/error_log", headers=hdrs2, timeout=10)
+                if r2.status_code == 200:
+                    lines = r2.text.strip().split("\n")[-100:]
+                    return jsonify({"log": "\n".join(lines), "lines": len(lines)})
+                return jsonify({"error": f"Logs nicht verfügbar ({r.status_code})"}), 404
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
