@@ -18,6 +18,7 @@
       <PersonenPanel  v-else-if="activeTab === 'personen'" />
       <ZonenPanel     v-else-if="activeTab === 'zonen'" />
       <JarvisPanel    v-else-if="activeTab === 'jarvis'" />
+      <!-- jarvis-v3 -->
       <AnalysePanel   v-else-if="activeTab === 'analyse'" />
     </main>
 
