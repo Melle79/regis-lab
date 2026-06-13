@@ -239,6 +239,21 @@ class Module(BaseModule):
 
         # ── Modelle ─────────────────────────────────────────────────
 
+        @self.app.route("/api/jarvis/ha-log")
+        def get_ha_log():
+            """HA Error-Log abrufen."""
+            ha   = "http://homeassistant.local.hass.io:8123"
+            hdrs = {"Authorization": "Bearer " + self.config.ha_long_token}
+            try:
+                r = requests.get(ha + "/api/error_log", headers=hdrs, timeout=10)
+                if r.status_code == 200:
+                    # Letzte 100 Zeilen
+                    lines = r.text.strip().split("\n")[-100:]
+                    return jsonify({"log": "\n".join(lines), "lines": len(lines)})
+                return jsonify({"error": f"HA Fehler: {r.status_code}"}), 500
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
         @self.app.route("/api/jarvis/providers")
         def get_providers():
             """Alle verfügbaren Provider und ihre Modelle zurückgeben."""

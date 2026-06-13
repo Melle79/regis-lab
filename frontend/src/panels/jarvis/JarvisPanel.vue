@@ -324,6 +324,17 @@ async function sendMessage() {
   let text = inputText.value.trim()
   inputText.value = ''
 
+  // HA-Log automatisch laden wenn danach gefragt wird
+  let haLogContext = ''
+  const logKeywords = ['log', 'fehler', 'error', 'protokoll', 'warning', 'warnung', 'problem', 'absturz', 'crash']
+  if (logKeywords.some(k => text.toLowerCase().includes(k))) {
+    try {
+      const lr = await fetch('api/jarvis/ha-log')
+      const ld = await lr.json()
+      if (ld.log) haLogContext = '\n\n[HA-Systemlog - letzte Einträge]:\n' + ld.log
+    } catch(e) {}
+  }
+
   // Datei-Inhalt für KI vorbereiten (aber im Chat nur Dateiname anzeigen)
   let fileAttachment = null
   if (uploadedFile.value?.content) {
@@ -357,14 +368,14 @@ async function sendMessage() {
   }
 
   // An KI schicken: Text + Dateiinhalt
-  const sendText = fileAttachment
+  const sendText = (fileAttachment
     ? `${text}
 
 \`\`\`${fileAttachment.ext}
 // Datei: ${fileAttachment.name}
 ${fileAttachment.content}
 \`\`\``
-    : text
+    : text) + haLogContext
   await scrollToBottom()
 
   try {
