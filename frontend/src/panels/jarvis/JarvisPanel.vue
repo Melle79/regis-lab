@@ -331,7 +331,11 @@ async function sendMessage() {
     try {
       const lr = await fetch('api/jarvis/ha-log')
       const ld = await lr.json()
-      if (ld.log) haLogContext = '\n\n[HA-Systemlog - letzte Einträge]:\n' + ld.log
+      if (ld.log) {
+        haLogContext = '\n\n[HA-Systemlog - letzte Einträge]:\n' + ld.log
+      } else if (ld.hint) {
+        haLogContext = '\n\n[Info: ' + ld.error + ' ' + ld.hint + ']'
+      }
     } catch(e) {}
   }
 
