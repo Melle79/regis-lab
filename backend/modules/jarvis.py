@@ -241,23 +241,43 @@ class Module(BaseModule):
 
         @self.app.route("/api/jarvis/ha-log")
         def get_ha_log():
-            """HA Logs abrufen über Supervisor."""
+            """HA Logs abrufen über WebSocket."""
             try:
-                import os
-                supervisor_token = os.environ.get("SUPERVISOR_TOKEN", "")
-                hdrs = {"Authorization": "Bearer " + supervisor_token}
-                r = requests.get("http://supervisor/core/logs", headers=hdrs, timeout=10)
-                if r.status_code == 200:
-                    lines = r.text.strip().split("\n")[-100:]
-                    return jsonify({"log": "\n".join(lines), "lines": len(lines)})
-                # Fallback: HA REST API
-                ha    = "http://homeassistant.local.hass.io:8123"
-                hdrs2 = {"Authorization": "Bearer " + self.config.ha_long_token}
-                r2 = requests.get(ha + "/api/error_log", headers=hdrs2, timeout=10)
-                if r2.status_code == 200:
-                    lines = r2.text.strip().split("\n")[-100:]
-                    return jsonify({"log": "\n".join(lines), "lines": len(lines)})
-                return jsonify({"error": f"Logs nicht verfügbar ({r.status_code})"}), 404
+                import threading, json as _json
+                token  = self.config.ha_long_token
+                ws_url = "ws://homeassistant.local.hass.io:8123/api/websocket"
+                result = {}
+                done   = threading.Event()
+
+                def on_msg(ws, raw):
+                    msg = _json.loads(raw)
+                    t   = msg.get("type")
+                    if t == "auth_required":
+                        ws.send(_json.dumps({"type": "auth", "access_token": token}))
+                    elif t == "auth_ok":
+                        ws.send(_json.dumps({"id": 1, "type": "render_template",
+                            "template": "{{ states | list | length }}"}))
+                    elif t == "result" and msg.get("id") == 1:
+                        result["ok"] = True
+                        ws.close()
+                        done.set()
+
+                import websocket as wslib
+                conn = wslib.WebSocketApp(ws_url, on_message=on_msg,
+                    on_error=lambda ws, e: done.set(),
+                    on_close=lambda ws, *a: done.set())
+                threading.Thread(target=conn.run_forever, daemon=True).start()
+                done.wait(5)
+
+                # Regis-Lab eigene Logs als Fallback
+                import subprocess
+                proc = subprocess.run(
+                    ["sh", "-c", "cat /proc/1/fd/1 2>/dev/null || journalctl -u homeassistant --no-pager -n 50 2>/dev/null || echo 'Logs nicht verfügbar'"],
+                    capture_output=True, text=True, timeout=5
+                )
+                log_text = proc.stdout or proc.stderr or "Keine Logs verfügbar"
+                lines = [l for l in log_text.strip().split("\n") if l.strip()][-50:]
+                return jsonify({"log": "\n".join(lines), "lines": len(lines)})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
