@@ -326,7 +326,7 @@ async function sendMessage() {
 
   // HA-Log automatisch laden wenn danach gefragt wird
   let haLogContext = ''
-  const logKeywords = ['log', 'fehler', 'error', 'protokoll', 'warning', 'warnung', 'problem', 'absturz', 'crash']
+  const logKeywords = ['log', 'fehler', 'error', 'protokoll', 'protokolle', 'warning', 'warnung', 'problem', 'absturz', 'crash', 'zugriff auf', 'systemlog', 'ha log']
   if (logKeywords.some(k => text.toLowerCase().includes(k))) {
     try {
       const lr = await fetch('api/jarvis/ha-log')
