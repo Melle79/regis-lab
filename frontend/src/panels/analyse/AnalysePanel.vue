@@ -432,6 +432,14 @@
       </div>
     </Teleport>
 
+    <!-- Fehler-Toast -->
+    <Teleport to="body">
+      <div v-if="errorToast" class="error-toast" @click="errorToast = ''">
+        <MdiIcon icon="mdi:alert-circle" :size="16" />
+        <span>{{ errorToast }}</span>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -448,6 +456,8 @@ const editingSuggestion  = ref(null)
 const autoPreview        = ref(null)
 const showYaml           = ref(false)
 const createdAutoId      = ref(null)
+const errorToast         = ref('')
+let   errorToastTimer    = null
 const haBaseUrl          = computed(() => window.location.origin.replace(/:\d+$/, ':8123'))
 const editTitle          = ref('')
 const editDesc           = ref('')
@@ -582,9 +592,9 @@ async function previewAutomation(s) {
     if (d.ok) {
       autoPreview.value = { suggestion: s, automation: d.automation, creating: false }
     } else {
-      alert('Fehler: ' + (d.error || 'Unbekannt'))
+      showError('Fehler: ' + (d.error || 'Unbekannt'))
     }
-  } catch(e) { alert('Fehler: ' + e.message) }
+  } catch(e) { showError('Fehler: ' + e.message) }
   s.previewing = false
 }
 
@@ -598,11 +608,11 @@ async function confirmCreate(s) {
       autoPreview.value = null
       await loadSuggestions()
     } else {
-      alert('Fehler: ' + (d.error || 'Unbekannt'))
+      showError('Fehler: ' + (d.error || 'Unbekannt'))
       autoPreview.value.creating = false
     }
   } catch(e) {
-    alert('Fehler: ' + e.message)
+    showError('Fehler: ' + e.message)
     autoPreview.value.creating = false
   }
 }
@@ -616,11 +626,11 @@ async function acceptAndCreate(s) {
       s.status = 'accepted'
       s.ha_automation_id = d.automation_id
     } else {
-      alert('Fehler: ' + (d.error || 'Unbekannt'))
+      showError('Fehler: ' + (d.error || 'Unbekannt'))
       s.creating = false
     }
   } catch(e) {
-    alert('Fehler: ' + e.message)
+    showError('Fehler: ' + e.message)
     s.creating = false
   }
   await loadSuggestions()
@@ -635,7 +645,14 @@ async function updateSuggestion(id, status) {
   await loadSuggestions()
 }
 
+function showError(msg) {
+  errorToast.value = msg
+  clearTimeout(errorToastTimer)
+  errorToastTimer = setTimeout(() => { errorToast.value = '' }, 5000)
+}
+
 async function deleteSuggestion(id) {
+  if (!confirm('Diesen Vorschlag wirklich löschen?')) return
   await fetch(`api/suggestions/${id}`, { method: 'DELETE' })
   await loadSuggestions()
 }
@@ -1190,5 +1207,18 @@ function formatSummary(text) {
 .popup-item-state { font-size: 11px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); white-space: nowrap; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Fehler-Toast */
+.error-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; z-index: 2000;
+  max-width: min(90vw, 460px); padding: 10px 16px; border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 15%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--red) 45%, var(--border));
+  color: var(--red); font-size: 13px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  animation: toast-in .2s ease;
+}
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 /* v2-suggestions-tab */
 </style>

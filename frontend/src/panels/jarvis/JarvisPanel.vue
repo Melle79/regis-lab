@@ -96,7 +96,7 @@
       </div>
 
       <!-- Nachrichten -->
-      <div class="messages-area" ref="messagesEl" :data-chatid="activeChatId">
+      <div class="messages-area" ref="messagesEl" :data-chatid="activeChatId" @scroll="onMessagesScroll">
         <div v-if="!activeChat" class="empty-state">
           <MdiIcon icon="mdi:robot-outline" :size="52" color="var(--muted)" />
           <p>Wähle einen Chat oder erstelle einen neuen.</p>
@@ -154,11 +154,26 @@
               <MdiIcon icon="mdi:robot" :size="15" :color="haControl ? 'var(--accent)' : 'var(--muted)'" />
             </div>
             <div class="msg-content">
-              <div class="msg-text" v-html="formatMessage(streamText)" />
-              <span class="cursor">▋</span>
+              <div v-if="!streamText" class="msg-text typing">
+                <span class="typing-dot" /><span class="typing-dot" /><span class="typing-dot" />
+              </div>
+              <template v-else>
+                <div class="msg-text" v-html="formatMessage(streamText)" />
+                <span class="cursor">▋</span>
+              </template>
             </div>
           </div>
         </template>
+
+        <!-- Nach-unten-Springen wenn hochgescrollt -->
+        <button
+          v-if="showScrollBtn"
+          class="scroll-bottom-btn"
+          @click="scrollToBottom(true)"
+          title="Nach unten"
+        >
+          <MdiIcon icon="mdi:chevron-down" :size="20" />
+        </button>
       </div>
 
       <!-- Upload-Vorschau -->
@@ -191,8 +206,14 @@
           ref="inputEl"
           :disabled="streaming || !activeChat"
         />
-        <button class="send-btn" @click="sendMessage" :disabled="!canSend">
-          <MdiIcon :icon="streaming ? 'mdi:stop-circle' : 'mdi:send'" :size="18" />
+        <button
+          class="send-btn"
+          :class="{ stop: streaming }"
+          @click="streaming ? stopStreaming() : sendMessage()"
+          :disabled="!streaming && !canSend"
+          :title="streaming ? 'Antwort stoppen' : 'Senden'"
+        >
+          <MdiIcon :icon="streaming ? 'mdi:stop' : 'mdi:send'" :size="18" />
         </button>
       </div>
 
@@ -225,6 +246,9 @@ const editTitle      = ref('')
 const messagesEl     = ref(null)
 const inputEl        = ref(null)
 const titleInput     = ref(null)
+const abortController = ref(null)
+const autoScroll     = ref(true)
+const showScrollBtn  = ref(false)
 
 const canSend = computed(() =>
   inputText.value.trim() && !streaming.value && activeChatId.value && currentModel.value
@@ -268,12 +292,13 @@ async function loadChat(id) {
   activeChatId.value = id
   const r = await fetch(`api/jarvis/chats/${id}`)
   activeChat.value = await r.json()
-  await scrollToBottom()
+  await scrollToBottom(true)
   await nextTick()
   bindAttachmentHandlers()
 }
 
 async function deleteChat(id) {
+  if (!confirm('Diesen Chat wirklich löschen?')) return
   await fetch(`api/jarvis/chats/${id}`, { method: 'DELETE' })
   if (activeChatId.value === id) {
     activeChatId.value = null
@@ -353,12 +378,15 @@ async function sendMessage() {
 
   streaming.value = true
   streamText.value = ''
+  abortController.value = new AbortController()
 
   // Im Chat nur Text + Dateiname anzeigen
   const displayText = text + (fileAttachment ? `
 
 📎 ${fileAttachment.name}` : '')
   activeChat.value.messages.push({ role: 'user', content: displayText })
+  // Bei eigener Nachricht immer ans Ende springen
+  autoScroll.value = true
 
   // Datei im Backend speichern
   if (fileAttachment) {
@@ -387,6 +415,7 @@ ${fileAttachment.content}
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value }),
+      signal:  abortController.value.signal,
     })
 
     const reader  = r.body.getReader()
@@ -414,12 +443,24 @@ ${fileAttachment.content}
     await loadChatList()
 
   } catch(e) {
-    activeChat.value.messages.push({ role: 'assistant', content: `Fehler: ${e.message}` })
+    if (e.name === 'AbortError') {
+      // Benutzer hat die Antwort gestoppt – Teilantwort sichern
+      if (streamText.value) {
+        activeChat.value.messages.push({ role: 'assistant', content: streamText.value })
+      }
+    } else {
+      activeChat.value.messages.push({ role: 'assistant', content: `Fehler: ${e.message}` })
+    }
   } finally {
     streaming.value  = false
     streamText.value = ''
+    abortController.value = null
     await scrollToBottom()
   }
+}
+
+function stopStreaming() {
+  abortController.value?.abort()
 }
 
 // ── Hilfsfunktionen ─────────────────────────────────────────────
@@ -542,12 +583,25 @@ function bindAttachmentHandlers() {
   })
 }
 
-async function scrollToBottom() {
+async function scrollToBottom(force = false) {
   await nextTick()
   if (messagesEl.value) {
-    messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+    if (force || autoScroll.value) {
+      messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+      autoScroll.value = true
+      showScrollBtn.value = false
+    }
     bindAttachmentHandlers()
   }
+}
+
+function onMessagesScroll() {
+  const el = messagesEl.value
+  if (!el) return
+  const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+  // Nahe genug am Ende → weiterhin automatisch mitscrollen
+  autoScroll.value = distance < 80
+  showScrollBtn.value = distance > 160
 }
 
 async function loadModels() {
@@ -664,7 +718,7 @@ onMounted(async () => {
 .no-chats { font-size: 12px; color: var(--muted); text-align: center; padding: 20px; }
 
 /* Main */
-.chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -757,6 +811,30 @@ onMounted(async () => {
 }
 .send-btn:disabled { opacity: .4; cursor: default; }
 .send-btn:hover:not(:disabled) { opacity: .85; }
+.send-btn.stop { background: var(--red); }
+
+/* Tipp-Indikator während die KI antwortet */
+.msg-text.typing { display: inline-flex; align-items: center; gap: 4px; padding: 12px 14px; }
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: .18s; }
+.typing-dot:nth-child(3) { animation-delay: .36s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Nach-unten-Springen */
+.scroll-bottom-btn {
+  position: absolute; bottom: 78px; right: 22px;
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: border-color .15s, color .15s;
+}
+.scroll-bottom-btn:hover { border-color: var(--accent); color: var(--accent); }
 .ha-changed-banner {
   display: flex; align-items: center; gap: 8px; padding: 8px 16px;
   background: color-mix(in srgb, var(--amber) 12%, var(--surface));

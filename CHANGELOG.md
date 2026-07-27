@@ -4,6 +4,23 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.2.1] - 2026-07-27
+
+### Behoben
+- **Rollos schaltbar** — Geräte-Kacheln nutzen jetzt den `<domain>.toggle`-Service statt des für `cover` nicht existierenden `turn_on`; offene Rollos werden korrekt als „an" dargestellt
+- **Schnellchat auf der Übersicht** — Antworten blieben leer, weil ein falsches Streaming-Format geparst wurde; jetzt identisch zum Jarvis-Panel
+- **Diagnose** — blockierende Browser-Alerts durch einen dezenten Inline-Fehler-Toast ersetzt; Rückfrage vor dem Löschen von KI-Vorschlägen
+- **Jarvis** — Stop-Button bricht laufende Antworten jetzt wirklich ab (AbortController); Rückfrage vor dem Löschen von Chats
+- Zonen-Pluralisierung („1 Person" statt „1 Personen")
+
+### Geändert
+- Jarvis-Chat: intelligentes Auto-Scrollen (springt nur ans Ende, wenn man unten ist) mit „Nach-unten"-Button; Tipp-Indikator während die KI antwortet
+
+### Entfernt
+- Ungenutzte Legacy-Panels (`AutomationsPanel`, `EntitiesPanel`, `AreasPanel`, `SettingsPanel`, altes `JarvisPanel`)
+
+---
+
 ## [1.2.0] - 2026-06-10
 
 ### Neu

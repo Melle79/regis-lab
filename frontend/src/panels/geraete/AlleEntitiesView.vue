@@ -61,8 +61,8 @@ function onToggle(entity) {
   const domain = entity.entity_id.split('.')[0]
   const toggleable = ['light', 'switch', 'input_boolean', 'fan', 'cover']
   if (!toggleable.includes(domain)) return
-  const svc = entity.state === 'on' ? 'turn_off' : 'turn_on'
-  callService(domain, svc, { entity_id: entity.entity_id })
+  // domain-eigener toggle-Service: funktioniert auch für cover (open/close)
+  callService(domain, 'toggle', { entity_id: entity.entity_id })
 }
 </script>
 

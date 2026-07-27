@@ -12,7 +12,7 @@
           <div class="zone-name">{{ zone.attributes?.friendly_name || zone.entity_id.split('.')[1] }}</div>
           <div class="zone-details">
             <span v-if="zone.attributes?.radius">Radius: {{ zone.attributes.radius }}m</span>
-            <span>{{ zone.state }} Personen</span>
+            <span>{{ zone.state }} {{ parseInt(zone.state) === 1 ? 'Person' : 'Personen' }}</span>
           </div>
         </div>
         <div class="zone-state" :class="parseInt(zone.state) > 0 ? 'occupied' : 'empty'">

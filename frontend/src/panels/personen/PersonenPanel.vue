@@ -74,7 +74,7 @@ async function load() {
 function liveEntity(e) { return state.entities[e.entity_id] || e }
 function onToggle(entity) {
   const domain = entity.entity_id.split('.')[0]
-  callService(domain, entity.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: entity.entity_id })
+  callService(domain, 'toggle', { entity_id: entity.entity_id })
 }
 function showMoreInfo(entityId) {
   try {

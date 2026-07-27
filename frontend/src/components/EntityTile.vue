@@ -37,7 +37,7 @@ const liveEntity = computed(() => state.entities[props.entity.entity_id] || prop
 
 const TOGGLEABLE   = ['light','switch','input_boolean','fan','cover']
 const domain       = computed(() => liveEntity.value.entity_id.split('.')[0])
-const isOn         = computed(() => liveEntity.value.state === 'on')
+const isOn         = computed(() => ['on', 'open'].includes(liveEntity.value.state))
 const isToggleable = computed(() => TOGGLEABLE.includes(domain.value))
 const friendlyName = computed(() =>
   liveEntity.value.attributes?.friendly_name || liveEntity.value.entity_id.split('.')[1]

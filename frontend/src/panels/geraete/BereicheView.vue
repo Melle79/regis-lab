@@ -305,7 +305,8 @@ const TOGGLEABLE = ['light','switch','input_boolean','fan','cover']
 function onToggle(entity) {
   const domain = entity.entity_id.split('.')[0]
   if (!TOGGLEABLE.includes(domain)) return
-  callService(domain, entity.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: entity.entity_id })
+  // domain-eigener toggle-Service: funktioniert auch für cover (open/close)
+  callService(domain, 'toggle', { entity_id: entity.entity_id })
 }
 
 function getDeviceIcon(device) {

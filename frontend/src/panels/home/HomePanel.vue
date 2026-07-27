@@ -329,11 +329,14 @@ async function sendQuick() {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      const chunk = decoder.decode(value)
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('data: ')) {
-          try { answer += JSON.parse(line.slice(6)).token || '' } catch(e) {}
-        }
+      // Backend streamt newline-getrenntes JSON: {"message":{"content":"…"}}
+      const lines = decoder.decode(value).split('\n').filter(Boolean)
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line)
+          if (data.error) { answer = 'Fehler: ' + data.error; break }
+          answer += data.message?.content || ''
+        } catch(e) {}
       }
     }
     quickMessages.value.push({ role: 'assistant', text: answer.slice(0, 400) + (answer.length > 400 ? '…' : '') })
