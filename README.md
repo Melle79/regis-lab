@@ -136,7 +136,7 @@
 
 ## Bekannte Einschränkungen
 
-- InfluxDB-Integration derzeit nicht unterstützt (HA 2026.6 Bug)
+- InfluxDB: Anbindung als Verlaufs-Kontext für den KI-Assistenten (InfluxDB 1.x, direkte Verbindung) — die native HA-InfluxDB-Integration wird nicht genutzt
 - Supervisor-Auto-Update nicht verfügbar (manueller Image-Build nötig)
 - Sehr große HA-Instanzen (>5000 Entitäten) können die Performance beeinflussen
 

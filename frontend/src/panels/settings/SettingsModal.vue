@@ -312,6 +312,83 @@
             </template>
           </div>
 
+          <!-- InfluxDB (Verlaufsdaten für Jarvis) -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:database-clock" :size="20" color="var(--accent)" />
+              InfluxDB — Verlaufsdaten
+            </div>
+            <p class="card-desc">
+              Verbindet {{ form.ki_name || 'Jarvis' }} mit einer <strong>InfluxDB 1.x</strong>.
+              Bei Fragen nach Verläufen (z.B. „Wie war der Temperaturverlauf gestern?") zieht die KI
+              echte Zeitreihen aus der Datenbank als Kontext heran.
+            </p>
+
+            <div class="field">
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="form.influxdb_enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="field-hint">InfluxDB-Kontext für {{ form.ki_name || 'Jarvis' }} aktivieren</span>
+              </div>
+            </div>
+
+            <template v-if="form.influxdb_enabled">
+              <div class="field">
+                <label>Host / IP</label>
+                <input v-model="form.influxdb_host" class="input" placeholder="192.168.0.220 oder a0d7b954-influxdb" />
+              </div>
+              <div class="field-row">
+                <div class="field" style="flex:1">
+                  <label>Port</label>
+                  <input v-model.number="form.influxdb_port" class="input" type="number" placeholder="8086" />
+                </div>
+                <div class="field" style="flex:2">
+                  <label>Datenbank</label>
+                  <input v-model="form.influxdb_database" class="input" placeholder="homeassistant" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Benutzer (optional)</label>
+                <input v-model="form.influxdb_user" class="input" placeholder="Leer lassen, wenn ohne Auth" />
+              </div>
+              <div class="field">
+                <label>Passwort {{ form.influxdb_password_set ? '(gesetzt ✓)' : '' }}</label>
+                <div class="token-row">
+                  <input
+                    v-model="form.influxdb_password"
+                    :type="showInfluxPw ? 'text' : 'password'"
+                    class="input"
+                    :placeholder="form.influxdb_password_set ? '********************' : 'Passwort'"
+                  />
+                  <button class="icon-btn" @click="showInfluxPw = !showInfluxPw">
+                    <MdiIcon :icon="showInfluxPw ? 'mdi:eye-off' : 'mdi:eye'" :size="18" />
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" v-model="form.influxdb_ssl" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="field-hint">HTTPS/SSL verwenden</span>
+                </div>
+              </div>
+              <div class="field">
+                <button class="btn-secondary" :disabled="testingInflux || !form.influxdb_host" @click="testInflux">
+                  <MdiIcon icon="mdi:lan-connect" :size="16" />
+                  {{ testingInflux ? 'Teste…' : 'Verbindung testen' }}
+                </button>
+                <div v-if="influxResult" class="token-status" :class="influxResult.ok ? 'ok' : 'err'">
+                  <MdiIcon :icon="influxResult.ok ? 'mdi:check-circle' : 'mdi:alert-circle'" :size="14" />
+                  {{ influxResult.msg }}
+                </div>
+              </div>
+            </template>
+          </div>
+
         </div>
 
         <div class="modal-footer">
@@ -368,6 +445,14 @@ const form = ref({
   ha_external_url: '',
   briefing_targets: [],
   briefing_time: '07:00',
+  influxdb_enabled: false,
+  influxdb_host: '',
+  influxdb_port: 8086,
+  influxdb_database: 'homeassistant',
+  influxdb_user: '',
+  influxdb_password: '',
+  influxdb_password_set: false,
+  influxdb_ssl: false,
 })
 
 const showToken       = ref(false)
@@ -465,6 +550,47 @@ async function load() {
   // briefing_targets explizit als neues Array setzen (Vue-Reaktivität)
   if (Array.isArray(form.value.briefing_targets)) {
     form.value.briefing_targets = [...form.value.briefing_targets]
+  }
+}
+
+const testingInflux = ref(false)
+const influxResult  = ref(null)   // { ok: bool, msg: string }
+const showInfluxPw  = ref(false)
+
+function influxPayload() {
+  return {
+    influxdb_enabled:  !!form.value.influxdb_enabled,
+    influxdb_host:     form.value.influxdb_host,
+    influxdb_port:     Number(form.value.influxdb_port) || 8086,
+    influxdb_database: form.value.influxdb_database,
+    influxdb_user:     form.value.influxdb_user,
+    ...(form.value.influxdb_password ? { influxdb_password: form.value.influxdb_password } : {}),
+    influxdb_ssl:      !!form.value.influxdb_ssl,
+  }
+}
+
+async function testInflux() {
+  testingInflux.value = true
+  influxResult.value  = null
+  try {
+    // Erst speichern, damit das Backend die aktuellen Werte kennt
+    await fetch('api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(influxPayload()),
+    })
+    const r = await fetch('api/jarvis/influx/test', { method: 'POST' })
+    const d = await r.json()
+    if (d.ok) {
+      influxResult.value = { ok: true, msg: `Verbunden ✓ — ${d.measurements?.length || 0} Measurements in „${d.database}"` }
+      if (form.value.influxdb_password) form.value.influxdb_password_set = true
+    } else {
+      influxResult.value = { ok: false, msg: d.error || 'Verbindung fehlgeschlagen' }
+    }
+  } catch(e) {
+    influxResult.value = { ok: false, msg: e.message }
+  } finally {
+    testingInflux.value = false
   }
 }
 
@@ -573,6 +699,7 @@ async function save() {
         google_api_key:       form.value.google_api_key,
         mistral_api_key:      form.value.mistral_api_key,
         groq_api_key:         form.value.groq_api_key,
+        ...influxPayload(),
       }),
     })
     const d = await r.json()
@@ -676,6 +803,14 @@ onMounted(load)
 /* v4-provider-select */
 
 .token-row { display: flex; gap: 8px; align-items: center; }
+.field-row { display: flex; gap: 12px; }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px;
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-secondary:disabled { opacity: .5; cursor: default; }
 .icon-btn {
   padding: 8px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--surface); color: var(--muted); cursor: pointer; flex-shrink: 0;

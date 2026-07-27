@@ -122,8 +122,11 @@ class Module(BaseModule):
             ha_control = self.config._settings.get("jarvis_ha_control", False)
             system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
 
+            # Bei Verlaufs-Fragen echte Zeitreihen aus InfluxDB als Kontext anhängen
+            influx_ctx = self._influx_context(message)
+
             # KI bekommt vollen Text (inkl. Dateiinhalt), gespeichert wird display-Version
-            ki_messages = chat_data["messages"][:-1] + [{"role": "user", "content": message}]
+            ki_messages = chat_data["messages"][:-1] + [{"role": "user", "content": message + influx_ctx}]
             full_messages = [{"role": "system", "content": system_prompt}] + ki_messages
 
             def generate():
@@ -275,6 +278,41 @@ class Module(BaseModule):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+        # ── InfluxDB (1.x) ──────────────────────────────────────────
+        @self.app.route("/api/jarvis/influx/test", methods=["POST"])
+        def influx_test():
+            """Verbindung zur InfluxDB prüfen (nutzt die gespeicherten Einstellungen)."""
+            cfg = self._influx_cfg()
+            if not cfg["host"]:
+                return jsonify({"ok": False, "error": "Kein InfluxDB-Host konfiguriert"})
+            ok, data = self._influx_query("SHOW MEASUREMENTS LIMIT 20")
+            if not ok:
+                return jsonify({"ok": False, "error": data})
+            measurements = []
+            try:
+                for res in data.get("results", []):
+                    for series in res.get("series", []):
+                        for row in series.get("values", []):
+                            measurements.append(row[0])
+            except Exception:
+                pass
+            return jsonify({"ok": True, "database": cfg["database"], "measurements": measurements})
+
+        @self.app.route("/api/jarvis/influx/history")
+        def influx_history():
+            """Aggregierte Zeitreihe einer Entity abrufen."""
+            entity_id = request.args.get("entity_id", "")
+            try:
+                hours = int(request.args.get("hours", 24) or 24)
+            except ValueError:
+                hours = 24
+            if not entity_id:
+                return jsonify({"error": "entity_id erforderlich"}), 400
+            pts = self._influx_series(entity_id, hours=hours)
+            if pts is None:
+                return jsonify({"error": "InfluxDB-Abfrage fehlgeschlagen"}), 502
+            return jsonify({"entity_id": entity_id, "hours": hours, "points": pts})
+
         @self.app.route("/api/jarvis/providers")
         def get_providers():
             """Alle verfügbaren Provider und ihre Modelle zurückgeben."""
@@ -356,6 +394,122 @@ class Module(BaseModule):
 
     def _get_ollama_url(self) -> str:
         return self.config.jarvis_ollama_url.rstrip("/")
+
+    # ── InfluxDB (1.x) ───────────────────────────────────────────────
+    HISTORY_KEYWORDS = [
+        "verlauf", "verläufe", "historie", "history", "gestern", "vorgestern",
+        "letzte woche", "letzten tage", "letzten stunden", "letzte stunde",
+        "durchschnitt", "im schnitt", "verbrauch", "trend", "über die zeit",
+        "wie war", "wie hoch war", "wie niedrig", "höchste", "niedrigste",
+        "minimum", "maximum", "entwicklung", "seit heute morgen", "im laufe",
+    ]
+
+    def _influx_cfg(self) -> dict:
+        s = self.config._settings
+        return {
+            "enabled":  s.get("influxdb_enabled", False),
+            "host":     (s.get("influxdb_host", "") or "").strip(),
+            "port":     s.get("influxdb_port", 8086) or 8086,
+            "database": s.get("influxdb_database", "homeassistant") or "homeassistant",
+            "user":     s.get("influxdb_user", "") or "",
+            "password": s.get("influxdb_password", "") or "",
+            "ssl":      s.get("influxdb_ssl", False),
+        }
+
+    def _influx_query(self, q: str, timeout: int = 8):
+        """InfluxQL-Abfrage über die HTTP-API (InfluxDB 1.x). Rückgabe: (ok, result|error)."""
+        cfg = self._influx_cfg()
+        if not cfg["host"]:
+            return False, "InfluxDB-Host nicht konfiguriert"
+        scheme = "https" if cfg["ssl"] else "http"
+        url    = f"{scheme}://{cfg['host']}:{cfg['port']}/query"
+        params = {"db": cfg["database"], "q": q, "epoch": "ms"}
+        auth   = (cfg["user"], cfg["password"]) if cfg["user"] else None
+        try:
+            r = requests.get(url, params=params, auth=auth, timeout=timeout)
+            if r.status_code != 200:
+                return False, f"HTTP {r.status_code}: {r.text[:200]}"
+            data = r.json()
+            first = (data.get("results") or [{}])[0]
+            if first.get("error"):
+                return False, first["error"]
+            return True, data
+        except Exception as e:
+            return False, str(e)
+
+    def _influx_series(self, entity_id: str, hours: int = 24, bucket: str = None):
+        """Aggregierte Zeitreihe einer Entity. HA speichert entity_id ohne Domain-Präfix als Tag."""
+        short = entity_id.split(".", 1)[1] if "." in entity_id else entity_id
+        if not bucket:
+            bucket = "10m" if hours <= 6 else ("30m" if hours <= 48 else "1h")
+        safe = short.replace("'", "").replace(";", "")
+        q = (f'SELECT mean("value") AS value FROM /.*/ '
+             f"WHERE \"entity_id\" = '{safe}' AND time > now() - {int(hours)}h "
+             f"GROUP BY time({bucket}) fill(none)")
+        ok, data = self._influx_query(q)
+        if not ok:
+            return None
+        points = []
+        try:
+            for res in data.get("results", []):
+                for series in res.get("series", []):
+                    for t, v in series.get("values", []):
+                        if v is not None:
+                            points.append({"t": t, "v": round(float(v), 2)})
+        except Exception:
+            return None
+        return points
+
+    def _influx_context(self, message: str) -> str:
+        """Baut bei Verlaufs-Fragen einen Kontextblock mit echten Werten aus InfluxDB."""
+        cfg = self._influx_cfg()
+        if not cfg["enabled"] or not cfg["host"]:
+            return ""
+        text = (message or "").lower()
+        if not any(k in text for k in self.HISTORY_KEYWORDS):
+            return ""
+        # Zeitfenster grob aus der Frage ableiten
+        hours = 24
+        if "letzte woche" in text or "7 tage" in text or "woche" in text:
+            hours = 168
+        elif any(k in text for k in ("letzten stunden", "letzte stunde", "heute morgen", "seit heute")):
+            hours = 12
+        # Erwähnte Entities anhand friendly_name / entity_id finden
+        try:
+            states = self.ha.get_cached_states() if self.ha else {}
+        except Exception:
+            states = {}
+        candidates = []
+        for eid, st in states.items():
+            domain = eid.split(".")[0]
+            if domain not in ("sensor", "number", "input_number", "climate", "counter"):
+                continue
+            attrs = st.get("attributes") or {}
+            fn = (attrs.get("friendly_name") or "").lower().strip()
+            name_hit = bool(fn) and len(fn) >= 3 and fn in text
+            id_hit = eid.split(".", 1)[1].replace("_", " ") in text
+            if name_hit or id_hit:
+                candidates.append((eid, st))
+        if not candidates:
+            return ""
+        lines = []
+        for eid, st in candidates[:4]:
+            pts = self._influx_series(eid, hours=hours)
+            if not pts:
+                continue
+            vals = [p["v"] for p in pts]
+            attrs = st.get("attributes") or {}
+            unit = attrs.get("unit_of_measurement", "") or ""
+            fn   = attrs.get("friendly_name") or eid
+            lines.append(
+                f"- {fn} ({eid}): aktuell {vals[-1]}{unit}, "
+                f"Ø {round(sum(vals) / len(vals), 1)}{unit}, "
+                f"min {min(vals)}{unit}, max {max(vals)}{unit} ({len(vals)} Messpunkte)"
+            )
+        if not lines:
+            return ""
+        return (f"\n\n[InfluxDB-Verlauf – letzte {hours}h, aus der Zeitreihen-Datenbank]:\n"
+                + "\n".join(lines))
 
     def call_ki(self, prompt: str, system: str = "", max_tokens: int = 1024) -> str:
         """Zentrale Methode für einfache KI-Completions — nutzt konfigurierten Provider."""

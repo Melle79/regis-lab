@@ -33,6 +33,13 @@ SETTINGS_DEFAULTS = {
     "suggestions_time":    "08:00",
     "ha_external_url":     "",
     "briefing_time":       "07:00",
+    "influxdb_enabled":    False,
+    "influxdb_host":       "",
+    "influxdb_port":       8086,
+    "influxdb_database":   "homeassistant",
+    "influxdb_user":       "",
+    "influxdb_password":   "",
+    "influxdb_ssl":        False,
 }
 
 
@@ -152,5 +159,12 @@ class AddonConfig:
             "suggestions_time":     self._settings.get("suggestions_time", "08:00"),
             "ha_external_url":      self._settings.get("ha_external_url", ""),
             "briefing_time":        self._settings.get("briefing_time", "07:00"),
+            "influxdb_enabled":     self._settings.get("influxdb_enabled", False),
+            "influxdb_host":        self._settings.get("influxdb_host", ""),
+            "influxdb_port":        self._settings.get("influxdb_port", 8086),
+            "influxdb_database":    self._settings.get("influxdb_database", "homeassistant"),
+            "influxdb_user":        self._settings.get("influxdb_user", ""),
+            "influxdb_password_set": bool(self._settings.get("influxdb_password", "")),
+            "influxdb_ssl":         self._settings.get("influxdb_ssl", False),
             "ha_token_set":         bool(self.ha_long_token),
         }

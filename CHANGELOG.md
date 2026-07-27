@@ -4,6 +4,18 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.3.0] - 2026-07-27
+
+### Neu
+- **InfluxDB-Kontext für Jarvis** — der KI-Assistent kann historische Werte aus einer InfluxDB 1.x abfragen
+  - Bei Verlaufs-Fragen (z.B. „Wie war der Temperaturverlauf gestern?") werden erwähnte Entities erkannt und echte Zeitreihen (aktuell/Ø/min/max) als Kontext an die KI gehängt — analog zum HA-Log
+  - Zeitfenster wird grob aus der Frage abgeleitet (Stunden / Tag / Woche)
+  - Neue Einstellungen unter ⚙ → „InfluxDB — Verlaufsdaten" (Host, Port, DB, User/Passwort, SSL) mit „Verbindung testen"
+  - Neue Endpunkte: `POST /api/jarvis/influx/test`, `GET /api/jarvis/influx/history`
+  - Nutzt die vorhandene `requests`-Abhängigkeit (kein zusätzliches Paket)
+
+---
+
 ## [1.2.1] - 2026-07-27
 
 ### Behoben
