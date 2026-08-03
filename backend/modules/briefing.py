@@ -25,6 +25,7 @@ WEATHER_DE = {
 
 # Standard-Kalender fürs Briefing (per Setting "briefing_calendars" überschreibbar)
 DEFAULT_BRIEFING_CALENDARS = [
+    "calendar.outlook_kalender",
     "calendar.abfall_app",
     "calendar.schule_luna_melchior_schultermine",
     "calendar.schule_luna_melchior_arbeiten",
@@ -38,6 +39,7 @@ DEFAULT_BRIEFING_CALENDARS = [
 
 # Lesbare Kurz-Labels pro Kalender
 CAL_LABELS = {
+    "calendar.outlook_kalender": "Outlook",
     "calendar.abfall_app": "Müll",
     "calendar.schule_luna_melchior_schultermine": "Schule Luna",
     "calendar.schule_luna_melchior_arbeiten": "Arbeit Luna",
@@ -49,10 +51,16 @@ CAL_LABELS = {
     "calendar.ferien_feiertage_bayern": "Ferien/Feiertag",
 }
 
+# Mail-Sensor fürs Briefing (per Setting "briefing_mail_sensor" überschreibbar)
+DEFAULT_MAIL_SENSOR = "sensor.outlook_mail_mail"
+
+# So viele ungelesene Mails gehen maximal zur Bewertung an die KI
+MAIL_TRIAGE_LIMIT = 25
+
 
 class Module(BaseModule):
     name    = "briefing"
-    version = "2.0.0"
+    version = "2.1.0"
 
     # ── HA-Zugriff ───────────────────────────────────────────────────
     def _ha(self):
@@ -60,16 +68,13 @@ class Module(BaseModule):
                 {"Authorization": "Bearer " + self.config.ha_long_token,
                  "Content-Type": "application/json"})
 
-    def _call_ki(self, prompt: str) -> str:
-        """KI-Aufruf über konfigurierten Provider."""
-        try:
-            from modules.jarvis import Module as JarvisModule
-            jarvis = next((m for m in getattr(self, '_siblings', []) if isinstance(m, JarvisModule)), None)
-            if jarvis:
-                return jarvis.call_ki(prompt)
-        except Exception:
-            pass
-        # Fallback auf Ollama direkt
+    def _call_ki(self, prompt: str, timeout: int = 60) -> str:
+        """KI-Aufruf — bewusst fest auf das lokale Ollama verdrahtet.
+
+        Das Briefing verarbeitet Kalendereinträge und Mail-Metadaten (Absender,
+        Betreff). Die bleiben im Haus: kein Cloud-Provider, auch wenn Jarvis auf
+        einen solchen konfiguriert ist.
+        """
         model  = self.config._settings.get("jarvis_model", "")
         ollama = self.config.jarvis_ollama_url.rstrip("/")
         if not model or not ollama:
@@ -78,10 +83,11 @@ class Module(BaseModule):
             r = requests.post(
                 ollama + "/api/generate",
                 json={"model": model, "prompt": prompt, "stream": False},
-                timeout=60,
+                timeout=timeout,
             )
             return r.json().get("response", "").strip() if r.status_code == 200 else ""
-        except Exception:
+        except Exception as e:
+            self.log.error(f"Ollama-Aufruf fehlgeschlagen: {e}")
             return ""
 
     # ── Wetter-Tagesvorhersage ───────────────────────────────────────
@@ -155,12 +161,71 @@ class Module(BaseModule):
                 continue
         return out
 
+    # ── Ungelesene Mails ─────────────────────────────────────────────
+    def _unread_mails(self) -> list:
+        """Ungelesene Mails aus dem ms365_mail-Sensor (nur Metadaten, kein Body)."""
+        ha, hdrs = self._ha()
+        ent = self.config._settings.get("briefing_mail_sensor", DEFAULT_MAIL_SENSOR)
+        if not ent:
+            return []
+        try:
+            r = requests.get(ha + f"/api/states/{ent}", headers=hdrs, timeout=10)
+            if r.status_code != 200:
+                return []
+            data = r.json().get("attributes", {}).get("data", [])
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            self.log.error(f"Mail-Sensor {ent} nicht lesbar: {e}")
+            return []
+
+    def _triage_mails(self, mails: list) -> str:
+        """Lässt die lokale KI entscheiden, welche Mails Aufmerksamkeit brauchen."""
+        rows = []
+        for m in mails[:MAIL_TRIAGE_LIMIT]:
+            subject = (m.get("subject") or "").strip()
+            sender  = (m.get("sender") or "").strip()
+            if not subject and not sender:
+                continue
+            flags = []
+            if m.get("importance") == "high":
+                flags.append("Priorität hoch")
+            if m.get("has_attachments"):
+                flags.append("Anhang")
+            suffix = f" [{', '.join(flags)}]" if flags else ""
+            rows.append(f"- {sender or 'Unbekannt'} | {subject or '(kein Betreff)'}{suffix}")
+        if not rows:
+            return ""
+
+        prompt = (
+            "Du sortierst den Posteingang. Unten stehen ungelesene Mails als "
+            "'Absender | Betreff'. Entscheide, welche davon heute wirklich "
+            "Aufmerksamkeit brauchen — also etwas, das eine Antwort, eine Frist oder "
+            "eine Entscheidung verlangt.\n\n"
+            "Ignoriere Newsletter, Werbung, Rabattaktionen, Social-Media-Hinweise, "
+            "automatische Benachrichtigungen, Bestellbestätigungen und Versandmeldungen.\n\n"
+            "Antworte mit höchstens vier Zeilen im Format '- Absender: worum es geht' "
+            "(je Zeile maximal acht Wörter). Ist nichts Wichtiges dabei, antworte "
+            "ausschließlich mit dem Wort KEINE.\n\n"
+            + "\n".join(rows)
+        )
+        out = self._call_ki(prompt, timeout=120).strip()
+        if not out or out.upper().startswith("KEINE"):
+            return ""
+        # Nur Aufzählungszeilen behalten, Vorgeplauder des Modells verwerfen
+        keep = [ln.strip() for ln in out.splitlines()
+                if ln.strip().startswith(("-", "•", "*"))]
+        return "\n".join(keep[:4]) if keep else ""
+
     # ── Briefing zusammenbauen ───────────────────────────────────────
     def _build_briefing(self) -> dict:
         weather_text = self._weather_forecast_today()
 
         calendars = self.config._settings.get("briefing_calendars", DEFAULT_BRIEFING_CALENDARS)
         events    = self._today_events(calendars)
+
+        mails        = self._unread_mails()
+        unread_count = len(mails)
+        mail_digest  = self._triage_mails(mails)
 
         # Offline-Geräte als kleiner Hinweis (aus letztem Analyse-Report)
         offline_count = 0
@@ -188,6 +253,11 @@ class Module(BaseModule):
                 lines.append(f"- {prefix}{tm}{ev['summary']}")
         else:
             lines.append("Heute keine Termine in den Kalendern.")
+        if mail_digest:
+            lines.append(f"Ungelesene Mails: {unread_count}, davon beachtenswert:")
+            lines.extend(mail_digest.splitlines())
+        elif unread_count:
+            lines.append(f"Ungelesene Mails: {unread_count}, nichts Dringendes dabei.")
         if offline_count:
             lines.append(f"Hinweis: {offline_count} Geräte offline.")
         context = "\n".join(lines)
@@ -196,6 +266,8 @@ class Module(BaseModule):
             "Du bist ein persönlicher Assistent und erstellst ein kurzes, nützliches Morgen-Briefing "
             "auf Deutsch. Konzentriere dich auf das Wetter im Tagesverlauf und die wichtigen Termine "
             "des Tages. Fasse Schul- und Stundenplan kurz zusammen (nicht jede Stunde einzeln nennen). "
+            "Erwähne beachtenswerte Mails in einem eigenen Satz am Ende; sind keine aufgeführt, lass "
+            "das Thema Mail ganz weg. "
             "Schreibe 3–5 flüssige Sätze, freundlich, ohne Emojis und ohne Geräte-Aufzählungen.\n\n"
             + context
         )
@@ -205,6 +277,8 @@ class Module(BaseModule):
             "date":          date_str,
             "weather":       weather_text,
             "events":        events,
+            "unread_mails":  unread_count,
+            "mail_digest":   mail_digest,
             "offline_count": offline_count,
             "summary":       summary,
             "context":       context,
@@ -220,6 +294,10 @@ class Module(BaseModule):
         n = len(data.get("events", []))
         if n:
             infos.append(f"🗓️ {n} Termin{'e' if n != 1 else ''}")
+        if data.get("mail_digest"):
+            infos.append("📬 Mails beachten")
+        elif data.get("unread_mails"):
+            infos.append(f"📬 {data['unread_mails']} ungelesen")
         if data.get("offline_count"):
             infos.append(f"⚠️ {data['offline_count']} offline")
         subtitle = " · ".join(infos)

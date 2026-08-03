@@ -138,14 +138,14 @@ class Module(BaseModule):
                     )
 
                     def _stream_provider():
-                        # Provider-Basis ohne _fallback Suffix
-                        base_provider = provider.replace("_fallback", "") if provider.endswith("_fallback") else provider
-                        is_fallback = provider.endswith("_fallback")
+                        from modules.ki_providers import split_provider
+                        base_provider, is_fallback = split_provider(provider)
                         cloud_providers = ["anthropic", "openai", "google", "mistral", "groq"]
-                        key_setting = f"{base_provider}_api_key" if base_provider != "anthropic" else "anthropic_api_key"
-                        api_key = self.config._settings.get(key_setting, "")
+                        api_key = self.config._settings.get(f"{base_provider}_api_key", "")
 
-                        if base_provider in cloud_providers and api_key:
+                        # Cloud als Primärweg nur ohne _fallback-Suffix; mit Suffix
+                        # ist Ollama primär und die Cloud greift erst im except unten.
+                        if base_provider in cloud_providers and api_key and not is_fallback:
                             if base_provider == "anthropic":
                                 yield from chat_anthropic(full_messages, model, api_key)
                             elif base_provider == "openai":
@@ -540,28 +540,38 @@ class Module(BaseModule):
                 + "\n".join(lines))
 
     def call_ki(self, prompt: str, system: str = "", max_tokens: int = 1024) -> str:
-        """Zentrale Methode für einfache KI-Completions — nutzt konfigurierten Provider."""
-        from modules.ki_providers import generate_text, PROVIDERS
+        """Zentrale Methode für einfache KI-Completions — nutzt konfigurierten Provider.
+
+        Folgt derselben Konvention wie der Chat: '<anbieter>' heißt Cloud zuerst,
+        '<anbieter>_fallback' heißt Ollama zuerst und Cloud nur, wenn Ollama nichts
+        liefert.
+        """
+        from modules.ki_providers import generate_text, split_provider, PROVIDERS
         provider   = self._get_provider()
         ollama_url = self._get_ollama_url()
         model      = self.config._settings.get("jarvis_model", "")
 
-        # Modell für Cloud-Provider anpassen
-        if provider in PROVIDERS and provider not in ("ollama", "ollama_with_fallback"):
-            available = PROVIDERS[provider]["models"]
-            if not model or model not in available:
-                model = available[0] if available else model
+        base, is_fallback = split_provider(provider)
+        api_key   = self.config._settings.get(f"{base}_api_key", "")
+        cloud_ok  = base in PROVIDERS and base != "ollama" and bool(api_key)
 
-        key_setting = f"{provider}_api_key" if provider != "anthropic" else "anthropic_api_key"
-        api_key = self.config._settings.get(key_setting, "")
+        def _cloud_model() -> str:
+            available = PROVIDERS[base]["models"]
+            if model and model in available:
+                return model
+            return available[0] if available else model
 
-        result = generate_text(prompt, provider, model, api_key, ollama_url, system)
+        # Cloud als Primärweg nur ohne _fallback-Suffix
+        if cloud_ok and not is_fallback:
+            return generate_text(prompt, base, _cloud_model(), api_key, ollama_url, system)
 
-        # Fallback auf Anthropic bei ollama_with_fallback
-        if not result and provider == "ollama_with_fallback":
-            ant_key = self.config._settings.get("anthropic_api_key", "")
-            if ant_key:
-                result = generate_text(prompt, "anthropic", "claude-haiku-4-5", ant_key, "", system)
+        # Sonst zuerst lokal
+        result = generate_text(prompt, "ollama", model, "", ollama_url, system)
+
+        # Cloud-Rückfall, falls so konfiguriert und lokal nichts kam
+        if not result and is_fallback and cloud_ok:
+            self.log.warning(f"Ollama lieferte nichts, Rückfall auf {base}")
+            result = generate_text(prompt, base, _cloud_model(), api_key, ollama_url, system)
 
         return result
 

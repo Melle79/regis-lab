@@ -23,7 +23,18 @@ class ModuleLoader:
         """Lädt alle in config.enabled_modules aufgeführten Module."""
         for name in self.config.enabled_modules:
             self._load_module(name)
+        self._link_siblings()
         log.info(f"Geladene Module: {list(self._loaded.keys())}")
+
+    def _link_siblings(self):
+        """Quer-Referenzen setzen, damit Module einander zur Laufzeit finden.
+
+        Erst nach dem Laden aller Module, sonst sähe das zuerst geladene Modul
+        die später geladenen nicht.
+        """
+        instances = list(self._loaded.values())
+        for inst in instances:
+            inst._siblings = instances
 
     def _load_module(self, name: str):
         try:

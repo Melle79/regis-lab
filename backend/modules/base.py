@@ -35,6 +35,9 @@ class BaseModule:
         self.ha     = ha_client
         self.config = config
         self.log    = logging.getLogger(f"ha_dashboard.module.{self.name}")
+        # Wird vom ModuleLoader nach dem Laden aller Module gesetzt, damit
+        # Module einander zur Laufzeit finden (z. B. jarvis.call_ki nutzen).
+        self._siblings: list = []
 
     def register(self):
         """Hier Flask-Routen und andere Initialisierungen registrieren."""

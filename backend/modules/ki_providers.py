@@ -168,6 +168,22 @@ def chat_groq(messages: list, model: str, api_key: str):
     yield json.dumps({"done": True}) + "\n"
 
 
+def split_provider(provider: str):
+    """Zerlegt die Provider-Einstellung in (Basis-Anbieter, ist_rückfall).
+
+    Konvention der Einstellungsmaske:
+      "anthropic"          → Cloud ist der Primärweg
+      "anthropic_fallback" → Ollama ist der Primärweg, Cloud nur als Rückfall
+      "ollama"             → nur lokal
+      "ollama_with_fallback" → Altwert, entspricht "anthropic_fallback"
+    """
+    if provider == "ollama_with_fallback":
+        return "anthropic", True
+    if provider.endswith("_fallback"):
+        return provider[: -len("_fallback")], True
+    return provider, False
+
+
 def generate_text(prompt: str, provider: str, model: str, api_key: str,
                   ollama_url: str = "", system: str = "") -> str:
     """Einfache Text-Completion (non-streaming) für alle Provider."""
