@@ -19,6 +19,7 @@
       <ZonenPanel     v-else-if="activeTab === 'zonen'" />
       <JarvisPanel    v-else-if="activeTab === 'jarvis'" />
       <!-- jarvis-v3 -->
+      <VerlaufPanel   v-else-if="activeTab === 'verlauf'" />
       <AnalysePanel   v-else-if="activeTab === 'analyse'" />
     </main>
 
@@ -40,6 +41,7 @@ import GeraetePanel from './panels/geraete/GeraetePanel.vue'
 import PersonenPanel from './panels/personen/PersonenPanel.vue'
 import ZonenPanel   from './panels/zonen/ZonenPanel.vue'
 import JarvisPanel  from './panels/jarvis/JarvisPanel.vue'
+import VerlaufPanel from './panels/verlauf/VerlaufPanel.vue'
 import AnalysePanel from './panels/analyse/AnalysePanel.vue'
 import SettingsModal from './panels/settings/SettingsModal.vue'
 
@@ -55,6 +57,7 @@ const ALL_TABS = [
   { id: 'personen', label: 'Personen', icon: 'mdi:account-group' },
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
   { id: 'jarvis',   label: 'Jarvis',  icon: 'mdi:robot' },
+  { id: 'verlauf',  label: 'Verlauf', icon: 'mdi:chart-line' },
   { id: 'analyse',  label: 'Diagnose', icon: 'mdi:stethoscope' },
 ]
 
@@ -66,8 +69,10 @@ async function loadTabOrder() {
     const r = await fetch('api/config')
     const d = await r.json()
     if (d.tab_order && Array.isArray(d.tab_order)) {
-      tabOrder.value = d.tab_order
-      activeTab.value = d.tab_order[0]
+      // Neuen Verlauf-Tab auch bei bereits gespeicherter Reihenfolge zeigen
+      const order = d.tab_order.includes('verlauf') ? d.tab_order : [...d.tab_order, 'verlauf']
+      tabOrder.value = order
+      activeTab.value = order[0]
     }
   } catch(e) {}
 }

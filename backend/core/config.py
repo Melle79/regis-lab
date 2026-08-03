@@ -25,7 +25,7 @@ SETTINGS_DEFAULTS = {
     "jarvis_ha_control":   False,
     "jarvis_provider":     "ollama",
     "anthropic_api_key":   "",
-    "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "analyse"],
+    "tab_order":           ["home", "geraete", "personen", "zonen", "jarvis", "verlauf", "analyse"],
     "filter_labels":       [],
     "briefing_targets":    ["mobile_app_svens_iphone"],
     "briefing_enabled":    True,
