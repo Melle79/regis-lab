@@ -57,6 +57,14 @@ DEFAULT_MAIL_SENSOR = "sensor.outlook_mail_mail"
 # So viele ungelesene Mails gehen maximal zur Bewertung an die KI
 MAIL_TRIAGE_LIMIT = 25
 
+# Absender-Bestandteile, die auf Massenversand hindeuten. Kein harter Filter —
+# die Zeile wird nur markiert, entscheiden soll weiterhin die KI.
+AUTOMATED_SENDER_HINTS = (
+    "noreply", "no-reply", "donotreply", "do-not-reply", "nicht-antworten",
+    "newsletter", "mailer", "notifications", "notification", "alert",
+    "info@", "service@", "news@", "marketing@",
+)
+
 
 class Module(BaseModule):
     name    = "briefing"
@@ -191,29 +199,59 @@ class Module(BaseModule):
                 flags.append("Priorität hoch")
             if m.get("has_attachments"):
                 flags.append("Anhang")
+            if any(t in sender.lower() for t in AUTOMATED_SENDER_HINTS):
+                flags.append("Automatik-Absender")
             suffix = f" [{', '.join(flags)}]" if flags else ""
             rows.append(f"- {sender or 'Unbekannt'} | {subject or '(kein Betreff)'}{suffix}")
         if not rows:
             return ""
 
         prompt = (
-            "Du sortierst den Posteingang. Unten stehen ungelesene Mails als "
-            "'Absender | Betreff'. Entscheide, welche davon heute wirklich "
-            "Aufmerksamkeit brauchen — also etwas, das eine Antwort, eine Frist oder "
-            "eine Entscheidung verlangt.\n\n"
-            "Ignoriere Newsletter, Werbung, Rabattaktionen, Social-Media-Hinweise, "
-            "automatische Benachrichtigungen, Bestellbestätigungen und Versandmeldungen.\n\n"
-            "Antworte mit höchstens vier Zeilen im Format '- Absender: worum es geht' "
-            "(je Zeile maximal acht Wörter). Ist nichts Wichtiges dabei, antworte "
-            "ausschließlich mit dem Wort KEINE.\n\n"
+            "Du bist ein strenger Assistent und siebst einen Posteingang vor. "
+            "Unten stehen ungelesene Mails als 'Absender | Betreff'.\n\n"
+            "Nenne NUR Mails, bei denen eine Person heute etwas tun muss: antworten, "
+            "einen Termin wahrnehmen, eine Frist einhalten, ein Problem lösen.\n\n"
+            "Immer weglassen, ohne Ausnahme:\n"
+            "- Newsletter, Werbung, Rabatte, Gutscheine, Umfragen\n"
+            "- Stellenanzeigen und Job-Alarme\n"
+            "- Social-Media- und App-Benachrichtigungen\n"
+            "- Bestell-, Versand- und Zahlungsbestätigungen\n"
+            "- Werbliche Kontostands- oder Aufladehinweise\n\n"
+            "Mails mit dem Vermerk [Automatik-Absender] sind fast immer Massenversand. "
+            "Nimm sie nur auf, wenn der Betreff ein echtes Problem oder eine Frist nennt "
+            "— etwa Mahnung, Kündigung, Kontosperrung, Terminabsage, Rechnung fällig.\n\n"
+            "Lieber zu wenig nennen als zu viel. Bist du unsicher, lass die Mail weg.\n\n"
+            "Ausgabeformat, exakt so, ohne Einleitung und ohne Erklärung:\n"
+            "- Absender: worum es geht\n\n"
+            "Beispiel für eine gute Antwort:\n"
+            "- Frau Weber (Schule): Rückmeldung zum Elternabend bis Freitag\n"
+            "- Stadtwerke: Abschlagszahlung überfällig\n\n"
+            "Höchstens vier Zeilen, je Zeile maximal acht Wörter. Statt des Absenders "
+            "gern der erkennbare Name oder die Firma, nicht die rohe Mailadresse.\n"
+            "Ist nichts dabei, antworte ausschließlich mit dem Wort KEINE.\n\n"
+            "Ungelesene Mails:\n"
             + "\n".join(rows)
         )
         out = self._call_ki(prompt, timeout=120).strip()
         if not out or out.upper().startswith("KEINE"):
             return ""
-        # Nur Aufzählungszeilen behalten, Vorgeplauder des Modells verwerfen
-        keep = [ln.strip() for ln in out.splitlines()
-                if ln.strip().startswith(("-", "•", "*"))]
+
+        keep = []
+        for line in out.splitlines():
+            line = line.strip()
+            # Nur Aufzählungszeilen; Vorgeplauder des Modells fliegt raus
+            if not line.startswith(("-", "•", "*")):
+                continue
+            line = "- " + line.lstrip("-•* ").strip()
+            if line.upper().startswith("- KEINE"):
+                continue
+            # Spiegelt das Modell das Eingabeformat "Absender | Betreff", in die
+            # gewünschte Form umschreiben statt die Zeile zu verwerfen
+            if " | " in line:
+                sender, _, rest = line[2:].partition(" | ")
+                rest = rest.split(" [")[0].strip()
+                line = f"- {sender.strip()}: {rest}"
+            keep.append(line)
         return "\n".join(keep[:4]) if keep else ""
 
     # ── Briefing zusammenbauen ───────────────────────────────────────
@@ -368,6 +406,15 @@ class Module(BaseModule):
         @self.app.route("/api/briefing/morning")
         def morning_briefing():
             return jsonify(self._build_briefing())
+
+        @self.app.route("/api/briefing/mail-triage")
+        def mail_triage():
+            """Nur die Mail-Bewertung — zum Nachjustieren des Prompts."""
+            mails = self._unread_mails()
+            return jsonify({
+                "unread":  len(mails),
+                "digest":  self._triage_mails(mails),
+            })
 
         @self.app.route("/api/briefing/send-now", methods=["POST"])
         def send_briefing_now():
