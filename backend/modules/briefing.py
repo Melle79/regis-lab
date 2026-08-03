@@ -1,6 +1,7 @@
 """
 Modul: briefing
 Generiert eine tägliche Morgen-Zusammenfassung via Ollama und sendet sie per Push.
+Fokus: Wetter-Tagesvorhersage + die wichtigen Termine des Tages.
 """
 import json
 import os
@@ -16,12 +17,49 @@ MONTHS_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","Se
 WEATHER_DE = {
     "sunny": "Sonnig", "clear-night": "Klare Nacht", "cloudy": "Bewölkt",
     "partlycloudy": "Teils bewölkt", "rainy": "Regen", "snowy": "Schnee",
-    "windy": "Windig", "fog": "Nebel", "lightning": "Gewitter", "pouring": "Starkregen",
-    "exceptional": "Außergewöhnlich",
+    "snowy-rainy": "Schneeregen", "hail": "Hagel",
+    "windy": "Windig", "windy-variant": "Windig", "fog": "Nebel",
+    "lightning": "Gewitter", "lightning-rainy": "Gewitter mit Regen",
+    "pouring": "Starkregen", "exceptional": "Außergewöhnlich",
+}
+
+# Standard-Kalender fürs Briefing (per Setting "briefing_calendars" überschreibbar)
+DEFAULT_BRIEFING_CALENDARS = [
+    "calendar.abfall_app",
+    "calendar.schule_luna_melchior_schultermine",
+    "calendar.schule_luna_melchior_arbeiten",
+    "calendar.schule_finn_melchior_schultermine",
+    "calendar.schule_finn_melchior_arbeiten",
+    "calendar.luna_melchior_stundenplan",
+    "calendar.finn_melchior_stundenplan",
+    "calendar.geburtstage_2",
+    "calendar.ferien_feiertage_bayern",
+]
+
+# Lesbare Kurz-Labels pro Kalender
+CAL_LABELS = {
+    "calendar.abfall_app": "Müll",
+    "calendar.schule_luna_melchior_schultermine": "Schule Luna",
+    "calendar.schule_luna_melchior_arbeiten": "Arbeit Luna",
+    "calendar.schule_finn_melchior_schultermine": "Schule Finn",
+    "calendar.schule_finn_melchior_arbeiten": "Arbeit Finn",
+    "calendar.luna_melchior_stundenplan": "Stundenplan Luna",
+    "calendar.finn_melchior_stundenplan": "Stundenplan Finn",
+    "calendar.geburtstage_2": "Geburtstag",
+    "calendar.ferien_feiertage_bayern": "Ferien/Feiertag",
 }
 
 
 class Module(BaseModule):
+    name    = "briefing"
+    version = "2.0.0"
+
+    # ── HA-Zugriff ───────────────────────────────────────────────────
+    def _ha(self):
+        return ("http://homeassistant.local.hass.io:8123",
+                {"Authorization": "Bearer " + self.config.ha_long_token,
+                 "Content-Type": "application/json"})
+
     def _call_ki(self, prompt: str) -> str:
         """KI-Aufruf über konfigurierten Provider."""
         try:
@@ -37,7 +75,6 @@ class Module(BaseModule):
         if not model or not ollama:
             return ""
         try:
-            import requests
             r = requests.post(
                 ollama + "/api/generate",
                 json={"model": model, "prompt": prompt, "stream": False},
@@ -47,36 +84,85 @@ class Module(BaseModule):
         except Exception:
             return ""
 
-    name    = "briefing"
-    version = "1.0.0"
-
-    def _build_briefing(self) -> dict:
-        """Daten sammeln und KI-Zusammenfassung erstellen."""
-        ha   = "http://homeassistant.local.hass.io:8123"
-        hdrs = {"Authorization": "Bearer " + self.config.ha_long_token,
-                "Content-Type": "application/json"}
-
+    # ── Wetter-Tagesvorhersage ───────────────────────────────────────
+    def _weather_forecast_today(self) -> str:
+        ha, hdrs = self._ha()
+        ent = self.config._settings.get("briefing_weather_entity", "weather.forecast_home")
         try:
-            states = requests.get(ha + "/api/states", headers=hdrs, timeout=15).json()
+            r = requests.post(
+                ha + "/api/services/weather/get_forecasts?return_response",
+                headers=hdrs,
+                data=json.dumps({"entity_id": ent, "type": "daily"}),
+                timeout=15,
+            )
+            if r.status_code != 200:
+                return ""
+            resp = r.json().get("service_response", {}).get(ent, {})
+            fc = resp.get("forecast", [])
+            if not fc:
+                return ""
+            t = fc[0]
+            cond = WEATHER_DE.get(t.get("condition", ""), t.get("condition", ""))
+            hi, lo = t.get("temperature"), t.get("templow")
+            pprob, precip = t.get("precipitation_probability"), t.get("precipitation")
+            wind = t.get("wind_speed")
+            parts = [cond] if cond else []
+            if lo is not None and hi is not None:
+                parts.append(f"{round(lo)}–{round(hi)}°C")
+            elif hi is not None:
+                parts.append(f"bis {round(hi)}°C")
+            if pprob is not None:
+                parts.append(f"Regen {round(pprob)}%")
+            elif precip:
+                parts.append(f"{precip} mm Regen")
+            if wind is not None:
+                parts.append(f"Wind {round(wind)} km/h")
+            return ", ".join(str(p) for p in parts if p not in ("", None))
         except Exception:
-            states = []
+            return ""
 
-        # Personen zuhause
-        persons_home = [
-            s.get("attributes", {}).get("friendly_name", s["entity_id"])
-            for s in states
-            if s["entity_id"].startswith("person.") and s["state"] == "home"
-        ]
+    # ── Heutige Termine ──────────────────────────────────────────────
+    def _today_events(self, calendars: list) -> list:
+        ha, hdrs = self._ha()
+        now   = datetime.now()
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end   = start + timedelta(days=1)
+        out = []
+        for cal in calendars:
+            try:
+                r = requests.get(
+                    ha + f"/api/calendars/{cal}",
+                    headers=hdrs,
+                    params={"start": start.isoformat(), "end": end.isoformat()},
+                    timeout=10,
+                )
+                if r.status_code != 200:
+                    continue
+                for ev in r.json():
+                    summary = (ev.get("summary") or "").strip()
+                    if not summary:
+                        continue
+                    st = ev.get("start", {})
+                    tm = ""
+                    if isinstance(st, dict) and st.get("dateTime"):
+                        try:
+                            tm = datetime.fromisoformat(
+                                st["dateTime"].replace("Z", "+00:00")).strftime("%H:%M")
+                        except Exception:
+                            tm = ""
+                    out.append({"calendar": cal, "summary": summary, "time": tm})
+            except Exception:
+                continue
+        return out
 
-        # Wetter
-        weather_entity = self.config._settings.get("weather_entity", "")
-        weather = next((s for s in states if s["entity_id"] == weather_entity), None)
-        weather_text = ""
-        if weather:
-            temp = weather.get("attributes", {}).get("temperature", "?")
-            weather_text = f"{WEATHER_DE.get(weather.get('state',''), weather.get('state',''))}, {temp}°C"
+    # ── Briefing zusammenbauen ───────────────────────────────────────
+    def _build_briefing(self) -> dict:
+        weather_text = self._weather_forecast_today()
 
-        # Offline-Geräte
+        calendars = self.config._settings.get("briefing_calendars", DEFAULT_BRIEFING_CALENDARS)
+        events    = self._today_events(calendars)
+
+        # Offline-Geräte als kleiner Hinweis (aus letztem Analyse-Report)
         offline_count = 0
         try:
             if os.path.exists("/data/analyse_reports.json"):
@@ -86,95 +172,89 @@ class Module(BaseModule):
         except Exception:
             pass
 
-        # Lichter an (ohne Segmente)
-        seen, lights_on = set(), []
-        for s in states:
-            if not s["entity_id"].startswith("light.") or s["state"] != "on":
-                continue
-            name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
-            base = name.split(" Segment ")[0]
-            if base not in seen:
-                seen.add(base)
-                lights_on.append(base)
-
         now = datetime.now()
         date_str = f"{DAYS_DE[now.weekday()]}, {now.day}. {MONTHS_DE[now.month-1]} {now.year}"
 
-        context = f"Datum: {date_str}\n"
-        if weather_text:   context += f"Wetter: {weather_text}\n"
-        if persons_home:   context += f"Zuhause: {', '.join(persons_home)}\n"
-        else:              context += "Niemand zuhause\n"
-        if offline_count:  context += f"Offline-Geräte: {offline_count}\n"
-        if lights_on:      context += f"Lichter noch an: {', '.join(lights_on[:5])}\n"
+        # Kontext für die KI
+        lines = [f"Datum: {date_str}"]
+        if weather_text:
+            lines.append(f"Wetter heute: {weather_text}")
+        if events:
+            lines.append("Heutige Termine:")
+            for ev in events:
+                label  = CAL_LABELS.get(ev["calendar"], "")
+                prefix = f"[{label}] " if label else ""
+                tm     = f"{ev['time']} " if ev["time"] else ""
+                lines.append(f"- {prefix}{tm}{ev['summary']}")
+        else:
+            lines.append("Heute keine Termine in den Kalendern.")
+        if offline_count:
+            lines.append(f"Hinweis: {offline_count} Geräte offline.")
+        context = "\n".join(lines)
 
-        # KI-Zusammenfassung über konfigurierten Provider
-        summary = context
         prompt = (
-            "Du bist ein Smart Home Assistent. Erstelle eine kurze freundliche Morgen-Zusammenfassung "
-            "(2-3 Sätze) auf Deutsch ohne Emojis:\n\n" + context
+            "Du bist ein persönlicher Assistent und erstellst ein kurzes, nützliches Morgen-Briefing "
+            "auf Deutsch. Konzentriere dich auf das Wetter im Tagesverlauf und die wichtigen Termine "
+            "des Tages. Fasse Schul- und Stundenplan kurz zusammen (nicht jede Stunde einzeln nennen). "
+            "Schreibe 3–5 flüssige Sätze, freundlich, ohne Emojis und ohne Geräte-Aufzählungen.\n\n"
+            + context
         )
-        result = self._call_ki(prompt)
-        if result:
-            summary = result
+        summary = self._call_ki(prompt) or context
 
         return {
-            "date": date_str, "weather": weather_text,
-            "persons_home": persons_home, "offline_count": offline_count,
-            "lights_on": lights_on, "summary": summary, "context": context,
+            "date":          date_str,
+            "weather":       weather_text,
+            "events":        events,
+            "offline_count": offline_count,
+            "summary":       summary,
+            "context":       context,
         }
 
+    # ── Push senden ──────────────────────────────────────────────────
     def _send_push(self, data: dict):
-        """Push-Nachricht an Svens iPhone senden."""
-        ha   = "http://homeassistant.local.hass.io:8123"
-        hdrs = {"Authorization": "Bearer " + self.config.ha_long_token,
-                "Content-Type": "application/json"}
+        ha, hdrs = self._ha()
 
-        # Kurze Infos für Subtitle
         infos = []
-        if data["weather"]:       infos.append(data["weather"])
-        if data["offline_count"]: infos.append(f"⚠️ {data['offline_count']} offline")
-        if data["lights_on"]:     infos.append(f"💡 {len(data['lights_on'])} Lichter an")
+        if data.get("weather"):
+            infos.append(data["weather"])
+        n = len(data.get("events", []))
+        if n:
+            infos.append(f"🗓️ {n} Termin{'e' if n != 1 else ''}")
+        if data.get("offline_count"):
+            infos.append(f"⚠️ {data['offline_count']} offline")
         subtitle = " · ".join(infos)
 
-        ext_url = self.config._settings.get("ha_external_url", "").rstrip("/")
-        nav_url = "homeassistant://navigate/lovelace/0"
         payload = {
             "message": data["summary"],
-            "title":   f"☀️ Guten Morgen{', ' + data['persons_home'][0].split()[0] if data.get('persons_home') else ''}!",
+            "title":   "☀️ Guten Morgen!",
             "data": {
                 "subtitle": subtitle,
-                "push": {
-                    "sound": "default",
-                    "interruption-level": "active",
-                },
-                "url": nav_url,
+                "push": {"sound": "default", "interruption-level": "active"},
+                "url": "homeassistant://navigate/lovelace/0",
             },
         }
         targets = self.config._settings.get("briefing_targets", ["mobile_app_svens_iphone"])
         for target in targets:
             try:
-                requests.post(
-                    ha + f"/api/services/notify/{target}",
-                    headers=hdrs, data=json.dumps(payload), timeout=10,
-                )
+                requests.post(ha + f"/api/services/notify/{target}",
+                              headers=hdrs, data=json.dumps(payload), timeout=10)
                 self.log.info(f"Briefing gesendet an {target}")
             except Exception as e:
                 self.log.error(f"Push-Fehler ({target}): {e}")
 
         # Persistente Benachrichtigung in HA anlegen
         try:
-            from datetime import datetime as _dt
-            now = _dt.now()
-            persistent_payload = {
-                "message": data["context"],
-                "title":   f"☀️ Morgen-Briefing {now.strftime('%d.%m.%Y')}",
-                "notification_id": "regis_lab_morning_briefing",
-            }
+            now = datetime.now()
             requests.post(
                 ha + "/api/services/persistent_notification/create",
-                headers=hdrs, data=json.dumps(persistent_payload), timeout=10,
+                headers=hdrs,
+                data=json.dumps({
+                    "message": data["context"],
+                    "title":   f"☀️ Morgen-Briefing {now.strftime('%d.%m.%Y')}",
+                    "notification_id": "regis_lab_morning_briefing",
+                }),
+                timeout=10,
             )
-            self.log.info("Persistente Benachrichtigung angelegt")
         except Exception as e:
             self.log.error(f"Persistente Benachrichtigung Fehler: {e}")
 
@@ -182,10 +262,10 @@ class Module(BaseModule):
         data = self._build_briefing()
         self._send_push(data)
 
+    # ── Scheduler ────────────────────────────────────────────────────
     def _scheduler(self):
         while True:
             now = datetime.now()
-            # Uhrzeit aus Settings lesen
             time_str = self.config._settings.get("briefing_time", "07:00")
             try:
                 hour, minute = int(time_str.split(":")[0]), int(time_str.split(":")[1])
@@ -217,4 +297,4 @@ class Module(BaseModule):
             return jsonify({"ok": True, "message": "Briefing wird gesendet..."})
 
         threading.Thread(target=self._scheduler, daemon=True).start()
-        self.log.info("Briefing-Modul registriert (Scheduler aktiv)")
+        self.log.info("Briefing-Modul v2 registriert (Scheduler aktiv)")

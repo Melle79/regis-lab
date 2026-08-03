@@ -4,6 +4,17 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.4.0] - 2026-08-03
+
+### Geändert
+- **Morgen-Briefing neu ausgerichtet** — Fokus auf das Wesentliche:
+  - **Wetter-Tagesvorhersage** (Bedingung, Min/Max, Regenwahrscheinlichkeit, Wind) statt nur aktuellem Ist-Wert
+  - **Heutige Termine** aus den vorhandenen Kalendern (Müllabfuhr, Schule Luna & Finn inkl. Arbeiten/Stundenplan, Geburtstage, Ferien/Feiertage)
+  - „Wer ist zuhause" und „welche Lichter an" entfernt
+  - Kalender-Liste über Setting `briefing_calendars` anpassbar (Standardliste vorbelegt)
+
+---
+
 ## [1.3.1] - 2026-08-03
 
 ### Verbessert
