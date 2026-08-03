@@ -4,6 +4,13 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.3.1] - 2026-08-03
+
+### Verbessert
+- **InfluxDB-Entity-Erkennung** für Jarvis — statt nur bei exakt genanntem Anzeigenamen greift jetzt ein Wort-basiertes Matching (Raum-/Gerätewörter, Komposita wie „Temperaturverlauf" → „temperatur"). Natürliche Fragen wie „Temperaturverlauf gestern in Ottobrunn" finden nun die passende Entity.
+
+---
+
 ## [1.3.0] - 2026-07-27
 
 ### Neu

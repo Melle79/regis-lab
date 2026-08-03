@@ -4,6 +4,7 @@ KI-Assistent mit Ollama-Anbindung, HA-Zugriff und Chat-Persistenz.
 """
 import json
 import os
+import re
 import uuid
 import threading
 from datetime import datetime
@@ -460,6 +461,43 @@ class Module(BaseModule):
             return None
         return points
 
+    # Wörter, die zum Entity-Matching nichts beitragen
+    MATCH_STOPWORDS = {
+        "der", "die", "das", "und", "oder", "von", "im", "in", "am", "an", "auf", "für",
+        "mit", "zum", "zur", "the", "aktuell", "aktuelle", "aktueller", "sensor", "status",
+        "zustand", "wert", "werte", "home", "assistant", "wie", "war", "ist", "gestern",
+        "heute", "verlauf", "durchschnitt", "letzte", "letzten", "woche", "stunden", "tage",
+    }
+
+    def _tokenize(self, s: str):
+        return [w for w in re.split(r"[^a-zäöüß0-9]+", (s or "").lower())
+                if len(w) >= 3 and w not in self.MATCH_STOPWORDS]
+
+    def _influx_match_entities(self, text: str, states: dict):
+        """Findet erwähnte Entities per Wort-Overlap zwischen Frage und friendly_name/entity_id."""
+        msg_tokens = set(self._tokenize(text))
+        if not msg_tokens:
+            return []
+        scored = []
+        for eid, st in states.items():
+            domain = eid.split(".")[0]
+            if domain not in ("sensor", "number", "input_number", "climate", "counter"):
+                continue
+            attrs = st.get("attributes") or {}
+            fn = attrs.get("friendly_name") or eid.split(".", 1)[1].replace("_", " ")
+            ewords = set(self._tokenize(fn)) | set(self._tokenize(eid.split(".", 1)[1].replace("_", " ")))
+            score = 0
+            for ew in ewords:
+                if ew in msg_tokens:
+                    score += 2                       # exaktes Wort in der Frage
+                elif len(ew) >= 5 and ew in text:    # Kompositum, z.B. "temperatur" in "temperaturverlauf"
+                    score += 1
+            if score:
+                scored.append((score, len(fn), eid, st))
+        # höchster Score zuerst, bei Gleichstand kürzerer (spezifischerer) Name
+        scored.sort(key=lambda x: (-x[0], x[1]))
+        return [(eid, st) for _, _, eid, st in scored[:4]]
+
     def _influx_context(self, message: str) -> str:
         """Baut bei Verlaufs-Fragen einen Kontextblock mit echten Werten aus InfluxDB."""
         cfg = self._influx_cfg()
@@ -479,21 +517,11 @@ class Module(BaseModule):
             states = self.ha.get_cached_states() if self.ha else {}
         except Exception:
             states = {}
-        candidates = []
-        for eid, st in states.items():
-            domain = eid.split(".")[0]
-            if domain not in ("sensor", "number", "input_number", "climate", "counter"):
-                continue
-            attrs = st.get("attributes") or {}
-            fn = (attrs.get("friendly_name") or "").lower().strip()
-            name_hit = bool(fn) and len(fn) >= 3 and fn in text
-            id_hit = eid.split(".", 1)[1].replace("_", " ") in text
-            if name_hit or id_hit:
-                candidates.append((eid, st))
-        if not candidates:
+        matches = self._influx_match_entities(text, states)
+        if not matches:
             return ""
         lines = []
-        for eid, st in candidates[:4]:
+        for eid, st in matches:
             pts = self._influx_series(eid, hours=hours)
             if not pts:
                 continue
