@@ -4,12 +4,42 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.7.0] - 2026-10-22
+
+### Geändert
+- **Morgen-Briefing: Heimkehr statt Stundenplan.** Das Briefing zählte bisher
+  jede einzelne Schulstunde auf. Morgens interessiert aber nicht, welche Stunde
+  wann ist, sondern **wann wieder jemand zu Hause ist**. Neue Zeile „Wer wann
+  heimkommt" mit dem Schulschluss je Kind, nach Uhrzeit sortiert; die
+  Stundenplan-Kalender sind aus dem Briefing raus.
+- Wer keinen Unterricht hat, wird genannt statt verschwiegen — der Grund kommt
+  aus dem Sensor „aktuelle Stunde" (etwa „Betrieb"), sonst „heute keine Schule".
+- Neue Einstellung `briefing_heimweg`: Minuten vom Schultor bis zur Haustür je
+  Person, etwa `{"Kind": 25}`. Gesetzt, nennt das Briefing zusätzlich die
+  voraussichtliche Ankunft. Leer gelassen, bleibt es beim Schulschluss —
+  lieber keine Angabe als eine erfundene.
+
+### Behoben
+- **Keine Haushaltsdaten mehr im Quelltext.** Die Standardliste der Kalender
+  enthielt Entitäts-IDs mit echten Vor- und Nachnamen und war damit in einem
+  öffentlichen Repository nachlesbar. Kalender und Kurz-Labels stehen jetzt
+  ausschließlich in den Einstellungen unter `/data`; der Quelltext kennt keine
+  Namen mehr. Die Schulschluss-Sensoren werden am Muster erkannt, der Name der
+  Person kommt aus dem Attribut `kind`.
+- Kalender-Labels kommen aus Home Assistant (Anzeigename), wenn in
+  `briefing_calendar_labels` nichts hinterlegt ist — statt aus einer fest
+  verdrahteten Tabelle.
+- Ohne eigene Kalenderliste nimmt das Briefing alle Kalender, die Home
+  Assistant kennt, statt einer leeren Liste.
+
+---
+
 ## [1.4.0] - 2026-08-03
 
 ### Geändert
 - **Morgen-Briefing neu ausgerichtet** — Fokus auf das Wesentliche:
   - **Wetter-Tagesvorhersage** (Bedingung, Min/Max, Regenwahrscheinlichkeit, Wind) statt nur aktuellem Ist-Wert
-  - **Heutige Termine** aus den vorhandenen Kalendern (Müllabfuhr, Schule Luna & Finn inkl. Arbeiten/Stundenplan, Geburtstage, Ferien/Feiertage)
+  - **Heutige Termine** aus den vorhandenen Kalendern (Müllabfuhr, Schule, Geburtstage, Ferien/Feiertage)
   - „Wer ist zuhause" und „welche Lichter an" entfernt
   - Kalender-Liste über Setting `briefing_calendars` anpassbar (Standardliste vorbelegt)
 

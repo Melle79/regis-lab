@@ -1,7 +1,7 @@
 """
 Modul: briefing
 Generiert eine tägliche Morgen-Zusammenfassung via Ollama und sendet sie per Push.
-Fokus: Wetter-Tagesvorhersage + die wichtigen Termine des Tages.
+Fokus: Wetter, die wichtigen Termine des Tages und wer wann wieder daheim ist.
 """
 import json
 import os
@@ -23,33 +23,32 @@ WEATHER_DE = {
     "pouring": "Starkregen", "exceptional": "Außergewöhnlich",
 }
 
-# Standard-Kalender fürs Briefing (per Setting "briefing_calendars" überschreibbar)
-DEFAULT_BRIEFING_CALENDARS = [
-    "calendar.outlook_kalender",
-    "calendar.abfall_app",
-    "calendar.schule_luna_melchior_schultermine",
-    "calendar.schule_luna_melchior_arbeiten",
-    "calendar.schule_finn_melchior_schultermine",
-    "calendar.schule_finn_melchior_arbeiten",
-    "calendar.luna_melchior_stundenplan",
-    "calendar.finn_melchior_stundenplan",
-    "calendar.geburtstage_2",
-    "calendar.ferien_feiertage_bayern",
-]
+# Kalender fürs Briefing.
+#
+# Hier steht bewusst NICHTS drin: Welche Kalender ein Haushalt führt und wie
+# die Personen darin heißen, geht niemanden etwas an, der dieses Repository
+# liest. Die eigene Liste gehört in die Einstellung "briefing_calendars"
+# (landet in /data, nicht im Quelltext). Ohne Eintrag greift die Erkennung
+# unten: alle Kalender, die Home Assistant kennt.
+DEFAULT_BRIEFING_CALENDARS: list = []
 
-# Lesbare Kurz-Labels pro Kalender
-CAL_LABELS = {
-    "calendar.outlook_kalender": "Outlook",
-    "calendar.abfall_app": "Müll",
-    "calendar.schule_luna_melchior_schultermine": "Schule Luna",
-    "calendar.schule_luna_melchior_arbeiten": "Arbeit Luna",
-    "calendar.schule_finn_melchior_schultermine": "Schule Finn",
-    "calendar.schule_finn_melchior_arbeiten": "Arbeit Finn",
-    "calendar.luna_melchior_stundenplan": "Stundenplan Luna",
-    "calendar.finn_melchior_stundenplan": "Stundenplan Finn",
-    "calendar.geburtstage_2": "Geburtstag",
-    "calendar.ferien_feiertage_bayern": "Ferien/Feiertag",
-}
+# Dasselbe für die Kurz-Labels: ohne Eintrag nimmt das Briefing den
+# Anzeigenamen des Kalenders aus Home Assistant.
+DEFAULT_CAL_LABELS: dict = {}
+
+# Schulschluss-Sensoren werden erkannt, nicht aufgezählt – der
+# Stundenplan-Manager legt sie nach diesem Muster an, und der Name des Kindes
+# steht im Attribut "kind", nicht in unserem Quelltext.
+SCHULSCHLUSS_PRAEFIX = "sensor.stundenplan_"
+SCHULSCHLUSS_SUFFIX  = "_schulschluss_heute"
+
+# Minuten vom Schultor bis zur Haustür, je Kind: {"<Kind>": 25}. Das weiß kein
+# Sensor, das weiß nur der Haushalt – deshalb eine Einstellung. Leer gelassen,
+# nennt das Briefing nur den Schulschluss, statt eine Ankunft zu erfinden.
+DEFAULT_HEIMWEG_MIN: dict = {}
+
+# Zustände, die „heute kein Unterricht" bedeuten
+KEIN_UNTERRICHT = ("", "-", "–", "—", "unknown", "unavailable", "none")
 
 # Mail-Sensor fürs Briefing (per Setting "briefing_mail_sensor" überschreibbar)
 DEFAULT_MAIL_SENSOR = "sensor.outlook_mail_mail"
@@ -68,7 +67,10 @@ AUTOMATED_SENDER_HINTS = (
 
 class Module(BaseModule):
     name    = "briefing"
-    version = "2.1.0"
+    version = "2.2.0"
+
+    # Anzeigenamen der Kalender werden je Lauf nur einmal geholt
+    _label_cache: dict = {}
 
     # ── HA-Zugriff ───────────────────────────────────────────────────
     def _ha(self):
@@ -169,6 +171,117 @@ class Module(BaseModule):
                 continue
         return out
 
+    # ── Kalender-Labels ──────────────────────────────────────────────
+    def _cal_label(self, entity_id: str) -> str:
+        """Kurzname eines Kalenders – aus den Einstellungen oder aus HA.
+
+        Eine fest verdrahtete Tabelle wäre bequemer, verriete aber jedem
+        Leser des Repositories, wer hier wohnt. Der Anzeigename steht ohnehin
+        in Home Assistant.
+        """
+        eigene = self.config._settings.get("briefing_calendar_labels", DEFAULT_CAL_LABELS) or {}
+        if entity_id in eigene:
+            return eigene[entity_id]
+        if entity_id in self._label_cache:
+            return self._label_cache[entity_id]
+        ha, hdrs = self._ha()
+        label = ""
+        try:
+            r = requests.get(ha + f"/api/states/{entity_id}", headers=hdrs, timeout=10)
+            if r.status_code == 200:
+                label = (r.json().get("attributes", {}) or {}).get("friendly_name", "") or ""
+        except Exception:
+            label = ""
+        self._label_cache[entity_id] = label
+        return label
+
+    def _alle_kalender(self) -> list:
+        """Jeden Kalender nehmen, den Home Assistant kennt – als Rückfallebene."""
+        ha, hdrs = self._ha()
+        try:
+            r = requests.get(ha + "/api/calendars", headers=hdrs, timeout=10)
+            if r.status_code != 200:
+                return []
+            return [c.get("entity_id") for c in r.json() if c.get("entity_id")]
+        except Exception as e:
+            self.log.error(f"Kalenderliste nicht lesbar: {e}")
+            return []
+
+    # ── Wer kommt wann heim ──────────────────────────────────────────
+    def _heimkehr(self) -> list:
+        """Schulschluss je Kind, auf Wunsch samt Heimweg.
+
+        Das ist der einzige Teil des Stundenplans, der morgens zählt: nicht,
+        welche Stunde wann ist, sondern ab wann wieder jemand im Haus ist.
+        Ein Kind ohne Schulschluss (Ferien, Betrieb, Praktikum) wird genannt
+        statt verschwiegen – „heute keine Schule" ist auch eine Auskunft.
+        """
+        heimweg = self.config._settings.get("briefing_heimweg", DEFAULT_HEIMWEG_MIN) or {}
+        out = []
+        for roh in self._schulschluss_sensoren():
+            attrs   = roh.get("attributes", {}) or {}
+            ent     = roh.get("entity_id", "")
+            name    = (attrs.get("kind") or "").strip() or ent.split(".")[-1]
+            zustand = (roh.get("state") or "").strip()
+
+            if zustand.lower() in KEIN_UNTERRICHT:
+                out.append({"name": name, "zeit": "",
+                            "text": self._warum_frei(ent) or "heute keine Schule"})
+                continue
+
+            text    = f"Schluss {zustand}"
+            minuten = heimweg.get(name)
+            if minuten:
+                daheim = self._plus_minuten(zustand, minuten)
+                if daheim:
+                    text = f"Schluss {zustand}, daheim gegen {daheim}"
+            out.append({"name": name, "zeit": zustand, "text": text})
+
+        # Wer zuerst daheim ist, steht oben; Kinder ohne Zeit ans Ende
+        out.sort(key=lambda k: k["zeit"] or "99:99")
+        return out
+
+    def _schulschluss_sensoren(self) -> list:
+        """Alle Schulschluss-Sensoren einsammeln – erkannt, nicht aufgezählt."""
+        ha, hdrs = self._ha()
+        gesetzt = self.config._settings.get("briefing_school_sensors") or []
+        try:
+            r = requests.get(ha + "/api/states", headers=hdrs, timeout=20)
+            if r.status_code != 200:
+                return []
+            alle = r.json()
+        except Exception as e:
+            self.log.error(f"Zustandsliste nicht lesbar: {e}")
+            return []
+        if gesetzt:
+            return [s for s in alle if s.get("entity_id") in gesetzt]
+        return [s for s in alle
+                if str(s.get("entity_id", "")).startswith(SCHULSCHLUSS_PRAEFIX)
+                and str(s.get("entity_id", "")).endswith(SCHULSCHLUSS_SUFFIX)]
+
+    def _warum_frei(self, schluss_sensor: str) -> str:
+        """Der Nachbarsensor sagt, warum heute nichts anliegt (z. B. „Betrieb")."""
+        ha, hdrs = self._ha()
+        ent = schluss_sensor.replace(SCHULSCHLUSS_SUFFIX, "_aktuelle_stunde")
+        try:
+            r = requests.get(ha + f"/api/states/{ent}", headers=hdrs, timeout=10)
+            if r.status_code != 200:
+                return ""
+            zustand = (r.json().get("state") or "").strip()
+            return "" if zustand.lower() in KEIN_UNTERRICHT else zustand
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _plus_minuten(uhrzeit: str, minuten) -> str:
+        """„14:15" + 25 → „14:40". Unlesbare Eingaben geben leer zurück."""
+        try:
+            stunde, minute = (int(x) for x in uhrzeit.split(":")[:2])
+            return (datetime(2000, 1, 1, stunde, minute)
+                    + timedelta(minutes=int(minuten))).strftime("%H:%M")
+        except Exception:
+            return ""
+
     # ── Ungelesene Mails ─────────────────────────────────────────────
     def _unread_mails(self) -> list:
         """Ungelesene Mails aus dem ms365_mail-Sensor (nur Metadaten, kein Body)."""
@@ -258,8 +371,10 @@ class Module(BaseModule):
     def _build_briefing(self) -> dict:
         weather_text = self._weather_forecast_today()
 
-        calendars = self.config._settings.get("briefing_calendars", DEFAULT_BRIEFING_CALENDARS)
+        calendars = (self.config._settings.get("briefing_calendars", DEFAULT_BRIEFING_CALENDARS)
+                     or self._alle_kalender())
         events    = self._today_events(calendars)
+        heimkehr  = self._heimkehr()
 
         mails        = self._unread_mails()
         unread_count = len(mails)
@@ -285,12 +400,16 @@ class Module(BaseModule):
         if events:
             lines.append("Heutige Termine:")
             for ev in events:
-                label  = CAL_LABELS.get(ev["calendar"], "")
+                label  = self._cal_label(ev["calendar"])
                 prefix = f"[{label}] " if label else ""
                 tm     = f"{ev['time']} " if ev["time"] else ""
                 lines.append(f"- {prefix}{tm}{ev['summary']}")
         else:
             lines.append("Heute keine Termine in den Kalendern.")
+        if heimkehr:
+            lines.append("Wer wann heimkommt:")
+            for kind in heimkehr:
+                lines.append(f"- {kind['name']}: {kind['text']}")
         if mail_digest:
             lines.append(f"Ungelesene Mails: {unread_count}, davon beachtenswert:")
             lines.extend(mail_digest.splitlines())
@@ -303,7 +422,9 @@ class Module(BaseModule):
         prompt = (
             "Du bist ein persönlicher Assistent und erstellst ein kurzes, nützliches Morgen-Briefing "
             "auf Deutsch. Konzentriere dich auf das Wetter im Tagesverlauf und die wichtigen Termine "
-            "des Tages. Fasse Schul- und Stundenplan kurz zusammen (nicht jede Stunde einzeln nennen). "
+            "des Tages. Nenne unter \"Wer wann heimkommt\" jede Person mit ihrer Zeit in einem "
+            "einzigen Satz – das ist die wichtigste Zeile des Briefings. Einzelne Schulstunden "
+            "nennst du nie. "
             "Erwähne beachtenswerte Mails in einem eigenen Satz am Ende; sind keine aufgeführt, lass "
             "das Thema Mail ganz weg. "
             "Schreibe 3–5 flüssige Sätze, freundlich, ohne Emojis und ohne Geräte-Aufzählungen.\n\n"
@@ -315,6 +436,7 @@ class Module(BaseModule):
             "date":          date_str,
             "weather":       weather_text,
             "events":        events,
+            "heimkehr":      heimkehr,
             "unread_mails":  unread_count,
             "mail_digest":   mail_digest,
             "offline_count": offline_count,
