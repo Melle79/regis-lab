@@ -496,7 +496,7 @@ ${fileAttachment.content}
     if (e.name === 'AbortError') {
       // Benutzer hat die Antwort gestoppt – Teilantwort sichern
       if (streamText.value) {
-        activeChat.value.messages.push({ role: 'assistant', content: streamText.value })
+        activeChat.value.messages.push({ role: 'assistant', content: stripMiniBlocks(streamText.value) })
       }
     } else {
       activeChat.value.messages.push({ role: 'assistant', content: `Fehler: ${e.message}` })
@@ -599,8 +599,31 @@ function saveModel() {
   localStorage?.setItem?.('jarvis_model', currentModel.value)
 }
 
+/* Werkzeug-Blöcke ({"mini": {...}}) sind reine Anweisungen an das Backend und
+   gehören nicht in die Anzeige – auch bei alten, schon gespeicherten Nachrichten. */
+function stripMiniBlocks(text) {
+  if (!text || !text.includes('{"mini":')) return text
+  let out = '', rest = text
+  while (true) {
+    const start = rest.indexOf('{"mini":')
+    if (start < 0) { out += rest; break }
+    let depth = 0, end = -1
+    for (let i = start; i < rest.length; i++) {
+      const ch = rest[i]
+      if (ch === '{') depth++
+      else if (ch === '}') { depth--; if (depth === 0) { end = i; break } }
+    }
+    // Block noch unvollständig (Antwort läuft noch): Rest ausblenden
+    if (end < 0) { out += rest.slice(0, start); break }
+    out += rest.slice(0, start)
+    rest = rest.slice(end + 1)
+  }
+  return out.replace(/\n{3,}/g, '\n\n').trim()
+}
+
 function formatMessage(text) {
   if (!text) return ''
+  text = stripMiniBlocks(text)
   const placeholders = {}
   let idx = 0
 

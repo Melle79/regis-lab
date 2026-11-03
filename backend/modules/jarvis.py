@@ -267,7 +267,9 @@ class Module(BaseModule):
                     return
 
                 # Antwort speichern mit ha_control Status
-                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
+                # Werkzeug-Block {"mini": ...} gehoert nicht in den Verlauf
+                save_text = self._strip_mini_blocks(full_text) or full_text.strip()
+                chat_data["messages"].append({"role": "assistant", "content": save_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch durch KI generieren (erste Nachricht)
@@ -756,6 +758,22 @@ class Module(BaseModule):
                         return block, text[:idx] + text[i + 1:]
                     return None, text
         return None, text
+
+    def _strip_mini_blocks(self, text: str) -> str:
+        """Alle {"mini": {...}}-Bloecke aus einem Text entfernen.
+
+        Die Bloecke sind reine Anweisungen an das Backend und haben im
+        gespeicherten Verlauf nichts zu suchen.
+        """
+        if not text or '{"mini":' not in text:
+            return text
+        out = text
+        while True:
+            block, cleaned = self._mini_block(out)
+            if not block or cleaned == out:
+                break
+            out = cleaned
+        return out.strip()
 
     def _mini_prompt(self) -> str:
         """Anleitung fuer die Werkzeuge auf dem Mac mini (nur wenn eingeschaltet)."""

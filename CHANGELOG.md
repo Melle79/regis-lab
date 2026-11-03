@@ -4,6 +4,18 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.1] - 2026-11-03
+
+### Behoben
+- **Werkzeug-Blöcke sind aus dem Chat verschwunden.** Den JSON-Block
+  (`{"mini": {...}}`), mit dem Jarvis einen Auftrag für den Mac mini formuliert,
+  hat das Modell mit in den Text geschrieben – er wurde mitgespeichert und war
+  nach dem Neuladen als roher JSON sichtbar. Er wird jetzt weder gespeichert noch
+  angezeigt; auch alte Chat-Verläufe zeigen ihn nicht mehr. Bricht man eine
+  Antwort ab, bleibt der Block ebenfalls draußen.
+
+---
+
 ## [1.11.0] - 2026-11-03
 
 ### Hinzugefügt
