@@ -273,6 +273,7 @@
               <select v-model="form.cloud_provider" class="input" @change="onCloudProviderChange">
                 <option value="">— Keinen Cloud-Anbieter nutzen —</option>
                 <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openrouter">OpenRouter</option>
                 <option value="openai">OpenAI (GPT)</option>
                 <option value="google">Google (Gemini)</option>
                 <option value="mistral">Mistral</option>
@@ -467,11 +468,11 @@ const allLabels       = ref([])
 const iconRegistered      = ref(null)
 const showCloudKey        = ref(false)
 const cloudKeyField = computed(() => {
-  const map = { anthropic: 'anthropic_api_key', openai: 'openai_api_key', google: 'google_api_key', mistral: 'mistral_api_key', groq: 'groq_api_key' }
+  const map = { anthropic: 'anthropic_api_key', openrouter: 'openrouter_api_key', openai: 'openai_api_key', google: 'google_api_key', mistral: 'mistral_api_key', groq: 'groq_api_key' }
   return map[form.value.cloud_provider] || 'anthropic_api_key'
 })
 const cloudKeyPlaceholder = computed(() => {
-  const map = { anthropic: 'sk-ant-...', openai: 'sk-...', google: 'AIza...', mistral: '...', groq: 'gsk_...' }
+  const map = { anthropic: 'sk-ant-...', openrouter: 'sk-or-v1-...', openai: 'sk-...', google: 'AIza...', mistral: '...', groq: 'gsk_...' }
   return map[form.value.cloud_provider] || ''
 })
 const notifyServices  = ref([])

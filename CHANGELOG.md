@@ -4,6 +4,31 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.8.0] - 2026-11-03
+
+### Hinzugefügt
+- **OpenRouter als Anbieter.** Neben Ollama und den bisherigen Cloud-Anbietern
+  lässt sich jetzt OpenRouter nutzen (eigener Schlüssel). Der Modellkatalog
+  (mehrere hundert Modelle) wird live geladen statt fest verdrahtet.
+- **Verbrauchsanzeige.** Jede Antwort zeigt Token (gesendet/empfangen) und –
+  sofern der Anbieter es liefert – die Kosten in US-Dollar. Im Kopf des Chats
+  steht die Summe des Chats, bei OpenRouter zusätzlich das Guthaben des
+  Schlüssels. Fehlen Preisdaten, werden die Kosten aus dem OpenRouter-Katalog
+  geschätzt und als „geschätzt“ gekennzeichnet.
+- **Anbieter- und Modellwechsel direkt im Chat** – unabhängig von der
+  Standardeinstellung in den Einstellungen.
+
+### Geändert
+- Die Anbieterprüfung im Chat ist generisch: Fehlt der Schlüssel des gewählten
+  Anbieters, erscheint eine klare Meldung statt eines stillen Fehlschlags.
+- Verbrauch wird je Nachricht im Chat gespeichert.
+
+### Hinweise
+- Token liefern alle Anbieter; verlässliche Kosten derzeit nur OpenRouter.
+  Lokale Modelle werden mit 0 $ geführt.
+
+---
+
 ## [1.7.0] - 2026-10-22
 
 ### Geändert

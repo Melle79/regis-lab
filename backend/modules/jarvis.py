@@ -92,7 +92,7 @@ class Module(BaseModule):
             message = body.get("message", "")
             display  = body.get("display", message)  # Anzeige-Version (ohne Dateiinhalt)
             model      = body.get("model") or self._get_setting("jarvis_model", "")
-            provider   = self._get_provider()
+            provider   = body.get("provider") or self._get_provider()
             ollama_url = self._get_ollama_url()
 
             # Bei Cloud-Providern: Standard-Modell setzen
@@ -104,8 +104,11 @@ class Module(BaseModule):
 
             if provider == "ollama" and not ollama_url:
                 return jsonify({"error": "Ollama URL nicht konfiguriert"}), 400
-            if provider == "anthropic" and not self.config._settings.get("anthropic_api_key"):
-                return jsonify({"error": "Anthropic API-Key nicht konfiguriert"}), 400
+            from modules.ki_providers import split_provider as _split_provider
+            _base_prov, _is_fb = _split_provider(provider)
+            if _base_prov != "ollama" and not _is_fb:
+                if not self.config._settings.get(f"{_base_prov}_api_key", ""):
+                    return jsonify({"error": f"Kein API-Key für {_base_prov} hinterlegt"}), 400
             if not model:
                 return jsonify({"error": "Kein Modell ausgewählt"}), 400
             if not message:
@@ -134,13 +137,14 @@ class Module(BaseModule):
                 full_text = ""
                 try:
                     from modules.ki_providers import (
-                        chat_anthropic, chat_openai, chat_google, chat_mistral, chat_groq, PROVIDERS
+                        chat_anthropic, chat_openai, chat_google, chat_mistral, chat_groq,
+                        chat_openrouter, PROVIDERS
                     )
 
                     def _stream_provider():
                         from modules.ki_providers import split_provider
                         base_provider, is_fallback = split_provider(provider)
-                        cloud_providers = ["anthropic", "openai", "google", "mistral", "groq"]
+                        cloud_providers = ["anthropic", "openrouter", "openai", "google", "mistral", "groq"]
                         api_key = self.config._settings.get(f"{base_provider}_api_key", "")
 
                         # Cloud als Primärweg nur ohne _fallback-Suffix; mit Suffix
@@ -156,6 +160,8 @@ class Module(BaseModule):
                                 yield from chat_mistral(full_messages, model, api_key)
                             elif base_provider == "groq":
                                 yield from chat_groq(full_messages, model, api_key)
+                            elif base_provider == "openrouter":
+                                yield from chat_openrouter(full_messages, model, api_key)
                         else:
                             # Ollama
                             try:
@@ -181,13 +187,18 @@ class Module(BaseModule):
                                         yield from chat_mistral(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
                                     elif base_provider == "groq":
                                         yield from chat_groq(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
+                                    elif base_provider == "openrouter":
+                                        yield from chat_openrouter(full_messages, PROVIDERS[base_provider]["models"][0], api_key)
                                 else:
                                     raise ollama_err
 
+                    usage_info = None
                     for line in _stream_provider():
                         try:
-                            chunk = json.loads(line).get("message", {}).get("content", "")
-                            full_text += chunk
+                            parsed = json.loads(line)
+                            full_text += parsed.get("message", {}).get("content", "")
+                            if parsed.get("usage"):
+                                usage_info = parsed["usage"]
                         except Exception:
                             pass
                         yield line
@@ -196,7 +207,7 @@ class Module(BaseModule):
                     return
 
                 # Antwort speichern mit ha_control Status
-                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model})
+                chat_data["messages"].append({"role": "assistant", "content": full_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch durch KI generieren (erste Nachricht)
@@ -332,12 +343,26 @@ class Module(BaseModule):
 
         @self.app.route("/api/jarvis/models")
         def get_models():
-            from modules.ki_providers import PROVIDERS
-            provider = self._get_provider()
+            from modules.ki_providers import PROVIDERS, split_provider, openrouter_models
+            provider = request.args.get("provider") or self._get_provider()
+            base, _fb = split_provider(provider)
+            # OpenRouter: Katalog (optional gefiltert) statt fester Liste
+            if base == "openrouter":
+                q = request.args.get("q", "")
+                try:
+                    limit = int(request.args.get("limit", 60) or 60)
+                except ValueError:
+                    limit = 60
+                catalog = openrouter_models(query=q, limit=limit)
+                return jsonify({
+                    "models": [m["id"] for m in catalog],
+                    "catalog": catalog,
+                    "provider": "openrouter",
+                })
             # Cloud-Provider: feste Modell-Liste
-            if provider in PROVIDERS and provider != "ollama" and not provider.startswith("ollama"):
-                models = PROVIDERS[provider]["models"]
-                return jsonify({"models": models, "provider": provider})
+            if base in PROVIDERS and base != "ollama":
+                models = PROVIDERS[base]["models"]
+                return jsonify({"models": models, "provider": base})
             # Ollama
             ollama_url = self._get_ollama_url()
             if not ollama_url:
@@ -350,6 +375,24 @@ class Module(BaseModule):
                 return jsonify({"error": f"Ollama Fehler: {r.status_code}"}), 500
             except Exception as e:
                 return jsonify({"error": f"Ollama nicht erreichbar: {e}"}), 503
+
+        @self.app.route("/api/jarvis/openrouter/models")
+        def openrouter_catalog():
+            """OpenRouter-Modellkatalog inklusive Preisen (optional gefiltert)."""
+            from modules.ki_providers import openrouter_models
+            q = request.args.get("q", "")
+            try:
+                limit = int(request.args.get("limit", 60) or 60)
+            except ValueError:
+                limit = 60
+            return jsonify({"models": openrouter_models(query=q, limit=limit)})
+
+        @self.app.route("/api/jarvis/openrouter/credit")
+        def openrouter_credit():
+            """Guthaben und Verbrauch des hinterlegten OpenRouter-Schluessels."""
+            from modules.ki_providers import openrouter_key_info
+            info = openrouter_key_info(self.config._settings.get("openrouter_api_key", ""))
+            return jsonify(info), (200 if "error" not in info else 502)
 
         @self.app.route("/api/jarvis/chats/<chat_id>/system-message", methods=["POST"])
         def add_system_message(chat_id):

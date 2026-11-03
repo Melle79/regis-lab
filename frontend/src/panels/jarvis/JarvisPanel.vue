@@ -72,12 +72,17 @@
           <span v-else class="chat-title muted">{{ kiName }}</span>
         </div>
         <div class="chat-header-right">
-          <select v-model="currentModel" class="model-select" @change="saveModel">
+          <select v-model="chatProvider" class="provider-select" @change="onProviderChange" title="KI-Anbieter">
+            <option v-for="p in providerOptions" :key="p.id" :value="p.id">{{ p.label }}</option>
+          </select>
+          <select v-model="currentModel" class="model-select" @change="saveModel" :title="currentModel">
             <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
             <option v-if="!models.length" value="">Kein Modell verfügbar</option>
           </select>
-          <span v-if="currentProvider === 'anthropic'" class="provider-badge">☁️ Cloud</span>
-          <span v-else-if="currentProvider === 'ollama'" class="provider-badge">🏠 Lokal</span>
+          <span class="provider-badge">{{ providerLabel }}</span>
+          <span v-if="chatUsage.cost > 0" class="cost-badge" :title="chatUsage.title">
+            {{ fmtCost(chatUsage.cost) }} · {{ chatUsage.tokens }} Tok
+          </span>
           <span class="ha-control-badge" :class="haControl ? 'active' : 'inactive'">
             <MdiIcon :icon="haControl ? 'mdi:home' : 'mdi:home-off'" :size="13" />
             {{ haControl ? 'HA aktiv' : 'HA aus' }}
@@ -135,6 +140,9 @@
               <div class="msg-meta">
                 <span v-if="msg.timestamp">{{ formatTime(msg.timestamp) }}</span>
                 <span v-if="msg.model" class="msg-model">{{ msg.model }}</span>
+                <span v-if="msg.usage" class="msg-usage" :title="usageTitle(msg.usage)">
+                  {{ msg.usage.total_tokens }} Tok<span v-if="msg.usage.cost"> · {{ fmtCost(msg.usage.cost) }}</span>
+                </span>
               </div>
               <div class="msg-actions">
                 <button class="msg-action-btn" @click="copyMessage(msg.content)" title="Kopieren">
@@ -229,7 +237,10 @@ const chats          = ref([])
 const activeChatId   = ref(null)
 const activeChat     = ref(null)
 const models         = ref([])
+const providers      = ref({})
+const credit         = ref(null)
 const currentProvider = ref('')
+const chatProvider   = ref('')
 const currentModel   = ref('')
 const kiName         = ref('Assistent')
 const haControl      = ref(false)
@@ -414,7 +425,7 @@ ${fileAttachment.content}
     const r = await fetch(`api/jarvis/chats/${activeChatId.value}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value }),
+      body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value, provider: chatProvider.value || undefined }),
       signal:  abortController.value.signal,
     })
 
@@ -604,9 +615,26 @@ function onMessagesScroll() {
   showScrollBtn.value = distance > 160
 }
 
-async function loadModels() {
+async function loadProviders() {
   try {
-    const r = await fetch('api/jarvis/models')
+    const r = await fetch('api/jarvis/providers')
+    providers.value = await r.json()
+  } catch(e) { providers.value = {} }
+}
+
+async function loadCredit() {
+  if (chatProvider.value !== 'openrouter') { credit.value = null; return }
+  try {
+    const r = await fetch('api/jarvis/openrouter/credit')
+    credit.value = await r.json()
+  } catch(e) { credit.value = null }
+}
+
+async function loadModels(providerId) {
+  const prov = providerId || chatProvider.value || ''
+  try {
+    const url = prov ? `api/jarvis/models?provider=${encodeURIComponent(prov)}` : 'api/jarvis/models'
+    const r = await fetch(url)
     const d = await r.json()
     if (d.models) {
       models.value = d.models
@@ -618,6 +646,65 @@ async function loadModels() {
     }
   } catch(e) {}
 }
+
+function onProviderChange() {
+  localStorage?.setItem?.('jarvis_provider', chatProvider.value)
+  loadModels(chatProvider.value)
+  loadCredit()
+}
+
+function fmtCost(v) {
+  const n = Number(v || 0)
+  if (!n) return '0,00000 $'
+  if (n < 0.01) return `${n.toFixed(5).replace('.', ',')} $`
+  return `${n.toFixed(3).replace('.', ',')} $`
+}
+
+function usageTitle(u) {
+  if (!u) return ''
+  const parts = [`${u.prompt_tokens} Token gesendet`, `${u.completion_tokens} Token empfangen`]
+  if (u.cost != null) parts.push(`Kosten ${fmtCost(u.cost)}${u.cost_estimated ? ' (geschätzt)' : ''}`)
+  return parts.join(' · ')
+}
+
+const providerOptions = computed(() => {
+  const list = [{ id: 'ollama', label: '🏠 Lokal (Ollama)' }]
+  const order = ['openrouter', 'anthropic', 'openai', 'google', 'mistral', 'groq']
+  for (const id of order) {
+    const p = providers.value?.[id]
+    if (!p) continue
+    list.push({ id, label: `☁️ ${p.name}${p.configured ? '' : ' (kein Schlüssel)'}` })
+  }
+  return list
+})
+
+const providerLabel = computed(() => {
+  if (chatProvider.value === 'ollama') return '🏠 Lokal'
+  if (chatProvider.value === 'openrouter') return '🌐 OpenRouter'
+  const p = providers.value?.[chatProvider.value]
+  return p ? `☁️ ${p.name}` : '☁️ Cloud'
+})
+
+const chatUsage = computed(() => {
+  let cost = 0
+  let tokens = 0
+  let estimated = false
+  for (const m of (activeChat.value?.messages || [])) {
+    if (!m.usage) continue
+    cost += Number(m.usage.cost || 0)
+    tokens += Number(m.usage.total_tokens || 0)
+    if (m.usage.cost_estimated) estimated = true
+  }
+  const parts = [`${tokens} Token in diesem Chat`]
+  parts.push(cost > 0 ? `Kosten: ${fmtCost(cost)}${estimated ? ' (teils geschätzt)' : ''}` : 'keine Kostendaten')
+  if (chatProvider.value === 'openrouter' && credit.value && !credit.value.error) {
+    const rest = credit.value.limit_remaining
+    parts.push(rest != null && rest !== undefined
+      ? `OpenRouter-Guthaben: ${fmtCost(rest)}`
+      : `OpenRouter-Verbrauch: ${fmtCost(credit.value.usage || 0)}`)
+  }
+  return { cost, tokens, title: parts.join(' · ') }
+})
 
 watch(haControl, async (newVal, oldVal) => {
   if (oldVal !== undefined && newVal !== oldVal && activeChatId.value && activeChat.value) {
@@ -660,7 +747,10 @@ onMounted(async () => {
     kiName.value    = d.ki_name || 'Assistent'
     haControl.value = d.jarvis_ha_control === true
   } catch(e) {}
-  await loadModels()
+  await loadProviders()
+  chatProvider.value = localStorage?.getItem?.('jarvis_provider') || ''
+  await loadModels(chatProvider.value)
+  await loadCredit()
   await loadChatList()
   // Letzten Chat laden
   if (chats.value.length > 0)
@@ -891,6 +981,16 @@ onMounted(async () => {
   padding: 0 2px;
 }
 .message.user .msg-meta { justify-content: flex-end; }
+.provider-select {
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 6px; font-size: 11px; max-width: 200px;
+}
+.cost-badge {
+  font-size: 11px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(126, 200, 120, .15); color: #8fd08a; white-space: nowrap;
+  cursor: help;
+}
+.msg-usage { font-size: 10px; color: var(--muted); opacity: .85; cursor: help; }
 .msg-model {
   padding: 1px 5px; border-radius: 4px;
   background: var(--border); font-size: 9px;
