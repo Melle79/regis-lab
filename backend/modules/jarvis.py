@@ -111,7 +111,7 @@ class Module(BaseModule):
                     return jsonify({"error": f"Kein API-Key für {_base_prov} hinterlegt"}), 400
             if not model:
                 return jsonify({"error": "Kein Modell ausgewählt"}), 400
-            if not message:
+            if not message and not body.get("images"):
                 return jsonify({"error": "Keine Nachricht"}), 400
 
             # Chat laden oder erstellen
@@ -119,8 +119,12 @@ class Module(BaseModule):
             if not chat_data:
                 return jsonify({"error": "Chat nicht gefunden"}), 404
 
-            # Nachricht hinzufügen
-            chat_data["messages"].append({"role": "user", "content": display, "timestamp": datetime.now().isoformat(), "model": model})
+            # Nachricht hinzufügen (erstes Bild fuer die Anzeige mitschreiben)
+            _first_image = next((i for i in (body.get("images") or [])
+                                 if isinstance(i, str) and i.strip()), None)
+            if _first_image and not _first_image.startswith("data:"):
+                _first_image = "data:image/png;base64," + _first_image
+            chat_data["messages"].append({"role": "user", "content": display, "timestamp": datetime.now().isoformat(), "model": model, "image": _first_image})
 
             # System-Prompt
             ha_control = self.config._settings.get("jarvis_ha_control", False)
@@ -130,8 +134,34 @@ class Module(BaseModule):
             # Bei Verlaufs-Fragen echte Zeitreihen aus InfluxDB als Kontext anhängen
             influx_ctx = self._influx_context(message)
 
+            # Bilder aus der Anfrage (DataURL oder reines Base64)
+            raw_images = [i for i in (body.get("images") or []) if isinstance(i, str) and i.strip()][:4]
+            images = [i if i.startswith("data:") else "data:image/png;base64," + i for i in raw_images]
+
+            # Verlauf fuer die KI: nur Rolle und Inhalt (keine Anzeigefelder wie image)
+            history = [{"role": m.get("role"), "content": m.get("content")}
+                       for m in chat_data["messages"][:-1]
+                       if m.get("role") in ("user", "assistant", "system")]
+
             # KI bekommt vollen Text (inkl. Dateiinhalt), gespeichert wird display-Version
-            ki_messages = chat_data["messages"][:-1] + [{"role": "user", "content": message + influx_ctx}]
+            user_text = message + influx_ctx
+            if images:
+                from modules.ki_providers import split_provider as _split_for_images
+                _img_base = _split_for_images(provider)[0]
+                if _img_base in ("openai", "groq", "openrouter", "mistral"):
+                    parts = [{"type": "text", "text": user_text}]
+                    parts += [{"type": "image_url", "image_url": {"url": i}} for i in images]
+                    ki_messages = history + [{"role": "user", "content": parts}]
+                elif _img_base == "ollama":
+                    ki_messages = history + [{
+                        "role": "user",
+                        "content": user_text,
+                        "images": [i.split("base64,", 1)[-1] for i in images],
+                    }]
+                else:
+                    ki_messages = history + [{"role": "user", "content": user_text}]
+            else:
+                ki_messages = history + [{"role": "user", "content": user_text}]
             full_messages = [{"role": "system", "content": system_prompt}] + ki_messages
 
             def generate():

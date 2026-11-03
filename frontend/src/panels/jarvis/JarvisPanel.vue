@@ -1,5 +1,14 @@
 <template>
-  <div class="jarvis-layout">
+  <div
+    class="jarvis-layout"
+    @dragover.prevent="dragging = true"
+    @dragleave="dragging = false"
+    @drop.prevent="onDrop"
+  >
+    <div v-if="dragging" class="drop-overlay">
+      <MdiIcon icon="mdi:image-plus" :size="34" />
+      <span>Bild hier ablegen</span>
+    </div>
 
     <!-- Seitenleiste: Chat-Liste -->
     <div class="chat-sidebar" :class="{ collapsed: sidebarCollapsed }">
@@ -132,6 +141,7 @@
               />
             </div>
             <div class="msg-content">
+              <img v-if="msg.image" :src="msg.image" class="msg-image" alt="Anhang" @click="openImage(msg.image)" />
               <div class="msg-text" v-html="formatMessage(msg.content)" />
               <div v-if="msg.action" class="msg-action">
                 <MdiIcon icon="mdi:flash" :size="11" color="var(--amber)" />
@@ -198,8 +208,22 @@
         </button>
       </div>
 
+      <!-- Bild-Vorschau -->
+      <div v-if="uploadedImage" class="upload-preview">
+        <img :src="uploadedImage.dataUrl" class="preview-thumb" alt="Vorschau" />
+        <span>{{ uploadedImage.name }}</span>
+        <span class="upload-size">{{ Math.round(uploadedImage.size / 1024) }} KB</span>
+        <button @click="uploadedImage = null" title="Bild entfernen">
+          <MdiIcon icon="mdi:close" :size="13" />
+        </button>
+      </div>
+
       <!-- Input -->
       <div class="input-area" v-if="activeChat">
+        <label class="upload-btn" title="Bild anhängen (oder hineinziehen / einfügen)">
+          <input type="file" style="display:none" accept="image/*" @change="onImagePick" />
+          <MdiIcon icon="mdi:image-plus" :size="18" />
+        </label>
         <label class="upload-btn" title="Datei hochladen">
           <input type="file" style="display:none" @change="onFileUpload" accept=".txt,.md,.csv,.json,.yaml,.yml,.py,.js,.ts,.vue,.sh,.conf,.log,.xml,.html,.css" />
           <MdiIcon icon="mdi:paperclip" :size="18" />
@@ -211,6 +235,7 @@
           rows="1"
           @keydown.enter.exact.prevent="sendMessage"
           @input="autoResize"
+          @paste="onPaste"
           ref="inputEl"
           :disabled="streaming || !activeChat"
         />
@@ -249,6 +274,8 @@ const inputText      = ref('')
 const streaming      = ref(false)
 const streamText     = ref('')
 const uploadedFile   = ref(null)
+const uploadedImage  = ref(null)
+const dragging       = ref(false)
 const sidebarCollapsed = ref(false)
 const editingTitle   = ref(false)
 const renamingChatId = ref(null)
@@ -262,7 +289,7 @@ const autoScroll     = ref(true)
 const showScrollBtn  = ref(false)
 
 const canSend = computed(() =>
-  inputText.value.trim() && !streaming.value && activeChatId.value && currentModel.value
+  (inputText.value.trim() || uploadedImage.value) && !streaming.value && activeChatId.value && currentModel.value
 )
 
 // ── Chat-Verwaltung ──────────────────────────────────────────────
@@ -392,10 +419,12 @@ async function sendMessage() {
   abortController.value = new AbortController()
 
   // Im Chat nur Text + Dateiname anzeigen
-  const displayText = text + (fileAttachment ? `
-
-📎 ${fileAttachment.name}` : '')
-  activeChat.value.messages.push({ role: 'user', content: displayText })
+  const imageToSend = uploadedImage.value ? uploadedImage.value.dataUrl : null
+  const displayText = text
+    + (fileAttachment ? `\n\n📎 ${fileAttachment.name}` : '')
+    + (imageToSend ? `\n\n🖼️ ${uploadedImage.value.name}` : '')
+  activeChat.value.messages.push({ role: 'user', content: displayText, image: imageToSend })
+  uploadedImage.value = null
   // Bei eigener Nachricht immer ans Ende springen
   autoScroll.value = true
 
@@ -425,7 +454,7 @@ ${fileAttachment.content}
     const r = await fetch(`api/jarvis/chats/${activeChatId.value}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value, provider: chatProvider.value || undefined }),
+      body:    JSON.stringify({ message: sendText, display: displayText, model: currentModel.value, provider: chatProvider.value || undefined, images: imageToSend ? [imageToSend] : [] }),
       signal:  abortController.value.signal,
     })
 
@@ -510,6 +539,46 @@ async function deleteMessage(index) {
     body: JSON.stringify({ messages: activeChat.value.messages }),
   })
   await loadChatList()
+}
+
+/* ── Bilder: ablegen, einfügen oder auswählen ─────────────────── */
+
+function readImageFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return
+  if (file.size > 8 * 1024 * 1024) {
+    uploadedFile.value = { name: file.name, content: null, error: 'Bild zu groß (max. 8 MB)' }
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    uploadedImage.value = { name: file.name || 'Bild', dataUrl: String(reader.result), size: file.size }
+  }
+  reader.readAsDataURL(file)
+}
+
+function onImagePick(e) {
+  readImageFile(e.target.files?.[0])
+  e.target.value = ''
+}
+
+function onDrop(e) {
+  dragging.value = false
+  const files = Array.from(e.dataTransfer?.files || [])
+  const img = files.find(f => f.type && f.type.startsWith('image/'))
+  if (img) readImageFile(img)
+}
+
+function onPaste(e) {
+  const items = Array.from(e.clipboardData?.items || [])
+  const imgItem = items.find(i => i.type && i.type.startsWith('image/'))
+  if (!imgItem) return
+  e.preventDefault()
+  readImageFile(imgItem.getAsFile())
+}
+
+function openImage(dataUrl) {
+  const w = window.open('')
+  if (w) w.document.write(`<img src="${dataUrl}" style="max-width:100%;height:auto">`)
 }
 
 async function onFileUpload(e) {
@@ -770,6 +839,7 @@ onMounted(async () => {
 
 <style scoped>
 .jarvis-layout {
+  position: relative;
   display: flex; height: calc(100vh - 120px); gap: 0; overflow: hidden;
   background: var(--bg); border-radius: 12px; border: 1px solid var(--border);
 }
@@ -888,6 +958,25 @@ onMounted(async () => {
 .upload-size { font-size: 10px; color: var(--muted); }
 .upload-error { font-size: 11px; color: var(--red); }
 .upload-preview button { border: none; background: transparent; color: var(--muted); cursor: pointer; }
+
+/* Bilder: Vorschau, Anzeige im Chat, Ablege-Fläche */
+.preview-thumb {
+  width: 30px; height: 30px; object-fit: cover; border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.msg-image {
+  display: block; max-width: 320px; max-height: 240px; width: auto; height: auto;
+  border-radius: 8px; border: 1px solid var(--border);
+  margin-bottom: 6px; cursor: zoom-in;
+}
+.drop-overlay {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 2px dashed var(--accent); border-radius: 12px;
+  color: var(--accent); font-size: 13px; font-weight: 500;
+}
 
 .input-area {
   display: flex; align-items: flex-end; gap: 8px;

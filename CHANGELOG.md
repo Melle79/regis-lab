@@ -4,6 +4,25 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.0] - 2026-11-03
+
+### Hinzugefügt
+- **Bilder in den Chat ziehen**: Bilder lassen sich in den Jarvis-Chat ziehen,
+  mit Strg/Cmd+V einfügen oder über das Bild-Symbol auswählen. Vor dem Senden
+  erscheint eine kleine Vorschau; nach dem Senden steht das Bild in der Nachricht
+  und lässt sich zum Ansehen anklicken.
+- **Jarvis sieht das Bild**: Bei OpenAI-kompatiblen Anbietern (u. a. OpenRouter)
+  und bei Ollama geht das Bild zusammen mit dem Text an das Modell – Fragen zu
+  Screenshots oder Fotos sind damit direkt möglich.
+
+### Technisch
+- `POST /api/jarvis/chats/<id>/chat` nimmt zusätzlich `images` entgegen (DataURL
+  oder Base64, max. vier Bilder). Der Verlauf wird beim Aufbau der Modellanfrage
+  auf Rolle und Inhalt reduziert, damit Anzeigefelder nicht an den Anbieter gehen.
+  Eine Anfrage nur mit Bild (ohne Text) ist möglich.
+
+---
+
 ## [1.10.0] - 2026-11-03
 
 ### Hinzugefügt
