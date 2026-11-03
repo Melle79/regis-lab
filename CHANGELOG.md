@@ -4,6 +4,16 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.8.1] - 2026-11-03
+
+### Korrigiert
+- `openrouter_api_key` fehlte in der Liste der speicherbaren Einstellungen –
+  der Schlüssel wurde beim Speichern stillschweigend verworfen (die
+  Oberfläche meldete trotzdem Erfolg).
+- Leere API-Schlüsselfelder überschreiben beim Speichern der Einstellungen
+  nichts mehr: Bisher konnte ein leeres Feld einen hinterlegten Schlüssel
+  löschen.
+
 ## [1.8.0] - 2026-11-03
 
 ### Hinzugefügt
@@ -22,9 +32,6 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 - Die Anbieterprüfung im Chat ist generisch: Fehlt der Schlüssel des gewählten
   Anbieters, erscheint eine klare Meldung statt eines stillen Fehlschlags.
 - Verbrauch wird je Nachricht im Chat gespeichert.
-- Leere API-Schlüsselfelder überschreiben beim Speichern der Einstellungen
-  nichts mehr – bisher konnte ein leeres Feld einen hinterlegten Schlüssel
-  löschen.
 
 ### Hinweise
 - Token liefern alle Anbieter; verlässliche Kosten derzeit nur OpenRouter.
