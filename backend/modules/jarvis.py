@@ -146,17 +146,21 @@ class Module(BaseModule):
             # KI bekommt vollen Text (inkl. Dateiinhalt), gespeichert wird display-Version
             user_text = message + influx_ctx
             if images:
-                from modules.ki_providers import split_provider as _split_for_images
+                from modules.ki_providers import (
+                    split_provider as _split_for_images,
+                    image_content_parts, image_base64_list,
+                )
                 _img_base = _split_for_images(provider)[0]
-                if _img_base in ("openai", "groq", "openrouter", "mistral"):
-                    parts = [{"type": "text", "text": user_text}]
-                    parts += [{"type": "image_url", "image_url": {"url": i}} for i in images]
-                    ki_messages = history + [{"role": "user", "content": parts}]
-                elif _img_base == "ollama":
+                if _img_base == "ollama":
                     ki_messages = history + [{
                         "role": "user",
                         "content": user_text,
-                        "images": [i.split("base64,", 1)[-1] for i in images],
+                        "images": image_base64_list(images),
+                    }]
+                elif _img_base in ("openai", "groq", "openrouter", "mistral", "anthropic", "google"):
+                    ki_messages = history + [{
+                        "role": "user",
+                        "content": image_content_parts(_img_base, user_text, images),
                     }]
                 else:
                     ki_messages = history + [{"role": "user", "content": user_text}]

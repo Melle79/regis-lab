@@ -4,6 +4,21 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.2] - 2026-11-03
+
+### Hinzugefügt
+- **Bilder auch bei Claude und Gemini**: Bisher ging ein angehängtes Bild nur an
+  OpenRouter/Ollama. Jetzt bekommen auch die direkt eingetragenen Anbieter
+  Anthropic (Claude) und Google (Gemini) das Bild – jeder im Format, das seine
+  Schnittstelle erwartet.
+
+### Technisch
+- Neue Hilfsfunktionen in `ki_providers.py`: `image_content_parts()` baut den
+  Nachrichteninhalt je Anbieter (Text + Bild), `image_base64_list()` das
+  Ollama-Format, `_google_parts()` wandelt beliebige Inhalte in Gemini-Parts um.
+
+---
+
 ## [1.11.1] - 2026-11-03
 
 ### Behoben

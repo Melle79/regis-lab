@@ -54,6 +54,84 @@ def usage_line(usage: dict, cost=None, model_pricing=None):
     return json.dumps({"usage": out, "done": False}) + "\n"
 
 
+def _split_data_url(value):
+    """Zerlegt eine DataURL in (mime_type, base64). Reines Base64 bleibt Base64."""
+    if not isinstance(value, str):
+        return "image/png", ""
+    v = value.strip()
+    if v.startswith("data:"):
+        head, _, data = v.partition(",")
+        mime = head[5:].split(";")[0] or "image/png"
+        return mime, data.strip()
+    return "image/png", v
+
+
+def image_base64_list(images: list) -> list:
+    """Bilder als reine Base64-Zeichenketten (Format von Ollama)."""
+    return [_split_data_url(i)[1] for i in images if isinstance(i, str) and i.strip()]
+
+
+def image_content_parts(provider: str, text: str, images: list):
+    """Inhalt einer Nutzernachricht mit Bildern im Format des Anbieters.
+
+    Liefert die content-Struktur fuer Anthropic (Claude), Google (Gemini) und
+    OpenAI-kompatible APIs. Ollama arbeitet anders: dort gehoeren die Bilder
+    als reine Base64-Liste in das Feld "images" (siehe image_base64_list).
+    """
+    text = text or ""
+    if provider == "anthropic":
+        parts = []
+        if text.strip():
+            parts.append({"type": "text", "text": text})
+        for img in images:
+            mime, b64 = _split_data_url(img)
+            if b64:
+                parts.append({"type": "image", "source": {
+                    "type": "base64", "media_type": mime, "data": b64}})
+        return parts
+    if provider == "google":
+        parts = []
+        if text.strip():
+            parts.append({"text": text})
+        for img in images:
+            mime, b64 = _split_data_url(img)
+            if b64:
+                parts.append({"inline_data": {"mime_type": mime, "data": b64}})
+        return parts
+    # OpenAI-kompatibel: openai, groq, openrouter, mistral
+    parts = []
+    if text.strip():
+        parts.append({"type": "text", "text": text})
+    for img in images:
+        if not isinstance(img, str) or not img.strip():
+            continue
+        url = img.strip()
+        if not url.startswith("data:"):
+            url = "data:image/png;base64," + url
+        parts.append({"type": "image_url", "image_url": {"url": url}})
+    return parts
+
+
+def _google_parts(content):
+    """Baut Gemini-Parts aus einer content-Struktur (Text, inline_data oder image_url)."""
+    if not isinstance(content, list):
+        return [{"text": content or ""}]
+    parts = []
+    for block in content:
+        if not isinstance(block, dict):
+            parts.append({"text": str(block)})
+            continue
+        if block.get("inline_data"):
+            parts.append({"inline_data": block["inline_data"]})
+        elif block.get("text"):
+            parts.append({"text": block["text"]})
+        elif block.get("type") == "image_url":
+            mime, b64 = _split_data_url((block.get("image_url") or {}).get("url", ""))
+            if b64:
+                parts.append({"inline_data": {"mime_type": mime, "data": b64}})
+    return parts or [{"text": ""}]
+
+
 def chat_anthropic(messages: list, model: str, api_key: str, system: str = ""):
     """Streaming-Chat via Anthropic API."""
     import anthropic
@@ -257,7 +335,7 @@ def chat_google(messages: list, model: str, api_key: str):
         if m["role"] == "system":
             continue
         role = "user" if m["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+        contents.append({"role": role, "parts": _google_parts(m.get("content"))})
 
     system_msgs = [m for m in messages if m["role"] == "system"]
     payload = {
