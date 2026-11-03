@@ -26,6 +26,8 @@ class Module(BaseModule):
                 "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time", "briefing_enabled", "ha_external_url", "jarvis_provider", "anthropic_api_key", "openrouter_api_key", "use_anthropic_fallback", "use_anthropic_primary", "suggestions_enabled", "suggestions_time", "cloud_provider", "use_cloud_primary", "use_cloud_fallback", "openai_api_key", "google_api_key", "mistral_api_key", "groq_api_key",
                 "influxdb_enabled", "influxdb_host", "influxdb_port", "influxdb_database",
                 "influxdb_user", "influxdb_password", "influxdb_ssl",
+                "mini_enabled", "mini_host", "mini_user", "mini_root",
+                "mini_key_path", "mini_auto", "mini_max_rounds",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             # Token nur speichern wenn nicht leer

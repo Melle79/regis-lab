@@ -4,7 +4,28 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.9.0] - 2026-11-03
+
+### Hinzugefügt
+- **Jarvis darf auf dem Mac mini arbeiten.** Neuer Abschnitt „Mac mini" in den
+  Einstellungen: Adresse, Benutzer, Arbeitswurzel, „ohne Rückfrage" und Schritte
+  je Frage. Voreingestellt ist der Mac mini mit der Wurzel `~/Vibe_Coding` – alles
+  bleibt änderbar, ein Schalter schaltet den Zugriff ganz ab.
+- Werkzeuge im Chat: Datei lesen, Datei schreiben, Ordner auflisten, Befehl
+  ausführen – nur innerhalb der Arbeitswurzel. Im Chat erscheint eine Zeile
+  „🖥️ Mac mini · …", danach arbeitet Jarvis automatisch weiter (mehrere Schritte).
+- Neue Endpunkte `/api/mini/info`, `/api/mini/test` und `/api/mini/run`.
+
+### Hinweise
+- Der SSH-Schlüssel wird im Add-on erzeugt (`/data/regis_mini_key`, bleibt beim
+  Neubau erhalten); sein öffentlicher Teil steht in `/api/mini/info` und muss am
+  mini in `~/.ssh/authorized_keys` liegen.
+- Beide Rechner nutzen dieselben Arbeitskopien: Änderungen sind sofort in VS Code
+  sichtbar – eine Synchronisation braucht es dafür nicht.
+
+---
 ## [1.8.1] - 2026-11-03
+
 
 ### Korrigiert
 - `openrouter_api_key` fehlte in der Liste der speicherbaren Einstellungen –

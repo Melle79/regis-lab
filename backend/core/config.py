@@ -41,6 +41,14 @@ SETTINGS_DEFAULTS = {
     "influxdb_user":       "",
     "influxdb_password":   "",
     "influxdb_ssl":        False,
+    # Mac mini: Jarvis darf dort Dateien lesen/schreiben und Befehle ausfuehren
+    "mini_enabled":        True,
+    "mini_host":           "192.168.0.220",
+    "mini_user":           "sven",
+    "mini_root":           "/Users/sven/Vibe_Coding",
+    "mini_key_path":       "/data/regis_mini_key",
+    "mini_auto":           True,
+    "mini_max_rounds":     3,
 }
 
 
@@ -131,7 +139,7 @@ class AddonConfig:
 
     @property
     def enabled_modules(self) -> list:
-        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose", "analyse", "briefing", "suggestions"]
+        return ["areas", "automations", "entities", "jarvis", "settings", "voice_expose", "analyse", "briefing", "suggestions", "mini_tools"]
 
     def frontend_config(self) -> dict:
         return {
@@ -169,4 +177,11 @@ class AddonConfig:
             "influxdb_password_set": bool(self._settings.get("influxdb_password", "")),
             "influxdb_ssl":         self._settings.get("influxdb_ssl", False),
             "ha_token_set":         bool(self.ha_long_token),
+            "mini_enabled":         self._settings.get("mini_enabled", True),
+            "mini_host":            self._settings.get("mini_host", "192.168.0.220"),
+            "mini_user":            self._settings.get("mini_user", "sven"),
+            "mini_root":            self._settings.get("mini_root", "/Users/sven/Vibe_Coding"),
+            "mini_key_set":         bool(self._settings.get("mini_key_path", "/data/regis_mini_key")),
+            "mini_auto":            self._settings.get("mini_auto", True),
+            "mini_max_rounds":      self._settings.get("mini_max_rounds", 3),
         }

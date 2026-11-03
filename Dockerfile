@@ -1,7 +1,7 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/base-python:3.12-alpine3.22
 FROM $BUILD_FROM
 
-RUN apk add --no-cache nodejs npm
+RUN apk add --no-cache nodejs npm openssh-client
 
 WORKDIR /app
 

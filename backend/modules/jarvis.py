@@ -125,6 +125,7 @@ class Module(BaseModule):
             # System-Prompt
             ha_control = self.config._settings.get("jarvis_ha_control", False)
             system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
+            system_prompt += self._mini_prompt()
 
             # Bei Verlaufs-Fragen echte Zeitreihen aus InfluxDB als Kontext anhängen
             influx_ctx = self._influx_context(message)
@@ -140,6 +141,7 @@ class Module(BaseModule):
                         chat_anthropic, chat_openai, chat_google, chat_mistral, chat_groq,
                         chat_openrouter, PROVIDERS
                     )
+                    from modules.mini import run_tool as mini_run_tool
 
                     def _stream_provider():
                         from modules.ki_providers import split_provider
@@ -192,16 +194,44 @@ class Module(BaseModule):
                                 else:
                                     raise ollama_err
 
+                    from modules.mini_tools import cfg_of as _mini_cfg_of
+                    mini_cfg = _mini_cfg_of(self.config)
+                    max_rounds = int(mini_cfg.get("mini_max_rounds") or 3)
+
                     usage_info = None
-                    for line in _stream_provider():
-                        try:
-                            parsed = json.loads(line)
-                            full_text += parsed.get("message", {}).get("content", "")
-                            if parsed.get("usage"):
-                                usage_info = parsed["usage"]
-                        except Exception:
-                            pass
-                        yield line
+                    rounds = 0
+                    while True:
+                        round_text = ""
+                        for line in _stream_provider():
+                            try:
+                                parsed = json.loads(line)
+                                round_text += parsed.get("message", {}).get("content", "")
+                                if parsed.get("usage"):
+                                    usage_info = parsed["usage"]
+                            except Exception:
+                                pass
+                            yield line
+                        full_text += round_text
+                        rounds += 1
+                        block, _clean = self._mini_block(round_text)
+                        if not block or not mini_cfg.get("mini_enabled") or rounds > max_rounds:
+                            break
+                        if not mini_cfg.get("mini_auto"):
+                            yield json.dumps({"tool": {
+                                "action": block.get("action"),
+                                "blocked": "Automatik aus – bitte in den Einstellungen einschalten",
+                            }}) + "\n"
+                            break
+                        result = mini_run_tool(mini_cfg, block)
+                        yield json.dumps({"tool": {
+                            "action": block.get("action"),
+                            "result": result,
+                        }}, ensure_ascii=False) + "\n"
+                        full_messages.append({"role": "assistant", "content": round_text})
+                        full_messages.append({"role": "system", "content":
+                            "Ergebnis vom Mac mini (JSON): "
+                            + json.dumps(result, ensure_ascii=False)[:6000]
+                            + "\nFasse das Ergebnis jetzt kurz fuer den Nutzer zusammen."})
                 except Exception as e:
                     yield json.dumps({"error": str(e)}) + "\n"
                     return
@@ -665,6 +695,54 @@ class Module(BaseModule):
 
     def _get_setting(self, key: str, default=""):
         return self.config._settings.get(key, default)
+
+    @staticmethod
+    def _mini_block(text: str):
+        """Sucht einen {"mini": {...}}-Auftrag in der Antwort des Modells.
+
+        Gibt (Auftrag oder None, Text ohne den Block) zurueck. Die Klammern
+        werden gezaehlt, damit verschachtelte Inhalte (z. B. Dateiinhalte mit
+        geschweiften Klammern) nicht abgeschnitten werden.
+        """
+        key = '{"mini":'
+        idx = text.find(key)
+        if idx < 0:
+            return None, text
+        depth = 0
+        for i in range(idx, len(text)):
+            ch = text[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    raw = text[idx:i + 1]
+                    try:
+                        obj = json.loads(raw)
+                    except Exception:
+                        return None, text
+                    block = obj.get("mini")
+                    if isinstance(block, dict):
+                        return block, text[:idx] + text[i + 1:]
+                    return None, text
+        return None, text
+
+    def _mini_prompt(self) -> str:
+        """Anleitung fuer die Werkzeuge auf dem Mac mini (nur wenn eingeschaltet)."""
+        from modules.mini_tools import cfg_of
+        cfg = cfg_of(self.config)
+        if not cfg.get("mini_enabled"):
+            return ""
+        return (
+            "\n\nWERKZEUGE AUF DEM MAC MINI\n"
+            f"Du darfst auf dem Mac mini arbeiten (Wurzel: {cfg.get('mini_root')}). "
+            "Wenn du dort etwas nachsehen oder aendern sollst, gib GENAU EINEN solchen Block aus:\n"
+            '{"mini": {"action": "run", "cmd": "git status --short", "cwd": "dev/nupplo"}}\n'
+            'Erlaubt: action "run" (cmd, optional cwd), "read" (path), "write" (path, content), '
+            '"list" (path). Pfade sind relativ zur Wurzel. Du bekommst das Ergebnis als '
+            "Systemnachricht und antwortest danach in normaler Sprache. Nutze die Werkzeuge nur, "
+            "wenn wirklich etwas auf dem mini zu tun ist."
+        )
 
     def _build_system_prompt(self) -> str:
         custom  = self._get_setting("jarvis_system_prompt", "")

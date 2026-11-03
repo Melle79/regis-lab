@@ -313,6 +313,63 @@
             </template>
           </div>
 
+          <!-- Mac mini (Arbeitsrechner) -->
+          <div class="settings-card">
+            <div class="card-title">
+              <MdiIcon icon="mdi:laptop" :size="20" color="var(--accent)" />
+              Mac mini — Arbeitsrechner
+            </div>
+            <p class="card-desc">
+              {{ form.ki_name || 'Jarvis' }} darf auf dem Mac mini Dateien lesen und schreiben und
+              Befehle ausführen. Weil dort dieselben Arbeitskopien liegen, die auch VS Code
+              geöffnet hat, sind Änderungen sofort in beiden sichtbar.
+            </p>
+
+            <div class="field">
+              <div class="toggle-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="form.mini_enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="field-hint">Zugriff auf den Mac mini erlauben</span>
+              </div>
+            </div>
+
+            <template v-if="form.mini_enabled">
+              <div class="field">
+                <label>Adresse</label>
+                <input v-model="form.mini_host" class="input" placeholder="192.168.0.220" />
+              </div>
+              <div class="field">
+                <label>Benutzer</label>
+                <input v-model="form.mini_user" class="input" placeholder="sven" />
+              </div>
+              <div class="field">
+                <label>Arbeitswurzel</label>
+                <input v-model="form.mini_root" class="input" placeholder="/Users/sven/Vibe_Coding" />
+                <span class="field-hint">Nur innerhalb dieses Ordners darf gearbeitet werden</span>
+              </div>
+              <div class="field">
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" v-model="form.mini_auto" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="field-hint">Befehle und Dateiänderungen ohne Rückfrage ausführen</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Schritte je Frage</label>
+                <input v-model.number="form.mini_max_rounds" class="input" type="number" min="1" max="10" style="width:90px" />
+                <span class="field-hint">Wie oft {{ form.ki_name || 'Jarvis' }} nacheinander auf dem mini arbeiten darf</span>
+              </div>
+              <div class="field">
+                <button class="btn-test" @click="testMini">Verbindung testen</button>
+                <span v-if="miniTest" class="field-hint">{{ miniTest }}</span>
+              </div>
+            </template>
+          </div>
+
           <!-- InfluxDB (Verlaufsdaten für Jarvis) -->
           <div class="settings-card">
             <div class="card-title">
@@ -429,6 +486,12 @@ const form = ref({
   groq_api_key: '',
   anthropic_api_key: '',
   anthropic_api_key_set: false,
+  mini_enabled: true,
+  mini_host: '192.168.0.220',
+  mini_user: 'sven',
+  mini_root: '/Users/sven/Vibe_Coding',
+  mini_auto: true,
+  mini_max_rounds: 3,
   show_clock: true,
   show_weather: false,
   weather_entity: '',
@@ -460,6 +523,7 @@ const showToken       = ref(false)
 const availableModels = ref([])
 const loadingModels   = ref(false)
 const modelsError     = ref('')
+const miniTest        = ref('')
 const saving          = ref(false)
 const saved           = ref(false)
 const tokenError      = ref('')
@@ -694,6 +758,12 @@ async function save() {
         anthropic_api_key:    form.value.anthropic_api_key,
         use_anthropic_fallback: !!form.value.use_anthropic_fallback,
         cloud_provider:       form.value.cloud_provider,
+        mini_enabled:         form.value.mini_enabled,
+        mini_host:            form.value.mini_host,
+        mini_user:            form.value.mini_user,
+        mini_root:            form.value.mini_root,
+        mini_auto:            form.value.mini_auto,
+        mini_max_rounds:      form.value.mini_max_rounds,
         use_cloud_primary:    !!form.value.use_cloud_primary,
         use_cloud_fallback:   !!form.value.use_cloud_fallback,
         openai_api_key:       form.value.openai_api_key,
@@ -721,6 +791,22 @@ async function save() {
 
 
 onMounted(load)
+async function testMini() {
+  miniTest.value = 'prüfe…'
+  try {
+    const r = await fetch('api/mini/test', { method: 'POST' })
+    const d = await r.json()
+    if (d.ok) {
+      const out = (d.output || '').split('\n').filter(Boolean).join(' · ')
+      miniTest.value = `OK · ${out || d.host}`
+    } else {
+      miniTest.value = `Fehler: ${d.error || d.output || 'keine Verbindung'}`
+    }
+  } catch (e) {
+    miniTest.value = `Fehler: ${e.message}`
+  }
+}
+
 </script>
 
 <style scoped>

@@ -441,6 +441,16 @@ ${fileAttachment.content}
         try {
           const data  = JSON.parse(line)
           if (data.error) { streamText.value = `Fehler: ${data.error}`; break }
+          if (data.tool) {
+            const t = data.tool
+            const line = t.blocked
+              ? `\n🖥️ Mac mini · ${t.action}: ${t.blocked}\n`
+              : `\n🖥️ Mac mini · ${t.action} ausgeführt\n`
+            fullText += line
+            streamText.value = fullText
+            await scrollToBottom()
+            continue
+          }
           fullText += data.message?.content || ''
           streamText.value = fullText
           await scrollToBottom()
