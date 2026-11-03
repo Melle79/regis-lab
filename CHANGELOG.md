@@ -4,6 +4,19 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.3] - 2026-11-03
+
+### Behoben
+- **Veraltete Modellnamen bei Claude und Gemini.** In der Anbieterliste standen
+  noch Modelle, die nicht mehr aktuell sind – bei Google war `gemini-2.0-flash`
+  sogar bereits abgeschaltet. Claude steht jetzt mit `claude-haiku-5-5`,
+  `claude-sonnet-5-5` und `claude-opus-5-5` bereit (die bisherigen 4.x-Modelle
+  bleiben als Ausweichmöglichkeit in der Liste). Bei Gemini sind es
+  `gemini-flash-latest`, `gemini-3.8-flash`, `gemini-3.6-flash` und
+  `gemini-3.5-flash-lite`. Auch die Vorgabemodelle im Code wurden angepasst.
+
+---
+
 ## [1.11.2] - 2026-11-03
 
 ### Hinzugefügt

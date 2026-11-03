@@ -21,9 +21,9 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1"
 PROVIDERS = {
     "ollama":     {"name": "Ollama (lokal)",     "models": [], "key_required": False},
     "openrouter": {"name": "OpenRouter",          "models": ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro", "deepseek/deepseek-chat-v3.1"], "key_required": True},
-    "anthropic":  {"name": "Anthropic (Claude)",  "models": ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"], "key_required": True},
+    "anthropic":  {"name": "Anthropic (Claude)",  "models": ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"], "key_required": True},
     "openai":     {"name": "OpenAI (GPT)",        "models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"], "key_required": True},
-    "google":     {"name": "Google (Gemini)",     "models": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"], "key_required": True},
+    "google":     {"name": "Google (Gemini)",     "models": ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"], "key_required": True},
     "mistral":    {"name": "Mistral",             "models": ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest"], "key_required": True},
     "groq":       {"name": "Groq",                "models": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"], "key_required": True},
 }
@@ -141,7 +141,7 @@ def chat_anthropic(messages: list, model: str, api_key: str, system: str = ""):
         system_msgs = [m for m in messages if m["role"] == "system"]
         system = system_msgs[-1]["content"] if system_msgs else ""
     with client.messages.stream(
-        model=model or "claude-haiku-4-5-20251001",
+        model=model or "claude-haiku-5-5",
         max_tokens=4096,
         system=system,
         messages=chat_msgs,
@@ -345,7 +345,7 @@ def chat_google(messages: list, model: str, api_key: str):
     if system_msgs:
         payload["systemInstruction"] = {"parts": [{"text": system_msgs[-1]["content"]}]}
 
-    model_name = model or "gemini-1.5-flash"
+    model_name = model or "gemini-flash-latest"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:streamGenerateContent?key={api_key}&alt=sse"
     r = requests.post(url, json=payload, stream=True, timeout=120)
     usage = None
