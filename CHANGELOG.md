@@ -22,6 +22,9 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 - Die Anbieterprüfung im Chat ist generisch: Fehlt der Schlüssel des gewählten
   Anbieters, erscheint eine klare Meldung statt eines stillen Fehlschlags.
 - Verbrauch wird je Nachricht im Chat gespeichert.
+- Leere API-Schlüsselfelder überschreiben beim Speichern der Einstellungen
+  nichts mehr – bisher konnte ein leeres Feld einen hinterlegten Schlüssel
+  löschen.
 
 ### Hinweise
 - Token liefern alle Anbieter; verlässliche Kosten derzeit nur OpenRouter.

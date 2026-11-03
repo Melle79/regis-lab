@@ -23,7 +23,7 @@ class Module(BaseModule):
             allowed = [
                 "title", "theme", "show_clock", "show_weather", "weather_entity",
                 "ki_name", "ha_token", "jarvis_ollama_url", "jarvis_model",
-                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time", "briefing_enabled", "ha_external_url", "jarvis_provider", "anthropic_api_key", "use_anthropic_fallback", "use_anthropic_primary", "suggestions_enabled", "suggestions_time", "cloud_provider", "use_cloud_primary", "use_cloud_fallback", "openai_api_key", "google_api_key", "mistral_api_key", "groq_api_key",
+                "jarvis_temperature", "jarvis_max_tokens", "jarvis_system_prompt", "jarvis_ha_control", "tab_order", "filter_labels", "briefing_targets", "briefing_time", "briefing_enabled", "ha_external_url", "jarvis_provider", "anthropic_api_key", "openrouter_api_key", "use_anthropic_fallback", "use_anthropic_primary", "suggestions_enabled", "suggestions_time", "cloud_provider", "use_cloud_primary", "use_cloud_fallback", "openai_api_key", "google_api_key", "mistral_api_key", "groq_api_key",
                 "influxdb_enabled", "influxdb_host", "influxdb_port", "influxdb_database",
                 "influxdb_user", "influxdb_password", "influxdb_ssl",
             ]
@@ -31,6 +31,11 @@ class Module(BaseModule):
             # Token nur speichern wenn nicht leer
             if "ha_token" in updates and not updates["ha_token"]:
                 del updates["ha_token"]
+            # Leere API-Schluessel nie ueberschreiben (sonst loescht ein
+            # Speichern der Einstellungen den hinterlegten Schluessel)
+            for k in list(updates.keys()):
+                if k.endswith("_api_key") and not updates[k]:
+                    del updates[k]
             # InfluxDB-Passwort nur speichern wenn nicht leer (sonst bestehendes behalten)
             if "influxdb_password" in updates and not updates["influxdb_password"]:
                 del updates["influxdb_password"]
