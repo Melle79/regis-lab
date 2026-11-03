@@ -367,6 +367,21 @@
                 <button class="btn-test" @click="testMini">Verbindung testen</button>
                 <span v-if="miniTest" class="field-hint">{{ miniTest }}</span>
               </div>
+
+              <div class="field">
+                <div class="toggle-row">
+                  <label class="toggle">
+                    <input type="checkbox" v-model="form.cline_enabled" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="field-hint">Cline-Chats anzeigen (nur lesen – Liste und Verlauf)</span>
+                </div>
+              </div>
+              <div class="field" v-if="form.cline_enabled">
+                <label>Verzeichnis der Cline-Daten</label>
+                <input v-model="form.cline_dir" class="input" placeholder="/Users/sven/.cline/data" />
+                <span class="field-hint">Ein eigener Bereich „Cline“ erscheint dann in der Kopfzeile</span>
+              </div>
             </template>
           </div>
 
@@ -492,6 +507,8 @@ const form = ref({
   mini_root: '/Users/sven/Vibe_Coding',
   mini_auto: true,
   mini_max_rounds: 3,
+  cline_enabled: false,
+  cline_dir: '/Users/sven/.cline/data',
   show_clock: true,
   show_weather: false,
   weather_entity: '',
@@ -764,6 +781,8 @@ async function save() {
         mini_root:            form.value.mini_root,
         mini_auto:            form.value.mini_auto,
         mini_max_rounds:      form.value.mini_max_rounds,
+        cline_enabled:        form.value.cline_enabled,
+        cline_dir:            form.value.cline_dir,
         use_cloud_primary:    !!form.value.use_cloud_primary,
         use_cloud_fallback:   !!form.value.use_cloud_fallback,
         openai_api_key:       form.value.openai_api_key,

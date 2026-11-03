@@ -4,6 +4,21 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.10.0] - 2026-11-03
+
+### Hinzugefügt
+- **Cline-Chats lesen** (optional): Neuer Bereich „Cline" zeigt die Chats, die am
+  Mac mini mit Cline geführt wurden – Titel, Modell, Zeit und Verlauf.
+  Eingeschaltet wird er in den Einstellungen im Abschnitt „Mac mini"; dort steht
+  auch das Verzeichnis der Cline-Daten (Vorgabe `~/.cline/data`).
+- Jarvis darf dieselben Chats lesen (`{"mini": {"action": "cline", "op": "list"}}`
+  bzw. `… "op": "show", "id": …`), wenn die Cline-Chats eingeschaltet sind.
+
+### Hinweise
+- Der Bereich liest nur: Ein Cline-Chat lebt in der VS-Code-Erweiterung und lässt
+  sich von hier aus **nicht** fortsetzen.
+- Der Cline-Tab erscheint automatisch in der Kopfzeile, sobald der Schalter an ist.
+
 ## [1.9.0] - 2026-11-03
 
 ### Hinzugefügt

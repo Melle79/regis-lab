@@ -28,6 +28,7 @@ class Module(BaseModule):
                 "influxdb_user", "influxdb_password", "influxdb_ssl",
                 "mini_enabled", "mini_host", "mini_user", "mini_root",
                 "mini_key_path", "mini_auto", "mini_max_rounds",
+                "cline_enabled", "cline_dir",
             ]
             updates = {k: v for k, v in data.items() if k in allowed}
             # Token nur speichern wenn nicht leer

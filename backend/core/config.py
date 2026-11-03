@@ -49,6 +49,9 @@ SETTINGS_DEFAULTS = {
     "mini_key_path":       "/data/regis_mini_key",
     "mini_auto":           True,
     "mini_max_rounds":     3,
+    # Cline-Chats (nur lesen, optional)
+    "cline_enabled":       False,
+    "cline_dir":           "/Users/sven/.cline/data",
 }
 
 
@@ -184,4 +187,6 @@ class AddonConfig:
             "mini_key_set":         bool(self._settings.get("mini_key_path", "/data/regis_mini_key")),
             "mini_auto":            self._settings.get("mini_auto", True),
             "mini_max_rounds":      self._settings.get("mini_max_rounds", 3),
+            "cline_enabled":        self._settings.get("cline_enabled", False),
+            "cline_dir":            self._settings.get("cline_dir", "/Users/sven/.cline/data"),
         }

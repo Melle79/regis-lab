@@ -10,8 +10,10 @@ sind Aenderungen sofort in beiden sichtbar - eine Synchronisation braucht es
 dafuer nicht.
 """
 import base64
+import json
 import logging
 import os
+import re
 import shlex
 import subprocess
 
@@ -19,6 +21,7 @@ log = logging.getLogger("regis_lab.mini")
 
 DEFAULT_KEY = "/data/regis_mini_key"
 DEFAULT_ROOT = "/Users/sven/Vibe_Coding"
+DEFAULT_CLINE_DIR = "/Users/sven/.cline/data"
 
 
 def key_path(cfg):
@@ -159,6 +162,11 @@ def run_tool(cfg, tool):
         return write_file(cfg, tool.get("path") or "", tool.get("content") or "")
     if action in ("list", "ls", "list_dir"):
         return list_dir(cfg, tool.get("path") or "")
+    if action == "cline":
+        op = (tool.get("op") or "list").strip().lower()
+        if op in ("show", "read", "get", "verlauf"):
+            return cline_show(cfg, tool.get("id") or "", int(tool.get("limit") or 20))
+        return cline_list(cfg, int(tool.get("limit") or 40))
     return {"error": f"unbekannte Aktion: {action}"}
 
 
@@ -174,4 +182,74 @@ def status(cfg):
         "root": root_of(cfg),
         "output": out.strip()[:500],
         "rc": rc,
+    }
+
+
+# --------------------------------------------------------------- Cline-Chats
+
+def cline_dir(cfg) -> str:
+    return ((cfg.get("cline_dir") or "").strip() or DEFAULT_CLINE_DIR).rstrip("/")
+
+
+def _message_text(content):
+    """Text aus einem Cline-Inhalt holen (String oder Blockliste)."""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text" and block.get("text"):
+                parts.append(str(block["text"]).strip())
+            elif block.get("type") == "tool_use":
+                parts.append("[%s %s]" % (block.get("name", "werkzeug"),
+                                          str(block.get("input"))[:120]))
+        return "\n".join(p for p in parts if p)
+    return ""
+
+
+def cline_list(cfg, limit=40):
+    """Liste der Cline-Chats (Titel, Modell, Zeit) vom mini."""
+    db = cline_dir(cfg) + "/db/sessions.db"
+    sql = ("select session_id, provider, model, substr(prompt,1,120) as title, "
+           "updated_at from sessions order by updated_at desc limit %d;" % int(limit))
+    rc, out = ssh_run(cfg, "sqlite3 -json %s %s" % (shlex.quote(db), shlex.quote(sql)), timeout=40)
+    if rc != 0:
+        return {"error": out.strip()[:300], "chats": []}
+    try:
+        rows = json.loads(out or "[]")
+    except Exception:
+        return {"error": "Antwort der Datenbank nicht lesbar", "chats": []}
+    return {"chats": rows}
+
+
+def cline_show(cfg, sid, limit=30, max_chars=1500):
+    """Verlauf eines Cline-Chats (letzte Nachrichten) vom mini."""
+    if not re.match(r"^[A-Za-z0-9_.-]{1,80}$", sid or ""):
+        return {"error": "ungueltige Chat-Kennung"}
+    path = "%s/sessions/%s/%s.messages.json" % (cline_dir(cfg), sid, sid)
+    rc, out = ssh_run(cfg, "cat %s" % shlex.quote(path), timeout=90)
+    if rc != 0:
+        return {"error": out.strip()[:300]}
+    try:
+        data = json.loads(out)
+    except Exception:
+        return {"error": "Verlauf nicht lesbar"}
+    messages = data.get("messages") or []
+    picked = []
+    for msg in messages[-int(limit):]:
+        text = _message_text(msg.get("content"))
+        if not text:
+            continue
+        picked.append({
+            "role": msg.get("role"),
+            "ts": msg.get("ts"),
+            "text": text[:max_chars],
+        })
+    return {
+        "session": sid,
+        "total_messages": len(messages),
+        "updated_at": data.get("updated_at"),
+        "messages": picked,
     }

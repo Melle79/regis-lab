@@ -742,6 +742,14 @@ class Module(BaseModule):
             '"list" (path). Pfade sind relativ zur Wurzel. Du bekommst das Ergebnis als '
             "Systemnachricht und antwortest danach in normaler Sprache. Nutze die Werkzeuge nur, "
             "wenn wirklich etwas auf dem mini zu tun ist."
+            + (
+                "\n\nCLINE-CHATS\n"
+                "Fruehere Chats aus Cline (VS Code) am mini kannst du lesen:\n"
+                '{"mini": {"action": "cline", "op": "list"}}\n'
+                '{"mini": {"action": "cline", "op": "show", "id": "<kennung>", "limit": 20}}\n'
+                "Nutze das, wenn nach frueherer Arbeit oder nach einem Verlauf gefragt wird."
+                if cfg.get("cline_enabled") else ""
+            )
         )
 
     def _build_system_prompt(self) -> str:

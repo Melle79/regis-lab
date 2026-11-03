@@ -19,6 +19,8 @@ def cfg_of(config) -> dict:
         "mini_key_path":   s.get("mini_key_path", ""),
         "mini_auto":       s.get("mini_auto", True),
         "mini_max_rounds": s.get("mini_max_rounds", 3),
+        "cline_enabled":   s.get("cline_enabled", False),
+        "cline_dir":       s.get("cline_dir", ""),
     }
 
 
@@ -53,5 +55,28 @@ class Module(BaseModule):
             if not cfg["mini_enabled"]:
                 return jsonify({"error": "mini-Zugriff ist ausgeschaltet"}), 400
             return jsonify(mini.run_tool(cfg, request.get_json() or {}))
+
+        # ── Cline-Chats (nur lesen) ─────────────────────────────────
+        @self.app.route("/api/cline/chats")
+        def cline_chats():
+            cfg = cfg_of(self.config)
+            if not cfg.get("cline_enabled"):
+                return jsonify({"chats": [], "error": "Cline-Chats sind ausgeschaltet"})
+            try:
+                limit = int(request.args.get("limit", 40) or 40)
+            except ValueError:
+                limit = 40
+            return jsonify(mini.cline_list(cfg, limit))
+
+        @self.app.route("/api/cline/chats/<sid>")
+        def cline_chat(sid):
+            cfg = cfg_of(self.config)
+            if not cfg.get("cline_enabled"):
+                return jsonify({"error": "Cline-Chats sind ausgeschaltet"}), 400
+            try:
+                limit = int(request.args.get("limit", 30) or 30)
+            except ValueError:
+                limit = 30
+            return jsonify(mini.cline_show(cfg, sid, limit))
 
         self.log.info("mini_tools-Modul registriert")

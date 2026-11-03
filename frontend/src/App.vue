@@ -20,6 +20,7 @@
       <JarvisPanel    v-else-if="activeTab === 'jarvis'" />
       <!-- jarvis-v3 -->
       <VerlaufPanel   v-else-if="activeTab === 'verlauf'" />
+      <ClinePanel     v-else-if="activeTab === 'cline'" />
       <AnalysePanel   v-else-if="activeTab === 'analyse'" />
     </main>
 
@@ -42,6 +43,7 @@ import PersonenPanel from './panels/personen/PersonenPanel.vue'
 import ZonenPanel   from './panels/zonen/ZonenPanel.vue'
 import JarvisPanel  from './panels/jarvis/JarvisPanel.vue'
 import VerlaufPanel from './panels/verlauf/VerlaufPanel.vue'
+import ClinePanel   from './panels/cline/ClinePanel.vue'
 import AnalysePanel from './panels/analyse/AnalysePanel.vue'
 import SettingsModal from './panels/settings/SettingsModal.vue'
 
@@ -58,6 +60,7 @@ const ALL_TABS = [
   { id: 'zonen',    label: 'Zonen',   icon: 'mdi:map-marker-radius' },
   { id: 'jarvis',   label: 'Jarvis',  icon: 'mdi:robot' },
   { id: 'verlauf',  label: 'Verlauf', icon: 'mdi:chart-line' },
+  { id: 'cline',    label: 'Cline',   icon: 'mdi:console' },
   { id: 'analyse',  label: 'Diagnose', icon: 'mdi:stethoscope' },
 ]
 
@@ -69,8 +72,9 @@ async function loadTabOrder() {
     const r = await fetch('api/config')
     const d = await r.json()
     if (d.tab_order && Array.isArray(d.tab_order)) {
-      // Neuen Verlauf-Tab auch bei bereits gespeicherter Reihenfolge zeigen
-      const order = d.tab_order.includes('verlauf') ? d.tab_order : [...d.tab_order, 'verlauf']
+      // Neue Tabs auch bei bereits gespeicherter Reihenfolge zeigen
+      const order = d.tab_order.includes('verlauf') ? [...d.tab_order] : [...d.tab_order, 'verlauf']
+      if (d.cline_enabled === true && !order.includes('cline')) order.push('cline')
       tabOrder.value = order
       activeTab.value = order[0]
     }
@@ -89,10 +93,13 @@ async function saveTabOrder(order) {
 }
 
 const mainTabs = computed(() => {
-  return tabOrder.value
+  const list = tabOrder.value
     .map(id => ALL_TABS.find(t => t.id === id))
     .filter(Boolean)
-    .map(t => t.id === 'jarvis' ? { ...t, label: config.value.ki_name || 'Jarvis' } : t)
+  const shown = config.value.cline_enabled === true
+    ? list
+    : list.filter(t => t.id !== 'cline')
+  return shown.map(t => t.id === 'jarvis' ? { ...t, label: config.value.ki_name || 'Jarvis' } : t)
 })
 
 const headerSettings = computed(() => ({
