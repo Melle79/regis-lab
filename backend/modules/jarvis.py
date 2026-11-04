@@ -35,6 +35,7 @@ class Module(BaseModule):
                     chats.append({
                         "id":         d["id"],
                         "title":      d.get("title", "Neuer Chat"),
+                        "project":    d.get("project", ""),
                         "updated_at": d.get("updated_at", ""),
                         "message_count": len(d.get("messages", [])),
                     })
@@ -44,11 +45,13 @@ class Module(BaseModule):
 
         @self.app.route("/api/jarvis/chats", methods=["POST"])
         def create_chat():
-            chat_id = str(uuid.uuid4())
-            now = datetime.now().isoformat()
+            body     = request.get_json(silent=True) or {}
+            chat_id  = str(uuid.uuid4())
+            now      = datetime.now().isoformat()
             chat = {
                 "id":         chat_id,
                 "title":      "Neuer Chat",
+                "project":    (body.get("project") or "").strip(),
                 "created_at": now,
                 "updated_at": now,
                 "messages":   [],
@@ -73,6 +76,8 @@ class Module(BaseModule):
                 chat["title"] = data["title"]
             if "messages" in data:
                 chat["messages"] = data["messages"]
+            if "project" in data:
+                chat["project"] = (data["project"] or "").strip()
             chat["updated_at"] = datetime.now().isoformat()
             _save_chat(chat)
             return jsonify({"ok": True})
@@ -130,6 +135,23 @@ class Module(BaseModule):
             ha_control = self.config._settings.get("jarvis_ha_control", False)
             system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
             system_prompt += self._mini_prompt()
+            # Projekt: Regeln und Gedaechtnis automatisch mitgeben
+            project = None
+            try:
+                from modules import projects as projects_mod
+                from modules.mini_tools import cfg_of as _cfg_of
+                if chat_data.get("project"):
+                    project = projects_mod.find_project(chat_data["project"])
+                    system_prompt += projects_mod.memory_context(project, _cfg_of(self.config))
+                    if project and project.get("writable"):
+                        system_prompt += (
+                            "\n\nPROJEKT-GEDAECHTNIS SCHREIBEN\n"
+                            "Wenn du etwas Dauerhaftes gelernt hast (Entscheidung, Falle, "
+                            "Vorgehen), schreibe eine Notiz:\n"
+                            '{"projekt": {"titel": "Kurzer Titel", "text": "..."}}\n'
+                            "Sparsam nutzen - nur fuer Wissen, das auch spaeter gilt.")
+            except Exception as e:
+                self.log.warning("Projektkontext nicht lesbar: %s", e)
 
             # Bei Verlaufs-Fragen echte Zeitreihen aus InfluxDB als Kontext anhängen
             influx_ctx = self._influx_context(message)
@@ -255,8 +277,29 @@ class Module(BaseModule):
                             yield line
                         full_text += round_text
                         rounds += 1
+                        if rounds > max_rounds:
+                            break
+                        # Notiz ins Projektgedaechtnis?
+                        if project:
+                            pblock, _ = self._project_block(round_text)
+                            if pblock:
+                                from modules.mini_tools import cfg_of as _cfg_p
+                                res = projects_mod.write_note(
+                                    project,
+                                    pblock.get("titel") or pblock.get("title") or "",
+                                    pblock.get("text") or "",
+                                    _cfg_p(self.config))
+                                yield json.dumps({"tool": {
+                                    "action": "Gedächtnis-Notiz",
+                                    "result": res.get("file") or res.get("error") or "ok",
+                                }}, ensure_ascii=False) + "\n"
+                                full_messages.append({"role": "assistant", "content": round_text})
+                                full_messages.append({"role": "system", "content":
+                                    "Notiz ins Projektgedaechtnis geschrieben: "
+                                    + json.dumps(res, ensure_ascii=False)[:400]})
+                                continue
                         block, _clean = self._mini_block(round_text)
-                        if not block or not mini_cfg.get("mini_enabled") or rounds > max_rounds:
+                        if not block or not mini_cfg.get("mini_enabled"):
                             break
                         if not mini_cfg.get("mini_auto"):
                             yield json.dumps({"tool": {
@@ -743,15 +786,15 @@ class Module(BaseModule):
         return self.config._settings.get(key, default)
 
     @staticmethod
-    def _mini_block(text: str):
-        """Sucht einen {"mini": {...}}-Auftrag in der Antwort des Modells.
+    def _tool_block(text: str, key: str):
+        """Sucht einen {"<key>": {...}}-Block.
 
         Gibt (Auftrag oder None, Text ohne den Block) zurueck. Die Klammern
         werden gezaehlt, damit verschachtelte Inhalte (z. B. Dateiinhalte mit
         geschweiften Klammern) nicht abgeschnitten werden.
         """
-        key = '{"mini":'
-        idx = text.find(key)
+        marker = '{"%s":' % key
+        idx = text.find(marker)
         if idx < 0:
             return None, text
         depth = 0
@@ -767,11 +810,19 @@ class Module(BaseModule):
                         obj = json.loads(raw)
                     except Exception:
                         return None, text
-                    block = obj.get("mini")
+                    block = obj.get(key)
                     if isinstance(block, dict):
                         return block, text[:idx] + text[i + 1:]
                     return None, text
         return None, text
+
+    @staticmethod
+    def _mini_block(text: str):
+        return Module._tool_block(text, "mini")
+
+    @staticmethod
+    def _project_block(text: str):
+        return Module._tool_block(text, "projekt")
 
     def _strip_mini_blocks(self, text: str) -> str:
         """Alle {"mini": {...}}-Bloecke aus einem Text entfernen.
@@ -779,14 +830,18 @@ class Module(BaseModule):
         Die Bloecke sind reine Anweisungen an das Backend und haben im
         gespeicherten Verlauf nichts zu suchen.
         """
-        if not text or '{"mini":' not in text:
+        if not text:
             return text
         out = text
-        while True:
-            block, cleaned = self._mini_block(out)
-            if not block or cleaned == out:
-                break
-            out = cleaned
+        for marker, finder in (('{"mini":', self._mini_block),
+                               ('{"projekt":', self._project_block)):
+            if marker not in out:
+                continue
+            while True:
+                block, cleaned = finder(out)
+                if not block or cleaned == out:
+                    break
+                out = cleaned
         return out.strip()
 
     def _mini_prompt(self) -> str:

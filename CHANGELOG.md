@@ -4,6 +4,35 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.12.0] - 2026-11-04
+
+### Hinzugefügt
+- **Projekte für Jarvis: Regeln und Gedächtnis an einem Ort.** Im Jarvis-Chat gibt
+  es jetzt oben eine Projekt-Auswahl („Kein Projekt" als Vorgabe) und einen
+  ＋-Knopf zum Anlegen. Ein Projekt hat einen Namen, einen Arbeitsordner auf dem
+  Mac mini, eigene Regeln und ein Gedächtnis.
+- **Automatisch mitgelesen:** Sobald ein Chat einem Projekt zugeordnet ist, gehen
+  Regeln und der Notiz-Index des Projektgedächtnisses bei jeder Frage als Kontext
+  an die KI – man muss nichts extra erwähnen.
+- **Jarvis schreibt mit:** Ist das Gedächtnis freigegeben, kann Jarvis Wissen als
+  Notiz ablegen (`{"projekt": {"titel": "…", "text": "…"}}`). Im Chat erscheint
+  dazu „Gedächtnis-Notiz: <Datei>".
+- **Zusammen mit Claude Code:** Das Projektgedächtnis liegt in Claude Codes
+  Ordner (`~/.claude/projects/<pfad>/memory/`). Damit wissen beide dasselbe,
+  egal ob du in Claude Code oder mit Jarvis arbeitest. Bestehende Notizen werden
+  nie überschrieben; Jarvis legt neue Dateien an und ergänzt nur eine Zeile im
+  Index (`MEMORY.md`).
+- In der Chatliste steht der Projektname vor der Nachrichtenzahl.
+
+### Technisch
+- Neues Modul `backend/modules/projects.py` mit `/api/projects`,
+  `/api/projects/<id>`, `/api/projects/<id>/note`; Chats haben ein Feld `project`.
+- `_tool_block()` in `jarvis.py` ersetzt den bisherigen Mini-Block-Parser und kennt
+  jetzt zwei Auftragsarten (`mini`, `projekt`); beide werden weiterhin nicht im
+  Chat gespeichert oder angezeigt.
+
+---
+
 ## [1.11.11] - 2026-11-04
 
 ### Behoben

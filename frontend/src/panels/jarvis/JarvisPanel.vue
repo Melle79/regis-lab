@@ -46,6 +46,7 @@
               <template v-else>{{ chat.title }}</template>
             </div>
             <div class="chat-item-meta">
+              <span v-if="projectName(chat.project)" class="chat-project">{{ projectName(chat.project) }}</span>
               {{ chat.message_count }} Nachrichten
               <span v-if="chat.updated_at" class="chat-timestamp">· {{ formatChatDate(chat.updated_at) }}</span>
             </div>
@@ -81,6 +82,12 @@
           <span v-else class="chat-title muted">{{ kiName }}</span>
         </div>
         <div class="chat-header-right">
+          <select v-model="projectId" class="provider-select" @change="onProjectChange"
+                  :title="projectTitle">
+            <option value="">Kein Projekt</option>
+            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+          <button class="proj-btn" @click="createProject" title="Neues Projekt anlegen">＋</button>
           <select v-model="chatProvider" class="provider-select" @change="onProviderChange" title="KI-Anbieter">
             <option v-for="p in providerOptions" :key="p.id" :value="p.id">{{ p.label }}</option>
           </select>
@@ -259,6 +266,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import MdiIcon from '../../components/MdiIcon.vue'
 
 const chats          = ref([])
+const projects       = ref([])
+const projectId      = ref('')
 const activeChatId   = ref(null)
 const activeChat     = ref(null)
 const models         = ref([])
@@ -328,8 +337,74 @@ function formatChatDate(ts) {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
 }
 
+// ── Projekte (Gedächtnis und Regeln) ────────────────────────────
+
+async function loadProjects() {
+  try {
+    const d = await fetchJson('api/projects')
+    projects.value = d.projects || []
+  } catch (e) {
+    projects.value = []
+  }
+}
+
+function projectName(id) {
+  if (!id) return ''
+  const p = projects.value.find(x => x.id === id)
+  return p ? p.name : ''
+}
+
+const projectTitle = computed(() => {
+  const p = projects.value.find(x => x.id === projectId.value)
+  if (!p) return 'Kein Projekt – ohne Regeln und Gedächtnis'
+  return `Projekt: ${p.name}` + (p.path ? ` (${p.path})` : '') +
+    (p.rules ? ' · mit Regeln' : '') + (p.writable ? ' · Jarvis darf Notizen anlegen' : '')
+})
+
+async function onProjectChange() {
+  if (!activeChatId.value) return
+  try {
+    await fetch(`api/jarvis/chats/${activeChatId.value}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: projectId.value || '' }),
+    })
+    if (activeChat.value) activeChat.value.project = projectId.value || ''
+  } catch (e) { console.warn('Projekt konnte nicht zugeordnet werden:', e.message) }
+}
+
+async function createProject() {
+  const name = window.prompt('Name des Projekts (z. B. Regis-Lab):')
+  if (!name) return
+  const path = window.prompt(
+    'Arbeitsordner auf dem mini, relativ zur Wurzel (z. B. HomeAssistant/addons/regis-lab):', '') || ''
+  const rules = window.prompt('Regeln für dieses Projekt (optional):', '') || ''
+  const memoryDir = window.prompt(
+    'Gedächtnisordner auf dem mini (leer lassen = wird aus dem Arbeitsordner abgeleitet).\n' +
+    'Für gemeinsames Wissen mit Claude Code z. B.: /Users/sven/.claude/projects/-Users-sven-Downloads/memory',
+    '') || ''
+  const writable = window.confirm('Soll Jarvis ins Projektgedächtnis schreiben dürfen?')
+  try {
+    const r = await fetch('api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, path, rules, memory_dir: memoryDir, writable }),
+    })
+    const d = await r.json()
+    await loadProjects()
+    if (d.id) {
+      projectId.value = d.id
+      await onProjectChange()
+    }
+  } catch (e) { console.warn('Projekt nicht angelegt:', e.message) }
+}
+
 async function createChat() {
-  const d = await fetchJson('api/jarvis/chats', { method: 'POST' })
+  const d = await fetchJson('api/jarvis/chats', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ project: projectId.value || '' }),
+  })
   await loadChatList()
   await loadChat(d.id)
   await nextTick()
@@ -339,6 +414,7 @@ async function createChat() {
 async function loadChat(id) {
   activeChatId.value = id
   activeChat.value = await fetchJson(`api/jarvis/chats/${id}`)
+  projectId.value = (activeChat.value && activeChat.value.project) || ''
   await scrollToBottom(true)
   await nextTick()
   bindAttachmentHandlers()
@@ -866,6 +942,7 @@ onMounted(async () => {
     kiName.value    = d.ki_name || 'Assistent'
     haControl.value = d.jarvis_ha_control === true
   } catch(e) {}
+  await loadProjects()
   await loadProviders()
   chatProvider.value = localStorage?.getItem?.('jarvis_provider') || ''
   await loadModels(chatProvider.value)
@@ -998,6 +1075,14 @@ onMounted(async () => {
 .upload-size { font-size: 10px; color: var(--muted); }
 .upload-error { font-size: 11px; color: var(--red); }
 .upload-preview button { border: none; background: transparent; color: var(--muted); cursor: pointer; }
+
+/* Projekt-Auswahl und Projektname in der Liste */
+.proj-btn {
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 9px; font-size: 14px; cursor: pointer; line-height: 1;
+}
+.proj-btn:hover { color: var(--text); }
+.chat-project { color: var(--accent); margin-right: 4px; }
 
 /* Bilder: Vorschau, Anzeige im Chat, Ablege-Fläche */
 .preview-thumb {
