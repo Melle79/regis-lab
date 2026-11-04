@@ -461,4 +461,10 @@ onMounted(async () => {
 .popup-item-state { font-size: 11px; color: var(--muted); padding: 2px 7px; border-radius: 5px; background: var(--border); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Schmale Geräte: Raster einspaltig statt zweispaltig ───────────── */
+@media (max-width: 900px) {
+  .status-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; }
+  .popup-card { width: min(400px, 94vw); max-height: 82vh; }
+}
 </style>

@@ -161,6 +161,22 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 
 .app { display: flex; flex-direction: column; height: 100vh; background: var(--bg); }
 .app-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* ── Schmale Geräte (Handy, Surface Duo ~540-800 px, Höhe ~720 px) ──────
+   Keine Media-Query gab es vorher; diese Regeln greifen nur dort. */
+@media (max-width: 900px) {
+  .app { height: 100dvh; }
+  .app-content { padding: 10px 10px 14px; }
+  /* Eingabefelder 16 px: verhindert das Hineinzoomen beim Antippen */
+  input, select, textarea { font-size: 16px; }
+  /* Tippflächen vergrößern (Maus-Ziele sind zu klein für den Finger) */
+  button { min-height: 38px; }
+  button.icon-only, .mini-btn, .btn-eye, .proj-btn { min-height: 34px; }
+}
+
+@media (max-height: 780px) {
+  .app-content { padding-top: 8px; }
+}
 </style>
 
 <style scoped>

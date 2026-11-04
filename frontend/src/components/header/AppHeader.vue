@@ -107,6 +107,21 @@ function onDragEnd() {
 .header-live  { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
 .header-live.live { color: var(--green); }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* ── Schmale Geräte: Titel + Symbole oben, Tabs in eigener Zeile ─────── */
+@media (max-width: 900px) {
+  .app-header {
+    height: auto; padding: 8px 10px; flex-wrap: wrap; row-gap: 6px;
+  }
+  .header-left  { order: 1; }
+  .header-right { order: 2; margin-left: auto; }
+  .header-nav {
+    order: 3; flex-basis: 100%; flex-wrap: wrap;
+    justify-content: flex-start; gap: 4px;
+  }
+  .nav-tab { padding: 7px 10px; font-size: 12px; }
+  .header-version, .header-live { display: none; }
+}
 .settings-btn {
   padding: 6px; border-radius: 8px; border: none; background: transparent;
   color: var(--muted); cursor: pointer;

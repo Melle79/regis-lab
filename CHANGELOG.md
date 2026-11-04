@@ -4,6 +4,29 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.14.0] - 2026-11-04
+
+### Hinzugefügt
+- **Mobil-tauglich für schmale Geräte** (Handy, Surface Duo, ca. 540–800 px breit
+  und nur ~720 px hoch). Bisher gab es **keine** Medienabfrage im Frontend.
+- Kopfzeile: Titel und Symbole in der ersten Zeile, die Tabs brechen darunter um;
+  Versions- und Live-Anzeige werden auf schmalen Geräten ausgeblendet.
+- Eingabefelder auf 16 px (sonst zoomt das Gerät beim Antippen hinein),
+  Schaltflächen mindestens 34–38 px hoch für die Fingerbedienung,
+  `100dvh` statt `100vh` (berücksichtigt die Adressleiste).
+- Cline-Bereich: Chatliste oben, Verlauf darunter (statt nebeneinander).
+- Jarvis: Sidebar schmaler (158 px), Chatkopf darf umbrechen, Bilder und
+  Rückfrage-Schaltflächen nutzen die volle Breite.
+- Übersicht und Diagnose: Kachelraster zweispaltig statt vierspaltig, zweispaltige
+  Bereiche einspaltig, Popups auf `94vw` begrenzt und flacher (82 vh).
+
+### Technisch
+- Erste `@media`-Regeln im Projekt: `App.vue`, `AppHeader.vue`, `ClinePanel.vue`,
+  `JarvisPanel.vue`, `HomePanel.vue`, `AnalysePanel.vue` (Schwelle 900 px,
+  zusätzlich `max-height: 780px`).
+
+---
+
 ## [1.13.2] - 2026-11-04
 
 ### Behoben

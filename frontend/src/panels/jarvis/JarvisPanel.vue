@@ -1310,4 +1310,14 @@ onMounted(async () => {
 .code-download-btn:hover { color: #89b4fa; border-color: #89b4fa; }
 .code-block pre { margin: 0; padding: 12px; overflow-x: auto; }
 .code-block pre code { background: none !important; padding: 0 !important; font-size: 12px; line-height: 1.6; color: #cdd6f4; white-space: pre; font-family: 'Courier New', monospace; }
+
+/* ── Schmale Geräte (Surface Duo ~540 px): schmale Sidebar, Chat bleibt nutzbar ── */
+@media (max-width: 900px) {
+  .chat-sidebar { width: 158px; }
+  .chat-main { min-width: 0; }
+  .chat-header-right { flex-wrap: wrap; row-gap: 4px; }
+  .chat-header { flex-wrap: wrap; row-gap: 4px; }
+  .msg-image { max-width: 100%; }
+  .frage-option { width: 100%; }
+}
 </style>

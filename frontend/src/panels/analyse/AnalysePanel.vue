@@ -1221,4 +1221,9 @@ function formatSummary(text) {
 }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 /* v2-suggestions-tab */
+/* ── Schmale Geräte: Raster und Popups anpassen ─────────────────────── */
+@media (max-width: 900px) {
+  .status-grid { grid-template-columns: repeat(2, 1fr); }
+  .popup-card { width: min(420px, 94vw); max-height: 82vh; }
+}
 </style>

@@ -114,6 +114,17 @@ onMounted(loadChats)
 .list-error { margin: 6px 10px; font-size: 12px; color: var(--amber); }
 .list-empty, .view-empty { padding: 16px; color: var(--muted); font-size: 13px; }
 .cline-view { display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Schmale Geräte: Liste oben, Verlauf darunter (statt nebeneinander) ── */
+@media (max-width: 900px) {
+  .cline-panel { grid-template-columns: 1fr; height: auto; }
+  .cline-list {
+    border-right: none; border-bottom: 1px solid var(--border);
+    max-height: 38vh;
+  }
+  .cline-view { min-height: 45vh; }
+  .messages { max-height: 55vh; }
+}
 .view-head { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .view-meta { font-size: 11px; color: var(--muted); margin-left: auto; }
 .messages { overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
