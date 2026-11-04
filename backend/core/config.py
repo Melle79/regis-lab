@@ -167,6 +167,10 @@ class AddonConfig:
             "google_api_key_set":   bool(self._settings.get("google_api_key", "")),
             "mistral_api_key_set":  bool(self._settings.get("mistral_api_key", "")),
             "groq_api_key_set":     bool(self._settings.get("groq_api_key", "")),
+            # Zustand der Cloud-Auswahl, damit die Einstellungen ihn anzeigen können
+            "cloud_provider":       self._settings.get("cloud_provider", ""),
+            "use_cloud_primary":    bool(self._settings.get("use_cloud_primary", False)),
+            "use_cloud_fallback":   bool(self._settings.get("use_cloud_fallback", False)),
             "use_anthropic_fallback": self._settings.get("use_anthropic_fallback", False),
             "tab_order":            self._settings.get("tab_order", ["geraete", "personen", "zonen", "jarvis"]),
             "filter_labels":        self._settings.get("filter_labels", []),

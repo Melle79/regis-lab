@@ -4,6 +4,23 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.10] - 2026-11-04
+
+### Behoben
+- **Die Einstellungen zeigen den Zustand der Cloud-Auswahl wieder an.** Anbieter
+  und die Schalter „primär/Fallback" fehlten in der Antwort des Servers und wurden
+  deshalb in der Oberfläche nicht angezeigt – obwohl der Fallback aktiv war. Jetzt
+  werden `cloud_provider`, `use_cloud_primary` und `use_cloud_fallback` mitgeliefert.
+
+### Geändert
+- **Rückfall der lokalen KI läuft über OpenRouter.** Der bisherige Rückfall war auf
+  Anthropic eingestellt, ohne dass dort ein Schlüssel hinterlegt war (der Schlüssel
+  ging früher durch den Lösch-Fehler verloren, behoben seit 1.8.1). `jarvis_provider`
+  steht jetzt auf `openrouter_fallback` – der Rückfall nutzt das vorhandene
+  OpenRouter-Guthaben und kann dort auch die Claude-Modelle verwenden.
+
+---
+
 ## [1.11.9] - 2026-11-04
 
 ### Behoben
