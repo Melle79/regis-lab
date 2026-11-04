@@ -4,6 +4,30 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.4] - 2026-11-04
+
+### Behoben
+- **Fehlermeldungen im Chat sind jetzt eindeutig.** Eine Meldung wie
+  „Unexpected non-whitespace character after JSON at position 3" ließ sich keiner
+  Stelle zuordnen. Jetzt steht dabei, woher sie kommt: „Fehler vom Server: …"
+  (die KI-Antwort kam als Fehler zurück) oder „Fehler im Browser: …" (der Fehler
+  entstand in der Oberfläche, z. B. weil eine Antwort kein JSON war).
+- **Nachladen kann die Antwort nicht mehr verdrängen.** Nach einer Antwort lädt
+  die Oberfläche den Chat neu. Schlug das fehl, erschien statt der Antwort eine
+  Fehlermeldung. Jetzt wird ein Fehler beim Nachladen nur in der Browser-Konsole
+  vermerkt, die Antwort bleibt stehen.
+- Antworten, die kein JSON sind, werden mit HTTP-Code und Textanfang gemeldet
+  (z. B. „Antwort von api/jarvis/chats war kein JSON (HTTP 404): …") – auch in der
+  Schnellfrage der Übersicht.
+
+### Technisch
+- `JarvisPanel.vue`: neuer Helfer `fetchJson()` für die Chat-Aufrufe.
+- `HomePanel.vue`: JSON-Antwort der Schnellfrage wird geprüft statt blind geparst.
+- `jarvis.py`: Bricht der Antwort-Stream ab, wird die Ursache jetzt mit
+  Traceback ins Add-on-Log geschrieben (`self.log.exception`).
+
+---
+
 ## [1.11.3] - 2026-11-03
 
 ### Behoben

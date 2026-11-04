@@ -317,7 +317,14 @@ async function sendQuick() {
   try {
     // Neuen Chat erstellen
     const chatR = await fetch('api/jarvis/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text.slice(0, 40) }) })
-    const chat  = await chatR.json()
+    const chatBody = await chatR.text()
+    let chat
+    try {
+      chat = JSON.parse(chatBody)
+    } catch (e) {
+      throw new Error(`Antwort von api/jarvis/chats war kein JSON (HTTP ${chatR.status}): `
+        + (chatBody.trim().slice(0, 80).replace(/\s+/g, ' ') || '(leer)'))
+    }
     const resp  = await fetch(`api/jarvis/chats/${chat.id}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -334,14 +341,15 @@ async function sendQuick() {
       for (const line of lines) {
         try {
           const data = JSON.parse(line)
-          if (data.error) { answer = 'Fehler: ' + data.error; break }
+          if (data.error) { answer = 'Fehler vom Server: ' + data.error; break }
           answer += data.message?.content || ''
         } catch(e) {}
       }
     }
     quickMessages.value.push({ role: 'assistant', text: answer.slice(0, 400) + (answer.length > 400 ? '…' : '') })
   } catch(e) {
-    quickMessages.value.push({ role: 'assistant', text: 'Fehler: ' + e.message })
+    console.error('Schnellfrage fehlgeschlagen:', e)
+    quickMessages.value.push({ role: 'assistant', text: 'Fehler im Browser: ' + e.message })
   }
   jarvisLoading.value = false
   await nextTick()

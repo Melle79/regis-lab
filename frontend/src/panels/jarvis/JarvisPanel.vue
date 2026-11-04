@@ -294,9 +294,20 @@ const canSend = computed(() =>
 
 // ── Chat-Verwaltung ──────────────────────────────────────────────
 
+/** Holt JSON und meldet verständlich, wenn die Antwort kein JSON ist. */
+async function fetchJson(url, options) {
+  const r = await fetch(url, options)
+  const body = await r.text()
+  try {
+    return JSON.parse(body)
+  } catch (e) {
+    const head = body.trim().slice(0, 120).replace(/\s+/g, ' ')
+    throw new Error(`Antwort von ${url} war kein JSON (HTTP ${r.status}): ${head || '(leer)'}`)
+  }
+}
+
 async function loadChatList() {
-  const r = await fetch('api/jarvis/chats')
-  const d = await r.json()
+  const d = await fetchJson('api/jarvis/chats')
   // Neueste zuerst
   chats.value = (d.chats || []).sort((a, b) => {
     const ta = a.updated_at || a.created_at || ''
@@ -318,8 +329,7 @@ function formatChatDate(ts) {
 }
 
 async function createChat() {
-  const r = await fetch('api/jarvis/chats', { method: 'POST' })
-  const d = await r.json()
+  const d = await fetchJson('api/jarvis/chats', { method: 'POST' })
   await loadChatList()
   await loadChat(d.id)
   await nextTick()
@@ -328,8 +338,7 @@ async function createChat() {
 
 async function loadChat(id) {
   activeChatId.value = id
-  const r = await fetch(`api/jarvis/chats/${id}`)
-  activeChat.value = await r.json()
+  activeChat.value = await fetchJson(`api/jarvis/chats/${id}`)
   await scrollToBottom(true)
   await nextTick()
   bindAttachmentHandlers()
@@ -469,7 +478,7 @@ ${fileAttachment.content}
       for (const line of lines) {
         try {
           const data  = JSON.parse(line)
-          if (data.error) { streamText.value = `Fehler: ${data.error}`; break }
+          if (data.error) { streamText.value = `Fehler vom Server: ${data.error}`; break }
           if (data.tool) {
             const t = data.tool
             const line = t.blocked
@@ -487,10 +496,15 @@ ${fileAttachment.content}
       }
     }
 
-    // Chat neu laden damit ha_control korrekt gesetzt ist
-    await loadChat(activeChatId.value)
-    // Chat-Liste aktualisieren (Titel könnte sich geändert haben)
-    await loadChatList()
+    // Chat neu laden damit ha_control korrekt gesetzt ist. Ein Fehler hier darf
+    // die gerade erhaltene Antwort nicht durch eine Fehlermeldung ersetzen.
+    try {
+      await loadChat(activeChatId.value)
+      // Chat-Liste aktualisieren (Titel könnte sich geändert haben)
+      await loadChatList()
+    } catch (e) {
+      console.warn('Nachladen nach der Antwort fehlgeschlagen:', e.message)
+    }
 
   } catch(e) {
     if (e.name === 'AbortError') {
@@ -499,7 +513,8 @@ ${fileAttachment.content}
         activeChat.value.messages.push({ role: 'assistant', content: stripMiniBlocks(streamText.value) })
       }
     } else {
-      activeChat.value.messages.push({ role: 'assistant', content: `Fehler: ${e.message}` })
+      console.error('Jarvis-Senden fehlgeschlagen:', e)
+      activeChat.value.messages.push({ role: 'assistant', content: `Fehler im Browser: ${e.message}` })
     }
   } finally {
     streaming.value  = false

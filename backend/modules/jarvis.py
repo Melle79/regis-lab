@@ -267,6 +267,8 @@ class Module(BaseModule):
                             + json.dumps(result, ensure_ascii=False)[:6000]
                             + "\nFasse das Ergebnis jetzt kurz fuer den Nutzer zusammen."})
                 except Exception as e:
+                    # Ins Add-on-Log schreiben, damit die Ursache nachvollziehbar ist
+                    self.log.exception("Jarvis-Stream abgebrochen: %s", e)
                     yield json.dumps({"error": str(e)}) + "\n"
                     return
 
