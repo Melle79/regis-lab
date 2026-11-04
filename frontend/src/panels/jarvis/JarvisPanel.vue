@@ -483,7 +483,9 @@ ${fileAttachment.content}
             const t = data.tool
             const line = t.blocked
               ? `\n🖥️ Mac mini · ${t.action}: ${t.blocked}\n`
-              : `\n🖥️ Mac mini · ${t.action} ausgeführt\n`
+              : (t.action && t.action.startsWith('Cline-Verlauf')
+                  ? `\n📄 ${t.action} – als Kontext mitgegeben\n`
+                  : `\n🖥️ Mac mini · ${t.action} ausgeführt\n`)
             fullText += line
             streamText.value = fullText
             await scrollToBottom()

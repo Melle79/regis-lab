@@ -133,6 +133,8 @@ class Module(BaseModule):
 
             # Bei Verlaufs-Fragen echte Zeitreihen aus InfluxDB als Kontext anhängen
             influx_ctx = self._influx_context(message)
+            # Bei Fragen nach frueherer Arbeit den passenden Cline-Verlauf mitgeben
+            cline_ctx, cline_info = self._cline_context(message)
 
             # Bilder aus der Anfrage (DataURL oder reines Base64)
             raw_images = [i for i in (body.get("images") or []) if isinstance(i, str) and i.strip()][:4]
@@ -144,7 +146,7 @@ class Module(BaseModule):
                        if m.get("role") in ("user", "assistant", "system")]
 
             # KI bekommt vollen Text (inkl. Dateiinhalt), gespeichert wird display-Version
-            user_text = message + influx_ctx
+            user_text = message + influx_ctx + cline_ctx
             if images:
                 from modules.ki_providers import (
                     split_provider as _split_for_images,
@@ -171,6 +173,12 @@ class Module(BaseModule):
             def generate():
                 full_text = ""
                 try:
+                    if cline_ctx:
+                        # Transparenz: im Chat steht, welcher Verlauf mitkam
+                        yield json.dumps({"tool": {
+                            "action": cline_info,
+                            "result": "Cline-Verlauf als Kontext mitgegeben",
+                        }}, ensure_ascii=False) + "\n"
                     from modules.ki_providers import (
                         chat_anthropic, chat_openai, chat_google, chat_mistral, chat_groq,
                         chat_openrouter, PROVIDERS
@@ -275,7 +283,7 @@ class Module(BaseModule):
                 # Antwort speichern mit ha_control Status
                 # Werkzeug-Block {"mini": ...} gehoert nicht in den Verlauf
                 save_text = self._strip_mini_blocks(full_text) or full_text.strip()
-                chat_data["messages"].append({"role": "assistant", "content": save_text, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
+                chat_data["messages"].append({"role": "assistant", "content": save_text, "action": cline_info or None, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch durch KI generieren (erste Nachricht)
@@ -805,6 +813,69 @@ class Module(BaseModule):
                 if cfg.get("cline_enabled") else ""
             )
         )
+
+    def _cline_context(self, message: str):
+        """Den passenden Cline-Verlauf automatisch als Kontext mitgeben.
+
+        Greift nur, wenn Cline-Chats eingeschaltet sind und die Frage nach
+        frueherer Arbeit klingt (oder ein Chat-Titel zum Thema passt). Gibt
+        (Kontexttext, Kurzinfo) zurueck; beides leer, wenn nichts passt.
+        """
+        import re
+        hints = ("cline", "frueher", "früher", "letzte", "letzten", "letzter", "vorher",
+                 "gestern", "damals", "fortsetzen", "weiterarbeiten", "weiter arbeiten",
+                 "verlauf", "arbeit von", "welcher chat", "womit haben wir", "thema")
+        try:
+            from modules.mini_tools import cfg_of
+            from modules import mini
+            cfg = cfg_of(self.config)
+            if not (cfg.get("cline_enabled") and cfg.get("mini_enabled")):
+                return "", ""
+            low = (message or "").lower()
+            wants = any(h in low for h in hints)
+
+            rows = mini.cline_list(cfg, 20).get("chats") or []
+            if not rows:
+                return "", ""
+
+            stop = {"aber", "auch", "dann", "dass", "deine", "deiner", "eine", "einen",
+                    "etwas", "haben", "hatte", "kannst", "koennen", "können", "nicht",
+                    "noch", "oder", "schon", "soll", "ueber", "über", "unser", "wieder",
+                    "wurde", "wuerde", "würde", "sagte", "arbeit", "arbeiten"}
+            words = {w for w in re.findall(r"[A-Za-zÄÖÜäöüß]{4,}", low) if w not in stop}
+            best, best_score = None, 0
+            for row in rows:
+                title = (row.get("title") or "").lower()
+                score = sum(1 for w in words if w in title)
+                if score > best_score:
+                    best, best_score = row, score
+            if best is None:
+                if not wants:
+                    return "", ""
+                best = rows[0]          # neuester Chat (Liste ist absteigend sortiert)
+
+            sid = best.get("session_id") or ""
+            if not sid:
+                return "", ""
+            detail = mini.cline_show(cfg, sid, limit=10, max_chars=1200)
+            if detail.get("error"):
+                return "", ""
+            lines = []
+            for m in detail.get("messages") or []:
+                role = "Nutzer" if m.get("role") == "user" else "Assistent"
+                lines.append("%s: %s" % (role, (m.get("text") or "").strip()))
+            if not lines:
+                return "", ""
+            title = (best.get("title") or "ohne Titel")[:80]
+            ctx = ("\n\n[Frueherer Cline-Chat (VS Code) auf dem Mac mini]\n"
+                   "Titel: %s\nModell: %s\nZuletzt: %s\n"
+                   "Letzte Nachrichten, gekuerzt:\n%s\n[Ende des Cline-Verlaufs]"
+                   % (title, best.get("model") or "-", best.get("updated_at") or "-",
+                      "\n".join(lines)[:6000]))
+            return ctx, "Cline-Verlauf: " + title
+        except Exception as e:
+            self.log.warning("Cline-Verlauf nicht lesbar: %s", e)
+            return "", ""
 
     def _build_system_prompt(self) -> str:
         custom  = self._get_setting("jarvis_system_prompt", "")

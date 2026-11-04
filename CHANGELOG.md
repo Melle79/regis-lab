@@ -4,6 +4,19 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.6] - 2026-11-04
+
+### Hinzugefügt
+- **Der passende Cline-Verlauf geht automatisch mit.** Fragst du im Jarvis-Chat
+  nach früherer Arbeit („womit haben wir zuletzt gearbeitet?", „setze das fort")
+  oder passt ein Chat-Titel zum Thema deiner Frage, liest Jarvis den passenden
+  Cline-Chat vom Mac mini und nutzt ihn als Kontext – ohne Knopf, ohne Nachfrage.
+  Im Chat steht dabei „📄 Cline-Verlauf: … – als Kontext mitgegeben", und die
+  Nachricht behält diesen Hinweis auch nach dem Neuladen. Das Werkzeug zum
+  gezielten Lesen (`{"mini": {"action": "cline"}}`) bleibt zusätzlich erhalten.
+
+---
+
 ## [1.11.5] - 2026-11-04
 
 ### Behoben
