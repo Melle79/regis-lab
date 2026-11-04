@@ -800,7 +800,6 @@ class Module(BaseModule):
     def _get_setting(self, key: str, default=""):
         return self.config._settings.get(key, default)
 
-    @staticmethod
     def _frage_prompt(self) -> str:
         """Anleitung: Entscheidungen als anklickbare Optionen anbieten."""
         return (
@@ -812,6 +811,7 @@ class Module(BaseModule):
             "Zwei bis fuenf Optionen, jede kurz und selbsterklaerend. Schreibe nichts hinter den Block."
         )
 
+    @staticmethod
     def _tool_block(text: str, key: str):
         """Sucht einen {"<key>": {...}}-Block.
 

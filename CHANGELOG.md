@@ -4,6 +4,18 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.13.1] - 2026-11-04
+
+### Behoben
+- **Serverfehler beim Senden behoben (HTTP 500).** In 1.13.0 rutschte der
+  `@staticmethod`-Dekorator beim Einfügen auf die neue Methode `_frage_prompt`,
+  dadurch brach jeder Chat-Aufruf mit „missing 1 required positional argument:
+  'self'" ab. Die Reihenfolge ist korrigiert; eine Strukturprüfung (`ast`) stellt
+  sicher, dass `_tool_block`, `_mini_block`, `_project_block` und `_frage_block`
+  statisch bleiben und `_frage_prompt` sowie `_strip_mini_blocks` nicht.
+
+---
+
 ## [1.13.0] - 2026-11-04
 
 ### Hinzugefügt
