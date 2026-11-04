@@ -4,6 +4,21 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.9] - 2026-11-04
+
+### Behoben
+- **Falsche Modelle im Ollama-Feld.** Das Feld „Standard-Modell" im Bereich „Lokaler
+  KI-Assistent" holte die Modellliste ohne Anbieter-Angabe – das Backend nahm dann
+  den aktuell eingestellten Cloud-Anbieter und zeigte deshalb Claude-Modelle
+  (`claude-haiku-5-5` …) in der lokalen Auswahl. Jetzt werden ausschließlich die
+  Modelle der eingetragenen Ollama-Installation angezeigt.
+- **API-Schlüssel-Felder waren unsichtbar.** Die sechs Felder erschienen nur, wenn
+  unter „Cloud KI" ein Anbieter ausgewählt war – bei „Keinen Cloud-Anbieter nutzen"
+  waren sie ausgeblendet. Sie stehen jetzt immer da; nur die Schalter
+  „primär/Fallback" hängen weiter am gewählten Anbieter.
+
+---
+
 ## [1.11.8] - 2026-11-04
 
 ### Hinzugefügt

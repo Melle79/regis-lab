@@ -280,9 +280,8 @@
                 <option value="groq">Groq</option>
               </select>
             </div>
-            <template v-if="form.cloud_provider">
-              <div class="field">
-                <label>API-Schlüssel</label>
+            <div class="field">
+              <label>API-Schlüssel</label>
                 <div class="field-hint" style="margin-bottom: 6px">
                   Nur ausfüllen, was du nutzen willst. Bereits hinterlegte Schlüssel bleiben
                   erhalten – leer lassen ändert nichts.
@@ -300,6 +299,7 @@
                   </span>
                 </div>
               </div>
+            <template v-if="form.cloud_provider">
               <div class="field">
                 <label>Als primäre KI nutzen</label>
                 <div class="toggle-row">
@@ -595,7 +595,7 @@ async function loadOllamaModels() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jarvis_ollama_url: url }),
     })
-    const r = await fetch('api/jarvis/models')
+    const r = await fetch('api/jarvis/models?provider=ollama')
     const d = await r.json()
     if (d.models) {
       availableModels.value = d.models
