@@ -100,7 +100,7 @@ def _read_mini_file(cfg, abspath: str, max_bytes=NOTE_MAX):
 def _list_mini_dir(cfg, abspath: str):
     import shlex
     rc, out = mini.ssh_run(
-        cfg, "ls -1 %s 2>/dev/null | head -80" % shlex.quote(abspath), timeout=40)
+        cfg, "ls -1 %s 2>/dev/null | head -400" % shlex.quote(abspath), timeout=40)
     return [l.strip() for l in out.splitlines() if l.strip()] if rc == 0 else []
 
 
@@ -144,7 +144,7 @@ def memory_context(project, cfg=None, limit=CONTEXT_MAX) -> str:
         ov = memory_overview(project, cfg)
         if ov.get("index"):
             parts.append("Gedaechtnis - vorhandene Notizen (Index):\n%s"
-                         % "\n".join(ov["index"][:40]))
+                         % "\n".join(ov["index"][:60]))
     except Exception as e:
         log.warning("Gedaechtnis nicht lesbar: %s", e)
     return "\n".join(parts)[:limit]
@@ -215,7 +215,7 @@ class Module(BaseModule):
             try:
                 ov = memory_overview(p, cfg)
                 out["memory"] = {"dir": ov["dir"], "count": len(ov["notes"]),
-                                 "index": ov["index"][:40], "notes": ov["notes"][:60]}
+                                 "index": ov["index"][:80], "notes": ov["notes"][:200]}
             except Exception as e:
                 out["memory"] = {"dir": "", "count": 0, "index": [], "notes": [],
                                  "error": str(e)}

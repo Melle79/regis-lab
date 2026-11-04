@@ -4,6 +4,21 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.12.1] - 2026-11-04
+
+### Behoben
+- **Projektliste im Kopf war zu schmal**, der Name wurde abgeschnitten („Regis-Lab"
+  erschien als „Regis"). Das Auswahlfeld hat jetzt eine eigene Mindestbreite.
+- **Notizzähler war bei allen Projekten gleich.** Die Ordnerauflistung war auf
+  80 Einträge begrenzt, deshalb zeigten alle Projekte 79 Notizen. Jetzt werden bis
+  zu 400 Einträge gelesen; Index und Notizliste werden vollständiger angezeigt
+  (Index bis 80 Zeilen, Notiznamen bis 200).
+- Dazu zwei vorbereitete Projekte: **Nupplo** (`Nupplo`, Gedächtnis aus
+  `-Users-sven-brickfolio`) und **Home Assistant** (`HomeAssistant`, Gedächtnis aus
+  `-Users-sven-homeassistant`) – beide nur lesend.
+
+---
+
 ## [1.12.0] - 2026-11-04
 
 ### Hinzugefügt

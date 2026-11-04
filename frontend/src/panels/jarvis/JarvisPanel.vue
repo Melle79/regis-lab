@@ -82,7 +82,7 @@
           <span v-else class="chat-title muted">{{ kiName }}</span>
         </div>
         <div class="chat-header-right">
-          <select v-model="projectId" class="provider-select" @change="onProjectChange"
+          <select v-model="projectId" class="provider-select project-select" @change="onProjectChange"
                   :title="projectTitle">
             <option value="">Kein Projekt</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -1083,6 +1083,10 @@ onMounted(async () => {
 }
 .proj-btn:hover { color: var(--text); }
 .chat-project { color: var(--accent); margin-right: 4px; }
+/* Eigene Breite, damit der Projektname nicht abgeschnitten wird */
+.chat-header-right select.project-select {
+  min-width: 150px; max-width: 240px; flex: 0 1 auto; text-overflow: ellipsis;
+}
 
 /* Bilder: Vorschau, Anzeige im Chat, Ablege-Fläche */
 .preview-thumb {
