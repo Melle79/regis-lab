@@ -719,13 +719,18 @@ function saveModel() {
   localStorage?.setItem?.('jarvis_model', currentModel.value)
 }
 
-/* Werkzeug-Blöcke ({"mini": {...}}) sind reine Anweisungen an das Backend und
-   gehören nicht in die Anzeige – auch bei alten, schon gespeicherten Nachrichten. */
+/* Werkzeug-Blöcke ({"mini": …}, {"projekt": …}, {"frage": …}) sind Anweisungen an
+   das Backend und gehören nicht in die Anzeige – auch bei alten Nachrichten. */
 function stripMiniBlocks(text) {
-  if (!text || !text.includes('{"mini":')) return text
+  if (!text) return text
+  const KEYS = ['{"mini":', '{"projekt":', '{"frage":']
   let out = '', rest = text
   while (true) {
-    const start = rest.indexOf('{"mini":')
+    let start = -1
+    for (const k of KEYS) {
+      const i = rest.indexOf(k)
+      if (i >= 0 && (start < 0 || i < start)) start = i
+    }
     if (start < 0) { out += rest; break }
     let depth = 0, end = -1
     for (let i = start; i < rest.length; i++) {

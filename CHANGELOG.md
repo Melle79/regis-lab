@@ -4,6 +4,16 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.13.2] - 2026-11-04
+
+### Behoben
+- **Werkzeug-Blöcke wurden im Live-Text sichtbar.** Die Anzeige kannte bisher nur
+  `{"mini": …}`; `{"projekt": …}` und `{"frage": …}` blieben während der Antwort
+  stehen. Der Filter blendet jetzt alle drei Arten aus – auch bei älteren
+  Nachrichten und mitten im Stream.
+
+---
+
 ## [1.13.1] - 2026-11-04
 
 ### Behoben
