@@ -20,7 +20,7 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1"
 
 PROVIDERS = {
     "ollama":     {"name": "Ollama (lokal)",     "models": [], "key_required": False},
-    "openrouter": {"name": "OpenRouter",          "models": ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro", "deepseek/deepseek-chat-v3.1"], "key_required": True},
+    "openrouter": {"name": "OpenRouter",          "models": ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro", "deepseek/deepseek-chat-v3.1", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "anthropic/claude-opus-5.5"], "key_required": True},
     "anthropic":  {"name": "Anthropic (Claude)",  "models": ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"], "key_required": True},
     "openai":     {"name": "OpenAI (GPT)",        "models": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"], "key_required": True},
     "google":     {"name": "Google (Gemini)",     "models": ["gemini-flash-latest", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"], "key_required": True},

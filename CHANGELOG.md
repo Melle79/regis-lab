@@ -4,6 +4,24 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.8] - 2026-11-04
+
+### Hinzugefügt
+- **Claude auch ohne Anthropic-Schlüssel:** In der OpenRouter-Auswahl stehen jetzt
+  zusätzlich `anthropic/claude-haiku-5.5`, `anthropic/claude-sonnet-5.5` und
+  `anthropic/claude-opus-5.5`. Damit laufen die Claude-Modelle über den bereits
+  hinterlegten OpenRouter-Schlüssel (Guthaben dort) – inklusive Bildern, denn
+  OpenRouter führt die Claude-Modelle mit Bild-Eingabe. Ein eigener Anthropic-API-Key
+  (console.anthropic.com, eigenes Guthaben) ist nur nötig, wenn du Claude direkt
+  ansteuern willst.
+
+### Hinweis
+- Das Claude-Pro-Abo (Claude Code) enthält **keinen** API-Schlüssel. Der auf dem
+  Mac mini hinterlegte Zugang (`~/.claude/.credentials.json`,
+  `sk-ant-oat01-…`) ist ein Abo-Token und für die Anthropic-API nicht geeignet.
+
+---
+
 ## [1.11.7] - 2026-11-04
 
 ### Geändert
