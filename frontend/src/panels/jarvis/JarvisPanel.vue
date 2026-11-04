@@ -154,6 +154,14 @@
                 <MdiIcon icon="mdi:flash" :size="11" color="var(--amber)" />
                 {{ msg.action }}
               </div>
+              <div v-if="msg.frage && msg.frage.optionen && msg.frage.optionen.length" class="msg-frage">
+                <div class="frage-titel">
+                  <MdiIcon icon="mdi:help-circle-outline" :size="13" />
+                  {{ msg.frage.titel }}
+                </div>
+                <button v-for="(o, oi) in msg.frage.optionen" :key="oi" class="frage-option"
+                        :disabled="streaming" @click="chooseOption(o)">{{ o }}</button>
+              </div>
               <div class="msg-meta">
                 <span v-if="msg.timestamp">{{ formatTime(msg.timestamp) }}</span>
                 <span v-if="msg.model" class="msg-model">{{ msg.model }}</span>
@@ -186,6 +194,14 @@
                 <div class="msg-text" v-html="formatMessage(streamText)" />
                 <span class="cursor">▋</span>
               </template>
+              <div v-if="streamFrage && streamFrage.optionen" class="msg-frage">
+                <div class="frage-titel">
+                  <MdiIcon icon="mdi:help-circle-outline" :size="13" />
+                  {{ streamFrage.titel }}
+                </div>
+                <button v-for="(o, oi) in streamFrage.optionen" :key="oi" class="frage-option"
+                        @click="chooseOption(o)">{{ o }}</button>
+              </div>
             </div>
           </div>
         </template>
@@ -282,6 +298,7 @@ const haControlChanged = ref('')
 const inputText      = ref('')
 const streaming      = ref(false)
 const streamText     = ref('')
+const streamFrage    = ref(null)
 const uploadedFile   = ref(null)
 const uploadedImage  = ref(null)
 const dragging       = ref(false)
@@ -501,6 +518,7 @@ async function sendMessage() {
 
   streaming.value = true
   streamText.value = ''
+  streamFrage.value = null
   abortController.value = new AbortController()
 
   // Im Chat nur Text + Dateiname anzeigen
@@ -554,6 +572,7 @@ ${fileAttachment.content}
       for (const line of lines) {
         try {
           const data  = JSON.parse(line)
+          if (data.frage) { streamFrage.value = data.frage; await scrollToBottom() }
           if (data.error) { streamText.value = `Fehler vom Server: ${data.error}`; break }
           if (data.tool) {
             const t = data.tool
@@ -604,6 +623,14 @@ ${fileAttachment.content}
 
 function stopStreaming() {
   abortController.value?.abort()
+}
+
+/* Angeklickte Variante als eigene Nachricht senden */
+async function chooseOption(text) {
+  if (!text || streaming.value) return
+  inputText.value = text
+  await nextTick()
+  await sendMessage()
 }
 
 // ── Hilfsfunktionen ─────────────────────────────────────────────
@@ -1075,6 +1102,17 @@ onMounted(async () => {
 .upload-size { font-size: 10px; color: var(--muted); }
 .upload-error { font-size: 11px; color: var(--red); }
 .upload-preview button { border: none; background: transparent; color: var(--muted); cursor: pointer; }
+
+/* Anklickbare Rückfrage-Optionen */
+.msg-frage { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.frage-titel { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.frage-option {
+  background: var(--bg); color: var(--text); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 6px 11px; font-size: 13px; cursor: pointer;
+  text-align: left; max-width: 100%;
+}
+.frage-option:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.frage-option:disabled { opacity: .5; cursor: default; }
 
 /* Projekt-Auswahl und Projektname in der Liste */
 .proj-btn {

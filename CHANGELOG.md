@@ -4,6 +4,26 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.13.0] - 2026-11-04
+
+### Hinzugefügt
+- **Rückfragen zum Anklicken.** Braucht Jarvis eine Entscheidung, bietet er die
+  Varianten jetzt als Schaltflächen an – wie die Auswahl in Cline. Ein Klick
+  schickt die Variante als deine Nachricht, du musst nichts abtippen.
+- Die Frage bleibt in der Nachricht erhalten (auch nach dem Neuladen des Chats)
+  und zeigt Titel plus 2–5 Varianten.
+- Jarvis weiß durch eine Anweisung im System-Prompt, wann er das anbieten soll
+  (`{"frage": {"titel": "…", "optionen": ["…", "…"]}}`). Der Block selbst wird –
+  wie die Werkzeug-Blöcke – nie im Chattext angezeigt oder gespeichert.
+
+### Technisch
+- `jarvis.py`: Block-Erkennung über `_tool_block(text, "frage")`, Weitergabe im
+  Stream als `{"frage": …}` und Speicherung im Feld `frage` der Antwort.
+- `JarvisPanel.vue`: Schaltflächen unter der Antwort (live und aus dem Verlauf),
+  `chooseOption()` sendet die Auswahl.
+
+---
+
 ## [1.12.1] - 2026-11-04
 
 ### Behoben

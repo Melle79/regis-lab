@@ -135,6 +135,7 @@ class Module(BaseModule):
             ha_control = self.config._settings.get("jarvis_ha_control", False)
             system_prompt = self._build_system_prompt() if ha_control else self._build_system_prompt_no_ha()
             system_prompt += self._mini_prompt()
+            system_prompt += self._frage_prompt()
             # Projekt: Regeln und Gedaechtnis automatisch mitgeben
             project = None
             try:
@@ -263,6 +264,7 @@ class Module(BaseModule):
                     max_rounds = int(mini_cfg.get("mini_max_rounds") or 3)
 
                     usage_info = None
+                    frage_info = None
                     rounds = 0
                     while True:
                         round_text = ""
@@ -279,6 +281,19 @@ class Module(BaseModule):
                         rounds += 1
                         if rounds > max_rounds:
                             break
+                        # Rueckfrage mit anklickbaren Optionen?
+                        fblock, _ = self._tool_block(round_text, "frage")
+                        if fblock:
+                            optionen = [str(o).strip()[:200]
+                                        for o in (fblock.get("optionen") or [])][:5]
+                            optionen = [o for o in optionen if o]
+                            if optionen:
+                                frage_info = {
+                                    "titel": str(fblock.get("titel") or "Bitte wählen")[:200],
+                                    "optionen": optionen,
+                                }
+                                yield json.dumps({"frage": frage_info},
+                                                 ensure_ascii=False) + "\n"
                         # Notiz ins Projektgedaechtnis?
                         if project:
                             pblock, _ = self._project_block(round_text)
@@ -326,7 +341,7 @@ class Module(BaseModule):
                 # Antwort speichern mit ha_control Status
                 # Werkzeug-Block {"mini": ...} gehoert nicht in den Verlauf
                 save_text = self._strip_mini_blocks(full_text) or full_text.strip()
-                chat_data["messages"].append({"role": "assistant", "content": save_text, "action": cline_info or None, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
+                chat_data["messages"].append({"role": "assistant", "content": save_text, "action": cline_info or None, "frage": frage_info, "ha_control": ha_control, "timestamp": datetime.now().isoformat(), "model": model, "provider": provider, "usage": usage_info})
                 chat_data["updated_at"] = datetime.now().isoformat()
 
                 # Titel automatisch durch KI generieren (erste Nachricht)
@@ -786,6 +801,17 @@ class Module(BaseModule):
         return self.config._settings.get(key, default)
 
     @staticmethod
+    def _frage_prompt(self) -> str:
+        """Anleitung: Entscheidungen als anklickbare Optionen anbieten."""
+        return (
+            "\n\nENTSCHEIDUNGEN ANKLICKBAR ANBIETEN\n"
+            "Wenn du eine Entscheidung vom Nutzer brauchst (mehrere Wege, Varianten, "
+            "Rueckfrage), stelle die Frage kurz und haenge GENAU EINEN Block an:\n"
+            '{"frage": {"titel": "Kurze Frage", "optionen": ["Erste Variante", "Zweite Variante"]}}\n'
+            "Der Nutzer klickt dann eine Variante an - sie kommt als seine Nachricht bei dir an. "
+            "Zwei bis fuenf Optionen, jede kurz und selbsterklaerend. Schreibe nichts hinter den Block."
+        )
+
     def _tool_block(text: str, key: str):
         """Sucht einen {"<key>": {...}}-Block.
 
@@ -824,6 +850,10 @@ class Module(BaseModule):
     def _project_block(text: str):
         return Module._tool_block(text, "projekt")
 
+    @staticmethod
+    def _frage_block(text: str):
+        return Module._tool_block(text, "frage")
+
     def _strip_mini_blocks(self, text: str) -> str:
         """Alle {"mini": {...}}-Bloecke aus einem Text entfernen.
 
@@ -834,7 +864,8 @@ class Module(BaseModule):
             return text
         out = text
         for marker, finder in (('{"mini":', self._mini_block),
-                               ('{"projekt":', self._project_block)):
+                               ('{"projekt":', self._project_block),
+                               ('{"frage":', self._frage_block)):
             if marker not in out:
                 continue
             while True:
