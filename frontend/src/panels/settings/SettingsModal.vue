@@ -620,9 +620,24 @@ async function load() {
   delete d.ha_token
   form.value = { ...form.value, ...d }
   form.value.ha_token_set = tokenSet
-  // use_anthropic_fallback und use_anthropic_primary aus jarvis_provider ableiten
-  form.value.use_anthropic_fallback = d.use_anthropic_fallback || d.jarvis_provider === 'ollama_with_fallback'
-  form.value.use_anthropic_primary  = d.jarvis_provider === 'anthropic'
+  // Zustand der Cloud-Auswahl aus jarvis_provider ableiten - das ist die Wahrheit
+  // für das Verhalten; cloud_provider/use_cloud_* dienen nur der Anzeige.
+  const cfgProv = d.jarvis_provider || 'ollama'
+  if (cfgProv.endsWith('_fallback')) {
+    form.value.cloud_provider     = cfgProv.slice(0, -'_fallback'.length)
+    form.value.use_cloud_fallback = true
+    form.value.use_cloud_primary  = false
+  } else if (cfgProv && cfgProv !== 'ollama' && cfgProv !== 'ollama_with_fallback') {
+    form.value.cloud_provider     = cfgProv
+    form.value.use_cloud_primary  = true
+    form.value.use_cloud_fallback = false
+  } else {
+    form.value.cloud_provider     = ''
+    form.value.use_cloud_primary  = false
+    form.value.use_cloud_fallback = false
+  }
+  form.value.use_anthropic_fallback = form.value.cloud_provider === 'anthropic' && form.value.use_cloud_fallback
+  form.value.use_anthropic_primary  = form.value.cloud_provider === 'anthropic' && form.value.use_cloud_primary
   // Cloud-Provider aus jarvis_provider ableiten
   const cloudProviders = ['anthropic', 'openai', 'google', 'mistral', 'groq']
   const jp = d.jarvis_provider || 'ollama'

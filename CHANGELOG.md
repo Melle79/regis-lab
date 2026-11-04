@@ -4,6 +4,17 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.11] - 2026-11-04
+
+### Behoben
+- **Die Einstellungen zeigen den Cloud-Rückfall jetzt richtig an.** Die Schalter
+  „primär/Fallback" und die Anbieter-Auswahl wurden nur aus den gespeicherten
+  Anzeigefeldern gelesen – die können leer sein, obwohl der Rückfall aktiv ist
+  (wie bei `openrouter_fallback`). Jetzt wird der Zustand aus `jarvis_provider`
+  abgeleitet; das ist der Wert, der das Verhalten bestimmt.
+
+---
+
 ## [1.11.10] - 2026-11-04
 
 ### Behoben
