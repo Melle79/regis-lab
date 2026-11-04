@@ -4,6 +4,23 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.5] - 2026-11-04
+
+### Behoben
+- **Cline-Chats waren zeitweise nicht zu sehen.** Die Liste wird über SSH vom
+  Mac mini gelesen; die Cline-Datenbank ist während der Arbeit in VS Code oft
+  kurz gesperrt. Dann stand dort nur „Antwort der Datenbank nicht lesbar" und die
+  Liste blieb leer. Jetzt wird kurz gewartet und einmal erneut gelesen; klappt es
+  weiterhin nicht, steht die Rohantwort in der Meldung (statt eines Rätseltexts).
+  Dasselbe gilt für einen einzelnen Chat-Verlauf.
+- **SSH-Warnungen machen JSON-Antworten nicht mehr kaputt.** Beim ersten
+  Verbindungsaufbau schreibt SSH „Warning: Permanently added … to the list of
+  known hosts" auf die Fehlerausgabe – die wurde an die Nutzausgabe gehängt und
+  machte JSON-Antworten unlesbar. Diese Warnung wird jetzt herausgefiltert,
+  echte Fehlermeldungen bleiben erhalten.
+
+---
+
 ## [1.11.4] - 2026-11-04
 
 ### Behoben

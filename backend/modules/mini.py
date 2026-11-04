@@ -16,6 +16,7 @@ import os
 import re
 import shlex
 import subprocess
+import time
 
 log = logging.getLogger("regis_lab.mini")
 
@@ -72,7 +73,16 @@ def ssh_run(cfg, command, timeout=60, stdin_data=None):
     ]
     try:
         r = subprocess.run(args, input=stdin_data, capture_output=True, text=True, timeout=timeout)
-        return r.returncode, (r.stdout or "") + (r.stderr or "")
+        out = r.stdout or ""
+        err = r.stderr or ""
+        # SSH-Warnungen (z. B. "Permanently added ... to the list of known hosts")
+        # nicht in die Nutzausgabe mischen - sie zerstoeren sonst JSON-Antworten
+        # (z. B. die sqlite3-Ausgabe fuer die Cline-Chats).
+        err = "\n".join(l for l in err.splitlines() if l.strip()
+                        and "Permanently added" not in l)
+        if err.strip():
+            out = out + ("" if (not out or out.endswith("\n")) else "\n") + err + "\n"
+        return r.returncode, out
     except subprocess.TimeoutExpired:
         return 124, f"Zeitueberschreitung nach {timeout}s"
     except Exception as e:
@@ -210,18 +220,27 @@ def _message_text(content):
 
 
 def cline_list(cfg, limit=40):
-    """Liste der Cline-Chats (Titel, Modell, Zeit) vom mini."""
+    """Liste der Cline-Chats (Titel, Modell, Zeit) vom mini.
+
+    Die Cline-Datenbank ist waehrend der Arbeit in VS Code oft kurz gesperrt;
+    deshalb wird ein unlesbares Ergebnis einmal wiederholt.
+    """
     db = cline_dir(cfg) + "/db/sessions.db"
     sql = ("select session_id, provider, model, substr(prompt,1,120) as title, "
            "updated_at from sessions order by updated_at desc limit %d;" % int(limit))
-    rc, out = ssh_run(cfg, "sqlite3 -json %s %s" % (shlex.quote(db), shlex.quote(sql)), timeout=40)
-    if rc != 0:
-        return {"error": out.strip()[:300], "chats": []}
-    try:
-        rows = json.loads(out or "[]")
-    except Exception:
-        return {"error": "Antwort der Datenbank nicht lesbar", "chats": []}
-    return {"chats": rows}
+    cmd = "sqlite3 -json %s %s" % (shlex.quote(db), shlex.quote(sql))
+    raw = ""
+    for attempt in (1, 2):
+        rc, out = ssh_run(cfg, cmd, timeout=40)
+        raw = out or ""
+        if rc != 0:
+            return {"error": raw.strip()[:300], "chats": []}
+        try:
+            return {"chats": json.loads(raw or "[]")}
+        except Exception:
+            if attempt == 1:
+                time.sleep(2)
+    return {"error": "Datenbank-Antwort nicht lesbar: " + raw.strip()[:200], "chats": []}
 
 
 def cline_show(cfg, sid, limit=30, max_chars=1500):
@@ -229,13 +248,22 @@ def cline_show(cfg, sid, limit=30, max_chars=1500):
     if not re.match(r"^[A-Za-z0-9_.-]{1,80}$", sid or ""):
         return {"error": "ungueltige Chat-Kennung"}
     path = "%s/sessions/%s/%s.messages.json" % (cline_dir(cfg), sid, sid)
-    rc, out = ssh_run(cfg, "cat %s" % shlex.quote(path), timeout=90)
-    if rc != 0:
-        return {"error": out.strip()[:300]}
-    try:
-        data = json.loads(out)
-    except Exception:
-        return {"error": "Verlauf nicht lesbar"}
+    raw = ""
+    data = None
+    for attempt in (1, 2):
+        rc, out = ssh_run(cfg, "cat %s" % shlex.quote(path), timeout=90)
+        raw = out or ""
+        if rc != 0:
+            return {"error": raw.strip()[:300]}
+        try:
+            data = json.loads(raw)
+            break
+        except Exception:
+            data = None
+            if attempt == 1:
+                time.sleep(1.5)
+    if data is None:
+        return {"error": "Verlauf nicht lesbar: " + raw.strip()[:200]}
     messages = data.get("messages") or []
     picked = []
     for msg in messages[-int(limit):]:
