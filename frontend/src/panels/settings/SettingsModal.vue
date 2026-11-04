@@ -282,12 +282,22 @@
             </div>
             <template v-if="form.cloud_provider">
               <div class="field">
-                <label>API-Key</label>
-                <div class="token-row">
-                  <input v-model="form[cloudKeyField]" :type="showCloudKey ? 'text' : 'password'" class="input" :placeholder="cloudKeyPlaceholder" />
-                  <button class="btn-eye" @click="showCloudKey = !showCloudKey">
-                    <MdiIcon :icon="showCloudKey ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
+                <label>API-Schlüssel</label>
+                <div class="field-hint" style="margin-bottom: 6px">
+                  Nur ausfüllen, was du nutzen willst. Bereits hinterlegte Schlüssel bleiben
+                  erhalten – leer lassen ändert nichts.
+                </div>
+                <div v-for="p in CLOUD_KEYS" :key="p.field" class="token-row" style="margin-bottom: 6px">
+                  <span class="key-name">{{ p.name }}</span>
+                  <input v-model="form[p.field]" :type="showKey[p.field] ? 'text' : 'password'"
+                         class="input" :placeholder="p.hint" autocomplete="off" />
+                  <button class="btn-eye" :title="showKey[p.field] ? 'verbergen' : 'anzeigen'"
+                          @click="showKey[p.field] = !showKey[p.field]">
+                    <MdiIcon :icon="showKey[p.field] ? 'mdi:eye-off' : 'mdi:eye'" :size="16" />
                   </button>
+                  <span class="key-state" :class="{ on: form[p.field + '_set'] }">
+                    {{ form[p.field + '_set'] ? '✓ gesetzt' : '—' }}
+                  </span>
                 </div>
               </div>
               <div class="field">
@@ -501,6 +511,11 @@ const form = ref({
   groq_api_key: '',
   anthropic_api_key: '',
   anthropic_api_key_set: false,
+  openrouter_api_key_set: false,
+  openai_api_key_set:     false,
+  google_api_key_set:     false,
+  mistral_api_key_set:    false,
+  groq_api_key_set:       false,
   mini_enabled: true,
   mini_host: '192.168.0.220',
   mini_user: 'sven',
@@ -548,6 +563,16 @@ const tokenSaved      = ref(false)
 const allLabels       = ref([])
 const iconRegistered      = ref(null)
 const showCloudKey        = ref(false)
+// Alle Anbieter-Schluessel gleichzeitig anzeigen (Sven 04.11.)
+const CLOUD_KEYS = [
+  { field: 'anthropic_api_key',  name: 'Claude (Anthropic)', hint: 'sk-ant-...' },
+  { field: 'openrouter_api_key', name: 'OpenRouter',         hint: 'sk-or-v1-...' },
+  { field: 'openai_api_key',     name: 'OpenAI (GPT)',       hint: 'sk-...' },
+  { field: 'google_api_key',     name: 'Google (Gemini)',    hint: 'AIza...' },
+  { field: 'mistral_api_key',    name: 'Mistral',            hint: '...' },
+  { field: 'groq_api_key',       name: 'Groq',               hint: 'gsk_...' },
+]
+const showKey = ref({})
 const cloudKeyField = computed(() => {
   const map = { anthropic: 'anthropic_api_key', openrouter: 'openrouter_api_key', openai: 'openai_api_key', google: 'google_api_key', mistral: 'mistral_api_key', groq: 'groq_api_key' }
   return map[form.value.cloud_provider] || 'anthropic_api_key'
@@ -944,4 +969,13 @@ async function testMini() {
 .toggle input:checked + .toggle-slider { background: var(--accent); }
 .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
 .toggle.disabled { opacity: .4; cursor: not-allowed; }
+/* Anbieter-Schluessel: Name links, Status rechts */
+.key-name  { min-width: 130px; font-size: 12px; color: var(--muted); }
+.key-state { min-width: 62px; font-size: 11px; color: var(--muted); }
+.key-state.on { color: var(--green); }
+.btn-eye {
+  background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; cursor: pointer; line-height: 0;
+}
+.btn-eye:hover { color: var(--text); }
 </style>

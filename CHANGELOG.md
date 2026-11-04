@@ -4,6 +4,24 @@ Alle wichtigen Änderungen an Regis-Lab werden hier dokumentiert.
 
 ---
 
+## [1.11.7] - 2026-11-04
+
+### Geändert
+- **Alle API-Schlüssel auf einen Blick** (Einstellungen → „Cloud KI"). Bisher gab
+  es dort nur ein Feld, das sich mit der Anbieter-Auswahl änderte – man musste den
+  Anbieter umstellen und einzeln speichern und sah nicht, was schon hinterlegt war.
+  Jetzt stehen **alle sechs** Anbieter untereinander: Claude (Anthropic),
+  OpenRouter, OpenAI, Google (Gemini), Mistral, Groq – je mit Feld, Auge-Symbol
+  und Status **„✓ gesetzt"** bzw. „—". Leer lassen ändert nichts, bestehende
+  Schlüssel bleiben erhalten.
+
+### Technisch
+- `core/config.py`: `*_api_key_set`-Status gibt es jetzt für alle sechs Anbieter
+  (vorher nur Anthropic und OpenRouter), damit die Oberfläche den Zustand zeigen
+  kann.
+
+---
+
 ## [1.11.6] - 2026-11-04
 
 ### Hinzugefügt
